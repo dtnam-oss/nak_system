@@ -10,7 +10,8 @@ interface SidebarContextType {
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined)
 
 export function SidebarProvider({ children }: { children: ReactNode }) {
-  const [isCollapsed, setIsCollapsed] = useState(false)
+  // Default to collapsed state on every page load
+  const [isCollapsed, setIsCollapsed] = useState(true)
 
   const toggle = () => setIsCollapsed((prev) => !prev)
 
