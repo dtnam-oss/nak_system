@@ -46,15 +46,13 @@ export function SummaryBar({ summary }: SummaryBarProps) {
   ]
 
   return (
-    <Card className="mb-4 p-4">
-      <div className="grid grid-cols-5 gap-6">
-        {stats.map((stat, index) => (
-          <div key={index} className="text-center">
-            <p className="text-sm text-muted-foreground mb-1">{stat.label}</p>
-            <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-          </div>
-        ))}
-      </div>
-    </Card>
+    <div className="grid grid-cols-5 gap-4">
+      {stats.map((stat, index) => (
+        <Card key={index} className="p-3">
+          <p className="text-xs text-muted-foreground mb-1">{stat.label}</p>
+          <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
+        </Card>
+      ))}
+    </div>
   )
 }
