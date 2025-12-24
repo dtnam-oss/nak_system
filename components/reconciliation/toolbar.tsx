@@ -1,9 +1,10 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ReconciliationFilters } from "@/types/reconciliation"
-import { Search, X, Download, Calendar } from "lucide-react"
+import { Search, X, Download, Loader2, Filter } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -11,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useDebounce } from "@/hooks/use-debounce"
 
 interface ReconciliationToolbarProps {
   filters: ReconciliationFilters
@@ -23,17 +25,71 @@ export function ReconciliationToolbar({
   onFiltersChange,
   totalRecords = 0,
 }: ReconciliationToolbarProps) {
+  // Local state for pending filters (not yet applied)
+  const [pendingFilters, setPendingFilters] = useState<ReconciliationFilters>({
+    fromDate: filters.fromDate,
+    toDate: filters.toDate,
+    khachHang: filters.khachHang,
+    donViVanChuyen: filters.donViVanChuyen,
+    loaiTuyen: filters.loaiTuyen,
+    trangThai: filters.trangThai,
+  })
+
+  // Separate state for search query (live with debounce)
+  const [searchQuery, setSearchQuery] = useState(filters.searchQuery || "")
+  const [isSearching, setIsSearching] = useState(false)
+
+  // Debounce search query (500ms delay)
+  const debouncedSearchQuery = useDebounce(searchQuery, 500)
+
+  // Check if there are pending changes (filters not yet applied)
+  const hasPendingChanges =
+    pendingFilters.fromDate !== filters.fromDate ||
+    pendingFilters.toDate !== filters.toDate ||
+    pendingFilters.khachHang !== filters.khachHang ||
+    pendingFilters.donViVanChuyen !== filters.donViVanChuyen ||
+    pendingFilters.loaiTuyen !== filters.loaiTuyen ||
+    pendingFilters.trangThai !== filters.trangThai
+
+  // Apply debounced search query automatically (live search)
+  useEffect(() => {
+    setIsSearching(false)
+    onFiltersChange({
+      ...filters,
+      searchQuery: debouncedSearchQuery || undefined,
+    })
+  }, [debouncedSearchQuery])
+
+  // Show searching indicator when typing
+  useEffect(() => {
+    if (searchQuery !== debouncedSearchQuery) {
+      setIsSearching(true)
+    }
+  }, [searchQuery])
+
   const hasActiveFilters = Object.values(filters).some((value) => value)
 
-  const handleReset = () => {
+  const handleApplyFilters = () => {
+    onFiltersChange({
+      ...pendingFilters,
+      searchQuery: debouncedSearchQuery || undefined,
+    })
+  }
+
+  const handleResetAll = () => {
+    setPendingFilters({})
+    setSearchQuery("")
     onFiltersChange({})
   }
 
-  const updateFilter = (key: keyof ReconciliationFilters, value: string) => {
-    onFiltersChange({
-      ...filters,
+  const updatePendingFilter = (
+    key: keyof ReconciliationFilters,
+    value: string
+  ) => {
+    setPendingFilters((prev) => ({
+      ...prev,
       [key]: value || undefined,
-    })
+    }))
   }
 
   const handleExport = () => {
@@ -47,41 +103,45 @@ export function ReconciliationToolbar({
       <div className="flex items-center justify-between gap-3 flex-wrap">
         {/* Left Side: Search & Filters */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Search */}
+          {/* Live Search with Debounce */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            {isSearching ? (
+              <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
+            ) : (
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            )}
             <Input
               placeholder="Tìm kiếm mã đơn, biển số..."
               className="pl-9 w-[280px]"
-              value={filters.searchQuery || ""}
-              onChange={(e) => updateFilter("searchQuery", e.target.value)}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
 
-          {/* Date Range */}
+          {/* Date Range (Manual Apply) */}
           <div className="flex items-center gap-1">
             <Input
               type="date"
               className="w-[140px] text-xs"
-              value={filters.fromDate || ""}
-              onChange={(e) => updateFilter("fromDate", e.target.value)}
+              value={pendingFilters.fromDate || ""}
+              onChange={(e) => updatePendingFilter("fromDate", e.target.value)}
               placeholder="Từ ngày"
             />
             <span className="text-muted-foreground text-xs">-</span>
             <Input
               type="date"
               className="w-[140px] text-xs"
-              value={filters.toDate || ""}
-              onChange={(e) => updateFilter("toDate", e.target.value)}
+              value={pendingFilters.toDate || ""}
+              onChange={(e) => updatePendingFilter("toDate", e.target.value)}
               placeholder="Đến ngày"
             />
           </div>
 
-          {/* Transport Unit Filter */}
+          {/* Transport Unit Filter (Manual Apply) */}
           <Select
-            value={filters.donViVanChuyen || "all"}
+            value={pendingFilters.donViVanChuyen || "all"}
             onValueChange={(value) =>
-              updateFilter("donViVanChuyen", value === "all" ? "" : value)
+              updatePendingFilter("donViVanChuyen", value === "all" ? "" : value)
             }
           >
             <SelectTrigger className="w-[140px]">
@@ -94,37 +154,50 @@ export function ReconciliationToolbar({
             </SelectContent>
           </Select>
 
-          {/* Customer Filter */}
+          {/* Customer Filter (Manual Apply) */}
           <Input
             placeholder="Khách hàng"
             className="w-[140px]"
-            value={filters.khachHang || ""}
-            onChange={(e) => updateFilter("khachHang", e.target.value)}
+            value={pendingFilters.khachHang || ""}
+            onChange={(e) => updatePendingFilter("khachHang", e.target.value)}
           />
 
-          {/* Status Filter */}
+          {/* Status Filter (Manual Apply) */}
           <Input
             placeholder="Trạng thái"
             className="w-[120px]"
-            value={filters.trangThai || ""}
-            onChange={(e) => updateFilter("trangThai", e.target.value)}
+            value={pendingFilters.trangThai || ""}
+            onChange={(e) => updatePendingFilter("trangThai", e.target.value)}
           />
 
-          {/* Reset Button */}
+          {/* Apply Button (Only for manual filters) */}
+          {hasPendingChanges && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleApplyFilters}
+              className="h-9 px-3"
+            >
+              <Filter className="h-4 w-4 mr-1" />
+              Áp dụng
+            </Button>
+          )}
+
+          {/* Reset All Button */}
           {hasActiveFilters && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleReset}
+              onClick={handleResetAll}
               className="h-9 px-2"
             >
               <X className="h-4 w-4 mr-1" />
-              Xóa lọc
+              Xóa tất cả
             </Button>
           )}
         </div>
 
-        {/* Right Side: Actions */}
+        {/* Right Side: Info & Actions */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-muted-foreground">
             {totalRecords} chuyến đi
@@ -140,6 +213,14 @@ export function ReconciliationToolbar({
           </Button>
         </div>
       </div>
+
+      {/* Pending Changes Indicator */}
+      {hasPendingChanges && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Filter className="h-3 w-3" />
+          <span>Có thay đổi chưa áp dụng. Click "Áp dụng" để lọc dữ liệu.</span>
+        </div>
+      )}
     </div>
   )
 }
