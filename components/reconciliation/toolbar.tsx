@@ -106,12 +106,11 @@ export function ReconciliationToolbar({
   return (
     <TooltipProvider>
       <div className="mb-4 space-y-3">
-        {/* Single Row Compact Toolbar */}
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          {/* Left Side: All Filters */}
-          <div className="flex items-center gap-2 flex-wrap flex-1">
-            {/* Live Search with Debounce */}
-            <div className="relative">
+        {/* Single Row Compact Toolbar with Horizontal Scroll */}
+        <div className="w-full overflow-x-auto">
+          <div className="flex flex-row items-center gap-2 w-full flex-nowrap min-w-max">
+            {/* Live Search with Debounce - Priority Flex Grow */}
+            <div className="relative flex-1 min-w-[200px]">
               {isSearching ? (
                 <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
               ) : (
@@ -119,17 +118,17 @@ export function ReconciliationToolbar({
               )}
               <Input
                 placeholder="Tìm kiếm mã đơn, biển số..."
-                className="pl-9 w-[240px]"
+                className="pl-9 h-9 text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
-            {/* Date Range (Manual Apply) */}
-            <div className="flex items-center gap-1">
+            {/* Date Range - Fixed Width */}
+            <div className="flex items-center gap-1 shrink-0">
               <Input
                 type="date"
-                className="w-[130px] text-xs"
+                className="w-[130px] h-9 text-sm"
                 value={pendingFilters.fromDate || ""}
                 onChange={(e) => updatePendingFilter("fromDate", e.target.value)}
                 placeholder="Từ ngày"
@@ -137,21 +136,21 @@ export function ReconciliationToolbar({
               <span className="text-muted-foreground text-xs">-</span>
               <Input
                 type="date"
-                className="w-[130px] text-xs"
+                className="w-[130px] h-9 text-sm"
                 value={pendingFilters.toDate || ""}
                 onChange={(e) => updatePendingFilter("toDate", e.target.value)}
                 placeholder="Đến ngày"
               />
             </div>
 
-            {/* Transport Unit Filter (Manual Apply) */}
+            {/* Transport Unit Filter - Fixed Width */}
             <Select
               value={pendingFilters.donViVanChuyen || "all"}
               onValueChange={(value: string) =>
                 updatePendingFilter("donViVanChuyen", value === "all" ? "" : value)
               }
             >
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger className="w-[140px] h-9 text-sm shrink-0">
                 <SelectValue placeholder="Đơn vị" />
               </SelectTrigger>
               <SelectContent>
@@ -161,22 +160,22 @@ export function ReconciliationToolbar({
               </SelectContent>
             </Select>
 
-            {/* Customer Filter (Manual Apply) */}
+            {/* Customer Filter - Wider for Names */}
             <Input
               placeholder="Khách hàng"
-              className="w-[130px]"
+              className="w-[160px] h-9 text-sm shrink-0"
               value={pendingFilters.khachHang || ""}
               onChange={(e) => updatePendingFilter("khachHang", e.target.value)}
             />
 
-            {/* Trip Type Select (Manual Apply) */}
+            {/* Trip Type Select - Compact */}
             <Select
               value={pendingFilters.loaiChuyen || "all"}
               onValueChange={(value: string) =>
                 updatePendingFilter("loaiChuyen", value === "all" ? "" : value)
               }
             >
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger className="w-[130px] h-9 text-sm shrink-0">
                 <SelectValue placeholder="Loại chuyến" />
               </SelectTrigger>
               <SelectContent>
@@ -186,13 +185,13 @@ export function ReconciliationToolbar({
               </SelectContent>
             </Select>
 
-            {/* Apply Button (Only for manual filters) */}
+            {/* Apply Button */}
             {hasPendingChanges && (
               <Button
                 variant="default"
                 size="sm"
                 onClick={handleApplyFilters}
-                className="h-9 px-3"
+                className="h-9 px-3 whitespace-nowrap shrink-0"
               >
                 <Filter className="h-4 w-4 mr-1" />
                 Áp dụng
@@ -205,32 +204,32 @@ export function ReconciliationToolbar({
                 variant="ghost"
                 size="sm"
                 onClick={handleResetAll}
-                className="h-9 px-2"
+                className="h-9 px-2 whitespace-nowrap shrink-0"
               >
                 <X className="h-4 w-4 mr-1" />
                 <span className="hidden md:inline">Xóa tất cả</span>
                 <span className="md:hidden">Xóa</span>
               </Button>
             )}
-          </div>
 
-          {/* Right Side: Export Button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleExport}
-                className="h-9"
-              >
-                <Download className="h-4 w-4 lg:mr-2" />
-                <span className="hidden lg:inline">Xuất Excel</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="lg:hidden">
-              <p>Xuất Excel</p>
-            </TooltipContent>
-          </Tooltip>
+            {/* Export Button - Auto Width */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleExport}
+                  className="h-9 w-auto whitespace-nowrap shrink-0"
+                >
+                  <Download className="h-4 w-4 lg:mr-2" />
+                  <span className="hidden lg:inline">Xuất Excel</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="lg:hidden">
+                <p>Xuất Excel</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
 
         {/* Pending Changes Indicator */}
