@@ -106,18 +106,6 @@ export function FilterSidebar({ filters, onFiltersChange }: FilterSidebarProps) 
             </select>
           </div>
 
-          {/* Status */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
-              Trạng thái
-            </label>
-            <Input
-              placeholder="Nhập trạng thái"
-              value={filters.trangThai || ""}
-              onChange={(e) => updateFilter("trangThai", e.target.value)}
-            />
-          </div>
-
           {/* Search Query */}
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">

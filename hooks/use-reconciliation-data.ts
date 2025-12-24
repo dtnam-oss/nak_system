@@ -39,7 +39,7 @@ export function useReconciliationData(
       if (filters?.donViVanChuyen)
         params.append('donViVanChuyen', filters.donViVanChuyen)
       if (filters?.loaiTuyen) params.append('loaiTuyen', filters.loaiTuyen)
-      if (filters?.trangThai) params.append('trangThai', filters.trangThai)
+      if (filters?.loaiChuyen) params.append('loaiChuyen', filters.loaiChuyen)
       if (filters?.searchQuery)
         params.append('searchQuery', filters.searchQuery)
 
