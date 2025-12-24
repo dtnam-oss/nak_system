@@ -43,7 +43,7 @@ export interface ReconciliationFilters {
   khachHang?: string
   donViVanChuyen?: string
   loaiTuyen?: string
-  trangThai?: string
+  loaiChuyen?: string
   searchQuery?: string
 }
 

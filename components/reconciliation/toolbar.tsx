@@ -18,6 +18,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useDebounce } from "@/hooks/use-debounce"
 
 interface ReconciliationToolbarProps {
@@ -38,7 +39,7 @@ export function ReconciliationToolbar({
     khachHang: filters.khachHang,
     donViVanChuyen: filters.donViVanChuyen,
     loaiTuyen: filters.loaiTuyen,
-    trangThai: filters.trangThai,
+    loaiChuyen: filters.loaiChuyen,
   })
 
   // Separate state for search query (live with debounce)
@@ -55,7 +56,7 @@ export function ReconciliationToolbar({
     pendingFilters.khachHang !== filters.khachHang ||
     pendingFilters.donViVanChuyen !== filters.donViVanChuyen ||
     pendingFilters.loaiTuyen !== filters.loaiTuyen ||
-    pendingFilters.trangThai !== filters.trangThai
+    pendingFilters.loaiChuyen !== filters.loaiChuyen
 
   // Apply debounced search query automatically (live search)
   useEffect(() => {
@@ -147,7 +148,7 @@ export function ReconciliationToolbar({
             {/* Transport Unit Filter (Manual Apply) */}
             <Select
               value={pendingFilters.donViVanChuyen || "all"}
-              onValueChange={(value) =>
+              onValueChange={(value: string) =>
                 updatePendingFilter("donViVanChuyen", value === "all" ? "" : value)
               }
             >
@@ -169,13 +170,26 @@ export function ReconciliationToolbar({
               onChange={(e) => updatePendingFilter("khachHang", e.target.value)}
             />
 
-            {/* Status Filter (Manual Apply) */}
-            <Input
-              placeholder="Trạng thái"
-              className="w-[120px]"
-              value={pendingFilters.trangThai || ""}
-              onChange={(e) => updatePendingFilter("trangThai", e.target.value)}
-            />
+            {/* Trip Type Toggle (Manual Apply) */}
+            <Tabs
+              value={pendingFilters.loaiChuyen || "all"}
+              onValueChange={(value: string) =>
+                updatePendingFilter("loaiChuyen", value === "all" ? "" : value)
+              }
+              className="w-auto"
+            >
+              <TabsList>
+                <TabsTrigger value="all" className="text-xs px-3">
+                  Tất cả
+                </TabsTrigger>
+                <TabsTrigger value="Theo tuyến" className="text-xs px-3">
+                  Theo tuyến
+                </TabsTrigger>
+                <TabsTrigger value="Theo ca" className="text-xs px-3">
+                  Theo ca
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
             {/* Apply Button (Only for manual filters) */}
             {hasPendingChanges && (

@@ -15,7 +15,7 @@ export const runtime = 'edge'
  * - khachHang (optional): Customer name
  * - donViVanChuyen (optional): NAK/VENDOR
  * - loaiTuyen (optional): Route type
- * - trangThai (optional): Status
+ * - loaiChuyen (optional): Trip type
  * - searchQuery (optional): Search text
  * - page (optional): Page number
  * - limit (optional): Items per page
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const khachHang = searchParams.get('khachHang')
     const donViVanChuyen = searchParams.get('donViVanChuyen')
     const loaiTuyen = searchParams.get('loaiTuyen')
-    const trangThai = searchParams.get('trangThai')
+    const loaiChuyen = searchParams.get('loaiChuyen')
     const searchQuery = searchParams.get('searchQuery')
 
     // Build filters object
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     if (khachHang) filters.khachHang = khachHang
     if (donViVanChuyen) filters.donViVanChuyen = donViVanChuyen
     if (loaiTuyen) filters.loaiTuyen = loaiTuyen
-    if (trangThai) filters.trangThai = trangThai
+    if (loaiChuyen) filters.loaiChuyen = loaiChuyen
     if (searchQuery) filters.searchQuery = searchQuery
 
     // Create cache key based on filters

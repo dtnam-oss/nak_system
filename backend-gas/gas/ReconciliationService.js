@@ -11,7 +11,7 @@
  * @param {string} filters.khachHang - Customer name (text search)
  * @param {string} filters.donViVanChuyen - Transport unit (NAK/VENDOR)
  * @param {string} filters.loaiTuyen - Route type
- * @param {string} filters.trangThai - Status
+ * @param {string} filters.loaiChuyen - Trip type (Theo tuyến/Theo ca)
  * @param {string} filters.searchQuery - General search query
  * @returns {Object} Response with records and summary
  */
@@ -219,6 +219,13 @@ function applyReconciliationFilters(records, filters) {
     if (filters.loaiTuyen) {
       const searchTerm = filters.loaiTuyen.toLowerCase();
       if (!record.loaiTuyen.toLowerCase().includes(searchTerm)) {
+        return false;
+      }
+    }
+
+    // Trip type filter (exact match)
+    if (filters.loaiChuyen) {
+      if (record.loaiChuyen !== filters.loaiChuyen) {
         return false;
       }
     }
