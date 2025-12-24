@@ -1,0 +1,22 @@
+# Clasp Ignore File
+# Chỉ push files .js và appsscript.json
+
+# Ignore tất cả
+**/**
+
+# Cho phép push files .js trong gas/
+!gas/*.js
+
+# Cho phép push appsscript.json
+!appsscript.json
+
+# Ignore markdown files
+*.md
+
+# Ignore git files
+.git
+.gitignore
+
+# Ignore IDE files
+.vscode
+.idea
