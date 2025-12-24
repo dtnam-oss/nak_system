@@ -12,6 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useDebounce } from "@/hooks/use-debounce"
 
 interface ReconciliationToolbarProps {
@@ -98,129 +104,137 @@ export function ReconciliationToolbar({
   }
 
   return (
-    <div className="mb-4 space-y-3">
-      {/* Main Toolbar Row */}
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        {/* Left Side: Search & Filters */}
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Live Search with Debounce */}
-          <div className="relative">
-            {isSearching ? (
-              <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
-            ) : (
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+    <TooltipProvider>
+      <div className="mb-4 space-y-3">
+        {/* Single Unified Toolbar Row */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          {/* Left Side: Search & Filters */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Live Search with Debounce */}
+            <div className="relative">
+              {isSearching ? (
+                <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
+              ) : (
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              )}
+              <Input
+                placeholder="Tìm kiếm mã đơn, biển số..."
+                className="pl-9 w-[280px]"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            {/* Date Range (Manual Apply) */}
+            <div className="flex items-center gap-1">
+              <Input
+                type="date"
+                className="w-[140px] text-xs"
+                value={pendingFilters.fromDate || ""}
+                onChange={(e) => updatePendingFilter("fromDate", e.target.value)}
+                placeholder="Từ ngày"
+              />
+              <span className="text-muted-foreground text-xs">-</span>
+              <Input
+                type="date"
+                className="w-[140px] text-xs"
+                value={pendingFilters.toDate || ""}
+                onChange={(e) => updatePendingFilter("toDate", e.target.value)}
+                placeholder="Đến ngày"
+              />
+            </div>
+
+            {/* Transport Unit Filter (Manual Apply) */}
+            <Select
+              value={pendingFilters.donViVanChuyen || "all"}
+              onValueChange={(value) =>
+                updatePendingFilter("donViVanChuyen", value === "all" ? "" : value)
+              }
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Đơn vị" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả đơn vị</SelectItem>
+                <SelectItem value="NAK">NAK</SelectItem>
+                <SelectItem value="VENDOR">VENDOR</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Customer Filter (Manual Apply) */}
+            <Input
+              placeholder="Khách hàng"
+              className="w-[140px]"
+              value={pendingFilters.khachHang || ""}
+              onChange={(e) => updatePendingFilter("khachHang", e.target.value)}
+            />
+
+            {/* Status Filter (Manual Apply) */}
+            <Input
+              placeholder="Trạng thái"
+              className="w-[120px]"
+              value={pendingFilters.trangThai || ""}
+              onChange={(e) => updatePendingFilter("trangThai", e.target.value)}
+            />
+
+            {/* Apply Button (Only for manual filters) */}
+            {hasPendingChanges && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleApplyFilters}
+                className="h-9 px-3"
+              >
+                <Filter className="h-4 w-4 mr-1" />
+                Áp dụng
+              </Button>
             )}
-            <Input
-              placeholder="Tìm kiếm mã đơn, biển số..."
-              className="pl-9 w-[280px]"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+
+            {/* Reset All Button */}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetAll}
+                className="h-9 px-2"
+              >
+                <X className="h-4 w-4 mr-1" />
+                <span className="hidden md:inline">Xóa tất cả</span>
+                <span className="md:hidden">Xóa</span>
+              </Button>
+            )}
           </div>
 
-          {/* Date Range (Manual Apply) */}
-          <div className="flex items-center gap-1">
-            <Input
-              type="date"
-              className="w-[140px] text-xs"
-              value={pendingFilters.fromDate || ""}
-              onChange={(e) => updatePendingFilter("fromDate", e.target.value)}
-              placeholder="Từ ngày"
-            />
-            <span className="text-muted-foreground text-xs">-</span>
-            <Input
-              type="date"
-              className="w-[140px] text-xs"
-              value={pendingFilters.toDate || ""}
-              onChange={(e) => updatePendingFilter("toDate", e.target.value)}
-              placeholder="Đến ngày"
-            />
+          {/* Right Side: Export Button (Responsive) */}
+          <div className="flex items-center gap-2">
+            {/* Desktop: Icon + Text, Mobile/Tablet: Icon Only with Tooltip */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExport}
+                  className="h-9"
+                >
+                  <Download className="h-4 w-4 lg:mr-2" />
+                  <span className="hidden lg:inline">Xuất Excel</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="lg:hidden">
+                <p>Xuất Excel</p>
+              </TooltipContent>
+            </Tooltip>
           </div>
-
-          {/* Transport Unit Filter (Manual Apply) */}
-          <Select
-            value={pendingFilters.donViVanChuyen || "all"}
-            onValueChange={(value) =>
-              updatePendingFilter("donViVanChuyen", value === "all" ? "" : value)
-            }
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Đơn vị" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Tất cả đơn vị</SelectItem>
-              <SelectItem value="NAK">NAK</SelectItem>
-              <SelectItem value="VENDOR">VENDOR</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* Customer Filter (Manual Apply) */}
-          <Input
-            placeholder="Khách hàng"
-            className="w-[140px]"
-            value={pendingFilters.khachHang || ""}
-            onChange={(e) => updatePendingFilter("khachHang", e.target.value)}
-          />
-
-          {/* Status Filter (Manual Apply) */}
-          <Input
-            placeholder="Trạng thái"
-            className="w-[120px]"
-            value={pendingFilters.trangThai || ""}
-            onChange={(e) => updatePendingFilter("trangThai", e.target.value)}
-          />
-
-          {/* Apply Button (Only for manual filters) */}
-          {hasPendingChanges && (
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleApplyFilters}
-              className="h-9 px-3"
-            >
-              <Filter className="h-4 w-4 mr-1" />
-              Áp dụng
-            </Button>
-          )}
-
-          {/* Reset All Button */}
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleResetAll}
-              className="h-9 px-2"
-            >
-              <X className="h-4 w-4 mr-1" />
-              Xóa tất cả
-            </Button>
-          )}
         </div>
 
-        {/* Right Side: Info & Actions */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">
-            {totalRecords} chuyến đi
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExport}
-            className="h-9"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Xuất Excel
-          </Button>
-        </div>
+        {/* Pending Changes Indicator */}
+        {hasPendingChanges && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Filter className="h-3 w-3" />
+            <span>Có thay đổi chưa áp dụng. Click "Áp dụng" để lọc dữ liệu.</span>
+          </div>
+        )}
       </div>
-
-      {/* Pending Changes Indicator */}
-      {hasPendingChanges && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Filter className="h-3 w-3" />
-          <span>Có thay đổi chưa áp dụng. Click "Áp dụng" để lọc dữ liệu.</span>
-        </div>
-      )}
-    </div>
+    </TooltipProvider>
   )
 }
