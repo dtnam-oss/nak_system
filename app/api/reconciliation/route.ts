@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { unstable_cache } from 'next/cache'
 import { getReconciliationData } from '@/lib/services/gas-api'
 import type { ReconciliationFilters } from '@/types/reconciliation'
 
 export const runtime = 'edge'
-export const dynamic = 'force-dynamic'
+// Removed force-dynamic to enable caching
 
 /**
  * GET /api/reconciliation
+ * Cached for 60 seconds to prevent rate limits
  * Query params:
  * - fromDate (optional): YYYY-MM-DD
  * - toDate (optional): YYYY-MM-DD
@@ -39,10 +41,24 @@ export async function GET(request: NextRequest) {
     if (trangThai) filters.trangThai = trangThai
     if (searchQuery) filters.searchQuery = searchQuery
 
-    // Fetch from Google Apps Script
-    const result = await getReconciliationData(
-      Object.keys(filters).length > 0 ? filters : undefined
+    // Create cache key based on filters
+    const cacheKey = JSON.stringify(filters)
+    
+    // Fetch from Google Apps Script with caching
+    const getCachedData = unstable_cache(
+      async () => {
+        return await getReconciliationData(
+          Object.keys(filters).length > 0 ? filters : undefined
+        )
+      },
+      [`reconciliation-${cacheKey}`],
+      {
+        revalidate: 60, // Cache for 60 seconds
+        tags: ['reconciliation'],
+      }
     )
+
+    const result = await getCachedData()
 
     if (!result.success) {
       return NextResponse.json(
@@ -53,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result.data, {
       headers: {
-        'Cache-Control': 'no-store, max-age=0',
+        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
       },
     })
   } catch (error) {
