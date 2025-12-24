@@ -29,8 +29,8 @@ export function SummaryBar({ summary }: SummaryBarProps) {
       color: "text-primary",
     },
     {
-      label: "Tổng tải trọng",
-      value: `${formatNumber(summary.totalWeight)} tấn`,
+      label: "Tổng quãng đường",
+      value: `${formatNumber(summary.totalDistance)} km`,
       color: "text-foreground",
     },
     {
