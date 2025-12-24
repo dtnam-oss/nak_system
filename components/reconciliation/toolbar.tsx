@@ -18,7 +18,6 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useDebounce } from "@/hooks/use-debounce"
 
 interface ReconciliationToolbarProps {
@@ -107,10 +106,10 @@ export function ReconciliationToolbar({
   return (
     <TooltipProvider>
       <div className="mb-4 space-y-3">
-        {/* Single Unified Toolbar Row */}
+        {/* Single Row Compact Toolbar */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          {/* Left Side: Search & Filters */}
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* Left Side: All Filters */}
+          <div className="flex items-center gap-2 flex-wrap flex-1">
             {/* Live Search with Debounce */}
             <div className="relative">
               {isSearching ? (
@@ -120,7 +119,7 @@ export function ReconciliationToolbar({
               )}
               <Input
                 placeholder="Tìm kiếm mã đơn, biển số..."
-                className="pl-9 w-[280px]"
+                className="pl-9 w-[240px]"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -130,7 +129,7 @@ export function ReconciliationToolbar({
             <div className="flex items-center gap-1">
               <Input
                 type="date"
-                className="w-[140px] text-xs"
+                className="w-[130px] text-xs"
                 value={pendingFilters.fromDate || ""}
                 onChange={(e) => updatePendingFilter("fromDate", e.target.value)}
                 placeholder="Từ ngày"
@@ -138,7 +137,7 @@ export function ReconciliationToolbar({
               <span className="text-muted-foreground text-xs">-</span>
               <Input
                 type="date"
-                className="w-[140px] text-xs"
+                className="w-[130px] text-xs"
                 value={pendingFilters.toDate || ""}
                 onChange={(e) => updatePendingFilter("toDate", e.target.value)}
                 placeholder="Đến ngày"
@@ -152,7 +151,7 @@ export function ReconciliationToolbar({
                 updatePendingFilter("donViVanChuyen", value === "all" ? "" : value)
               }
             >
-              <SelectTrigger className="w-[140px]">
+              <SelectTrigger className="w-[130px]">
                 <SelectValue placeholder="Đơn vị" />
               </SelectTrigger>
               <SelectContent>
@@ -165,31 +164,27 @@ export function ReconciliationToolbar({
             {/* Customer Filter (Manual Apply) */}
             <Input
               placeholder="Khách hàng"
-              className="w-[140px]"
+              className="w-[130px]"
               value={pendingFilters.khachHang || ""}
               onChange={(e) => updatePendingFilter("khachHang", e.target.value)}
             />
 
-            {/* Trip Type Toggle (Manual Apply) */}
-            <Tabs
+            {/* Trip Type Select (Manual Apply) */}
+            <Select
               value={pendingFilters.loaiChuyen || "all"}
               onValueChange={(value: string) =>
                 updatePendingFilter("loaiChuyen", value === "all" ? "" : value)
               }
-              className="w-auto"
             >
-              <TabsList>
-                <TabsTrigger value="all" className="text-xs px-3">
-                  Tất cả
-                </TabsTrigger>
-                <TabsTrigger value="Theo tuyến" className="text-xs px-3">
-                  Theo tuyến
-                </TabsTrigger>
-                <TabsTrigger value="Theo ca" className="text-xs px-3">
-                  Theo ca
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="Loại chuyến" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả loại</SelectItem>
+                <SelectItem value="Theo tuyến">Theo tuyến</SelectItem>
+                <SelectItem value="Theo ca">Theo ca</SelectItem>
+              </SelectContent>
+            </Select>
 
             {/* Apply Button (Only for manual filters) */}
             {hasPendingChanges && (
@@ -219,26 +214,23 @@ export function ReconciliationToolbar({
             )}
           </div>
 
-          {/* Right Side: Export Button (Responsive) */}
-          <div className="flex items-center gap-2">
-            {/* Desktop: Icon + Text, Mobile/Tablet: Icon Only with Tooltip */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExport}
-                  className="h-9"
-                >
-                  <Download className="h-4 w-4 lg:mr-2" />
-                  <span className="hidden lg:inline">Xuất Excel</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="lg:hidden">
-                <p>Xuất Excel</p>
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          {/* Right Side: Export Button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={handleExport}
+                className="h-9"
+              >
+                <Download className="h-4 w-4 lg:mr-2" />
+                <span className="hidden lg:inline">Xuất Excel</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="lg:hidden">
+              <p>Xuất Excel</p>
+            </TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Pending Changes Indicator */}
