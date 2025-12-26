@@ -3,6 +3,7 @@
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -10,6 +11,7 @@ import { ReconciliationRecord, ParsedDataJson } from "@/types/reconciliation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { useMemo } from "react"
+import { AlertCircle } from "lucide-react"
 
 interface TripDetailsDialogProps {
   open: boolean
@@ -22,22 +24,61 @@ export function TripDetailsDialog({
   onOpenChange,
   record,
 }: TripDetailsDialogProps) {
-  // Safely parse data_json
-  const parsedData = useMemo<ParsedDataJson | null>(() => {
-    if (!record?.data_json) return null
+  // Safely parse data_json with comprehensive error handling
+  const { parsedData, error } = useMemo<{
+    parsedData: ParsedDataJson | null
+    error: string | null
+  }>(() => {
+    // Guard clause: no record
+    if (!record) {
+      return { parsedData: null, error: null }
+    }
+
+    // Guard clause: no data_json field
+    if (!record.data_json) {
+      console.warn(`No data_json field for record: ${record.maChuyenDi}`)
+      return { parsedData: null, error: "Không có dữ liệu JSON" }
+    }
+
+    // Guard clause: empty string
+    if (typeof record.data_json === "string" && record.data_json.trim() === "") {
+      console.warn(`Empty data_json for record: ${record.maChuyenDi}`)
+      return { parsedData: null, error: "Dữ liệu JSON trống" }
+    }
 
     try {
-      // Handle both string and object cases
-      if (typeof record.data_json === 'string') {
-        return JSON.parse(record.data_json)
+      // Case 1: data_json is a string (from database)
+      if (typeof record.data_json === "string") {
+        const parsed = JSON.parse(record.data_json)
+
+        // Validate parsed structure
+        if (!parsed || typeof parsed !== "object") {
+          throw new Error("Invalid JSON structure")
+        }
+
+        return { parsedData: parsed as ParsedDataJson, error: null }
       }
-      // If already parsed (from some data source), return as is
-      return record.data_json as unknown as ParsedDataJson
-    } catch (error) {
-      console.error("Failed to parse data_json:", error)
-      return null
+
+      // Case 2: data_json is already an object (pre-parsed)
+      if (typeof record.data_json === "object") {
+        return { parsedData: record.data_json as unknown as ParsedDataJson, error: null }
+      }
+
+      // Case 3: Unknown type
+      throw new Error("Unknown data_json type")
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error"
+      console.error(`Failed to parse data_json for ${record.maChuyenDi}:`, {
+        error: errorMessage,
+        data_json: record.data_json,
+      })
+      return {
+        parsedData: null,
+        error: `Lỗi parse JSON: ${errorMessage}`,
+      }
     }
-  }, [record?.data_json])
+  }, [record])
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -50,6 +91,7 @@ export function TripDetailsDialog({
     return new Intl.NumberFormat("vi-VN").format(num)
   }
 
+  // Early return if no record
   if (!record) return null
 
   const thongTin = parsedData?.thongTinChuyenDi
@@ -62,7 +104,28 @@ export function TripDetailsDialog({
           <DialogTitle className="text-xl font-bold">
             Chi tiết chuyến đi: {record.maChuyenDi}
           </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Xem thông tin chi tiết về xe, tài xế và lộ trình di chuyển
+          </DialogDescription>
         </DialogHeader>
+
+        {/* Error State */}
+        {error && (
+          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 mb-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
+              <div>
+                <h4 className="text-sm font-semibold text-destructive mb-1">
+                  Không thể tải dữ liệu chi tiết
+                </h4>
+                <p className="text-sm text-destructive/80">{error}</p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Đang hiển thị thông tin cơ bản từ dữ liệu chính.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-6">
           {/* Section A: General Information */}
@@ -92,27 +155,27 @@ export function TripDetailsDialog({
               <div>
                 <p className="text-xs text-muted-foreground">Tổng doanh thu</p>
                 <p className="text-sm font-semibold text-foreground">
-                  {formatCurrency(record.tongDoanhThu)}
+                  {formatCurrency(record.tongDoanhThu || 0)}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Tổng quãng đường</p>
                 <p className="text-sm font-medium text-foreground">
-                  {formatNumber(record.tongQuangDuong)} km
+                  {formatNumber(record.tongQuangDuong || 0)} km
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Trạng thái</p>
                 <Badge
                   variant={
-                    record.trangThai.toLowerCase().includes("kết thúc") ||
-                    record.trangThai.toLowerCase().includes("hoàn thành")
+                    record.trangThai?.toLowerCase().includes("kết thúc") ||
+                    record.trangThai?.toLowerCase().includes("hoàn thành")
                       ? "success"
                       : "secondary"
                   }
                   className="mt-1"
                 >
-                  {record.trangThai}
+                  {record.trangThai || "Không rõ"}
                 </Badge>
               </div>
               {thongTin?.loaiCa && (
@@ -131,7 +194,7 @@ export function TripDetailsDialog({
                   </p>
                 </div>
               )}
-              {thongTin?.taiTrongTinhPhi !== undefined && (
+              {thongTin?.taiTrongTinhPhi !== undefined && thongTin.taiTrongTinhPhi !== null && (
                 <div>
                   <p className="text-xs text-muted-foreground">Tải trọng tính phí</p>
                   <p className="text-sm font-medium text-foreground">
@@ -148,11 +211,22 @@ export function TripDetailsDialog({
               Chi tiết lộ trình ({chiTietLoTrinh.length} điểm)
             </h3>
 
-            {chiTietLoTrinh.length === 0 ? (
+            {!parsedData ? (
+              // No parsed data - show error state
+              <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-border">
+                <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p className="font-medium">Không có dữ liệu chi tiết cho chuyến này</p>
+                <p className="text-xs mt-1">
+                  {error || "Dữ liệu JSON không khả dụng hoặc không hợp lệ"}
+                </p>
+              </div>
+            ) : chiTietLoTrinh.length === 0 ? (
+              // Parsed data exists but empty array
               <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg border border-border">
-                Không có dữ liệu chi tiết lộ trình
+                <p>Không có điểm lộ trình nào được ghi nhận</p>
               </div>
             ) : (
+              // Has route details - render table/cards
               <div className="space-y-3">
                 {/* Desktop: Table View */}
                 <div className="hidden md:block overflow-x-auto rounded-lg border border-border">
@@ -204,13 +278,13 @@ export function TripDetailsDialog({
                             )}
                           </td>
                           <td className="px-3 py-2 text-right text-foreground">
-                            {formatNumber(item.quangDuong)}
+                            {formatNumber(item.quangDuong || 0)}
                           </td>
                           <td className="px-3 py-2 text-right text-foreground">
-                            {formatNumber(item.taiTrong)}
+                            {formatNumber(item.taiTrong || 0)}
                           </td>
                           <td className="px-3 py-2 text-right font-medium text-foreground">
-                            {formatCurrency(item.thanhTien)}
+                            {formatCurrency(item.thanhTien || 0)}
                           </td>
                         </tr>
                       ))}
@@ -255,9 +329,7 @@ export function TripDetailsDialog({
                     <Card key={item.id || index} className="border-border">
                       <CardHeader className="pb-3">
                         <CardTitle className="text-sm flex items-center justify-between">
-                          <span>
-                            Điểm {item.thuTu || index + 1}
-                          </span>
+                          <span>Điểm {item.thuTu || index + 1}</span>
                           <Badge variant="outline" className="ml-2">
                             {item.maTem || "-"}
                           </Badge>
@@ -276,19 +348,19 @@ export function TripDetailsDialog({
                           <div>
                             <p className="text-xs text-muted-foreground">Quãng đường</p>
                             <p className="font-medium text-foreground">
-                              {formatNumber(item.quangDuong)} km
+                              {formatNumber(item.quangDuong || 0)} km
                             </p>
                           </div>
                           <div>
                             <p className="text-xs text-muted-foreground">Tải trọng</p>
                             <p className="font-medium text-foreground">
-                              {formatNumber(item.taiTrong)} tấn
+                              {formatNumber(item.taiTrong || 0)} tấn
                             </p>
                           </div>
                           <div className="col-span-2">
                             <p className="text-xs text-muted-foreground">Thành tiền</p>
                             <p className="font-semibold text-foreground">
-                              {formatCurrency(item.thanhTien)}
+                              {formatCurrency(item.thanhTien || 0)}
                             </p>
                           </div>
                         </div>
