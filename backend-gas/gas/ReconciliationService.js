@@ -142,7 +142,8 @@ function parseReconciliationRecord(row, colMap) {
     tongQuangDuong: parseFloat(row[colMap['tongQuangDuong']] || 0),
     tongDoanhThu: parseFloat(row[colMap['tongDoanhThu']] || 0),
     soXe: soXe,
-    chiTietLoTrinh: chiTietLoTrinh
+    chiTietLoTrinh: chiTietLoTrinh,
+    data_json: String(row[colMap['data_json']] || '')
   };
 }
 
