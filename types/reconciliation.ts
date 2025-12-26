@@ -19,6 +19,23 @@ export interface ReconciliationRecord {
   tongDoanhThu: number
   soXe?: string
   chiTietLoTrinh?: ChiTietLoTrinh[]
+  data_json?: string // Raw JSON string from Google Sheets
+}
+
+export interface ParsedDataJson {
+  thongTinChuyenDi?: {
+    soXe?: string
+    khCap1?: string
+    bienKiemSoat?: string
+    taiTrong?: number
+    quangDuong?: number
+    soChieu?: number
+    donGia?: number
+    loaiCa?: string
+    taiTrongTinhPhi?: number
+    hinhThucTinhGia?: string
+  }
+  chiTietLoTrinh?: ChiTietLoTrinh[]
 }
 
 export interface ChiTietLoTrinh {

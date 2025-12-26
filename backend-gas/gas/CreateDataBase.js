@@ -234,15 +234,51 @@ function buildJsonRecord(chuyenDiRow, chuyenDiMap, chiTietRows, chiTietMap) {
     data: {
       thongTinChuyenDi: {
         soXe: getValue(chuyenDiRow, chuyenDiMap.bien_kiem_soat),
-        khCap1: getValue(chuyenDiRow, chuyenDiMap.ten_khach_hang_cap_1)
+        khCap1: getValue(chuyenDiRow, chuyenDiMap.ten_khach_hang_cap_1),
+        // Thông tin bổ sung từ chi tiết (sẽ được cập nhật từ chiTietRows)
+        bienKiemSoat: getValue(chuyenDiRow, chuyenDiMap.bien_kiem_soat),
+        taiTrong: 0,
+        quangDuong: 0,
+        soChieu: 0,
+        donGia: 0,
+        loaiCa: '',
+        taiTrongTinhPhi: 0,
+        hinhThucTinhGia: ''
       },
       chiTietLoTrinh: []
     }
   };
 
-  // Build chi tiết lộ trình từ chi tiết rows
+  // Build chi tiết lộ trình từ chi tiết rows và tổng hợp thông tin
   if (chiTietRows && chiTietRows.length > 0) {
     record.data.chiTietLoTrinh = buildChiTietLoTrinh(chiTietRows, chiTietMap);
+    
+    // Tổng hợp thông tin từ chi tiết để dễ filter
+    let tongTaiTrong = 0;
+    let tongQuangDuong = 0;
+    let tongSoChieu = 0;
+    let tongTaiTrongTinhPhi = 0;
+    
+    for (let i = 0; i < chiTietRows.length; i++) {
+      const row = chiTietRows[i];
+      tongTaiTrong += parseFloat(getValue(row, chiTietMap.tai_trong)) || 0;
+      tongQuangDuong += parseFloat(getValue(row, chiTietMap.quang_duong)) || 0;
+      tongSoChieu += parseInt(getValue(row, chiTietMap.so_chieu)) || 0;
+      tongTaiTrongTinhPhi += parseFloat(getValue(row, chiTietMap.tai_trong_tinh_phi)) || 0;
+      
+      // Lấy giá trị từ record đầu tiên cho các trường không tổng hợp
+      if (i === 0) {
+        record.data.thongTinChuyenDi.donGia = parseFloat(getValue(row, chiTietMap.don_gia)) || 0;
+        record.data.thongTinChuyenDi.loaiCa = getValue(row, chiTietMap.loai_ca);
+        record.data.thongTinChuyenDi.hinhThucTinhGia = getValue(row, chiTietMap.hinh_thuc_tinh_gia);
+      }
+    }
+    
+    // Cập nhật giá trị tổng hợp
+    record.data.thongTinChuyenDi.taiTrong = tongTaiTrong;
+    record.data.thongTinChuyenDi.quangDuong = tongQuangDuong;
+    record.data.thongTinChuyenDi.soChieu = tongSoChieu;
+    record.data.thongTinChuyenDi.taiTrongTinhPhi = tongTaiTrongTinhPhi;
   }
 
   return record;
