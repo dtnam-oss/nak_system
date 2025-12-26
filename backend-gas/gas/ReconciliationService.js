@@ -95,12 +95,32 @@ function getReconciliationData(filters) {
 
 /**
  * Build column index map for reconciliation data
+ * Supports multiple header name variations for robustness
  */
 function buildColumnIndexMap(headers) {
   const map = {};
+
+  // Debug: Log all headers found in sheet
+  Logger.log('📋 Sheet Headers Found: ' + JSON.stringify(headers));
+
   headers.forEach((header, index) => {
-    map[header] = index;
+    const headerStr = String(header).trim();
+
+    // Store exact header name
+    map[headerStr] = index;
+
+    // Store normalized versions for fallback matching
+    const normalized = headerStr.toLowerCase().replace(/[_\s-]/g, '');
+    map[normalized] = index;
+
+    // Store camelCase version
+    const camelCase = headerStr.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+    map[camelCase] = index;
   });
+
+  // Debug: Log the complete column map
+  Logger.log('🗺️ Column Index Map: ' + JSON.stringify(map));
+
   return map;
 }
 
@@ -108,13 +128,38 @@ function buildColumnIndexMap(headers) {
  * Parse row into ReconciliationRecord object
  */
 function parseReconciliationRecord(row, colMap) {
-  // Parse data_json if exists
+  // Parse data_json if exists - with robust fallback strategy
   let chiTietLoTrinh = [];
   let soXe = '';
+  let rawDataJson = null;
 
-  try {
-    if (colMap['data_json'] !== undefined && row[colMap['data_json']]) {
-      const dataJson = JSON.parse(row[colMap['data_json']]);
+  // Strategy 1: Try exact header name 'data_json'
+  if (colMap['data_json'] !== undefined && row[colMap['data_json']]) {
+    rawDataJson = row[colMap['data_json']];
+  }
+
+  // Strategy 2: Try camelCase 'dataJson'
+  if (!rawDataJson && colMap['dataJson'] !== undefined && row[colMap['dataJson']]) {
+    rawDataJson = row[colMap['dataJson']];
+    Logger.log('✅ Found data_json using camelCase variant: dataJson');
+  }
+
+  // Strategy 3: Try normalized 'datajson'
+  if (!rawDataJson && colMap['datajson'] !== undefined && row[colMap['datajson']]) {
+    rawDataJson = row[colMap['datajson']];
+    Logger.log('✅ Found data_json using normalized variant: datajson');
+  }
+
+  // Strategy 4: Try by index (data_json is 12th column = index 11)
+  if (!rawDataJson && row[11]) {
+    rawDataJson = row[11];
+    Logger.log('✅ Found data_json using hardcoded index [11]');
+  }
+
+  // Parse the JSON if found
+  if (rawDataJson) {
+    try {
+      const dataJson = JSON.parse(rawDataJson);
 
       if (dataJson.data && dataJson.data.chiTietLoTrinh) {
         chiTietLoTrinh = dataJson.data.chiTietLoTrinh;
@@ -123,9 +168,12 @@ function parseReconciliationRecord(row, colMap) {
       if (dataJson.data && dataJson.data.thongTinChuyenDi && dataJson.data.thongTinChuyenDi.soXe) {
         soXe = dataJson.data.thongTinChuyenDi.soXe;
       }
+    } catch (e) {
+      Logger.log('⚠️ Error parsing data_json: ' + e.message);
+      Logger.log('⚠️ Raw data_json value: ' + rawDataJson);
     }
-  } catch (e) {
-    Logger.log('⚠️ Error parsing data_json: ' + e.message);
+  } else {
+    Logger.log('⚠️ data_json field not found in row');
   }
 
   return {
@@ -143,7 +191,7 @@ function parseReconciliationRecord(row, colMap) {
     tongDoanhThu: parseFloat(row[colMap['tongDoanhThu']] || 0),
     soXe: soXe,
     chiTietLoTrinh: chiTietLoTrinh,
-    data_json: String(row[colMap['data_json']] || '')
+    data_json: String(rawDataJson || '') // Use rawDataJson from robust fallback strategy
   };
 }
 
