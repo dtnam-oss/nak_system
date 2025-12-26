@@ -161,16 +161,40 @@ function parseReconciliationRecord(row, colMap) {
     try {
       const dataJson = JSON.parse(rawDataJson);
 
-      if (dataJson.data && dataJson.data.chiTietLoTrinh) {
-        chiTietLoTrinh = dataJson.data.chiTietLoTrinh;
+      // Debug: Log the actual structure of parsed JSON
+      Logger.log('🔍 Parsed JSON keys: ' + JSON.stringify(Object.keys(dataJson)));
+
+      // Extract chiTietLoTrinh (array of route details)
+      if (dataJson.chiTietLoTrinh && Array.isArray(dataJson.chiTietLoTrinh)) {
+        chiTietLoTrinh = dataJson.chiTietLoTrinh;
+        Logger.log('✅ Found chiTietLoTrinh with ' + chiTietLoTrinh.length + ' items');
       }
 
-      if (dataJson.data && dataJson.data.thongTinChuyenDi && dataJson.data.thongTinChuyenDi.soXe) {
-        soXe = dataJson.data.thongTinChuyenDi.soXe;
+      // Extract soXe from thongTinChuyenDi
+      if (dataJson.thongTinChuyenDi && dataJson.thongTinChuyenDi.soXe) {
+        soXe = dataJson.thongTinChuyenDi.soXe;
+        Logger.log('✅ Found soXe: ' + soXe);
       }
+
+      // Fallback: Try nested .data structure (for backwards compatibility)
+      if (chiTietLoTrinh.length === 0 && dataJson.data) {
+        Logger.log('⚠️ Trying nested .data structure as fallback');
+
+        if (dataJson.data.chiTietLoTrinh && Array.isArray(dataJson.data.chiTietLoTrinh)) {
+          chiTietLoTrinh = dataJson.data.chiTietLoTrinh;
+          Logger.log('✅ Found chiTietLoTrinh in .data wrapper');
+        }
+
+        if (!soXe && dataJson.data.thongTinChuyenDi && dataJson.data.thongTinChuyenDi.soXe) {
+          soXe = dataJson.data.thongTinChuyenDi.soXe;
+          Logger.log('✅ Found soXe in .data wrapper');
+        }
+      }
+
     } catch (e) {
       Logger.log('⚠️ Error parsing data_json: ' + e.message);
       Logger.log('⚠️ Raw data_json value: ' + rawDataJson);
+      Logger.log('⚠️ Stack trace: ' + e.stack);
     }
   } else {
     Logger.log('⚠️ data_json field not found in row');
