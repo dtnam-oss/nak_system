@@ -24,6 +24,13 @@ export function TripDetailsDialog({
   onOpenChange,
   record,
 }: TripDetailsDialogProps) {
+  // 🔍 STEP 2: Debug - Log received props
+  console.log('🔍 [STEP 2] TripDetailsDialog received record:', record)
+  console.log('🔍 [STEP 2] Has data_json field:', record ? 'data_json' in record : 'NO RECORD')
+  console.log('🔍 [STEP 2] data_json value:', record?.data_json)
+  console.log('🔍 [STEP 2] data_json type:', typeof record?.data_json)
+  console.log('🔍 [STEP 2] Record keys:', record ? Object.keys(record) : 'NO RECORD')
+
   // Safely parse data_json with comprehensive error handling
   const { parsedData, error } = useMemo<{
     parsedData: ParsedDataJson | null
@@ -31,12 +38,14 @@ export function TripDetailsDialog({
   }>(() => {
     // Guard clause: no record
     if (!record) {
+      console.log('🔍 [STEP 2] Guard: No record provided')
       return { parsedData: null, error: null }
     }
 
     // Guard clause: no data_json field
     if (!record.data_json) {
-      console.warn(`No data_json field for record: ${record.maChuyenDi}`)
+      console.warn('🔍 [STEP 2] Guard: No data_json field for record:', record.maChuyenDi)
+      console.warn('🔍 [STEP 2] Available fields:', Object.keys(record))
       return { parsedData: null, error: "Không có dữ liệu JSON" }
     }
 

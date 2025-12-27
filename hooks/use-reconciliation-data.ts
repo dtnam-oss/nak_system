@@ -53,7 +53,24 @@ export function useReconciliationData(
         throw new Error(errorData.error || 'Failed to fetch reconciliation data')
       }
 
-      return response.json()
+      const data = await response.json()
+
+      // 🔍 STEP 0: Debug - Log raw API response
+      console.log('🔍 [STEP 0] Raw API Response received')
+      console.log('🔍 [STEP 0] Total records:', data.records?.length || 0)
+      if (data.records && data.records.length > 0) {
+        const firstRecord = data.records[0]
+        console.log('🔍 [STEP 0] First record:', firstRecord)
+        console.log('🔍 [STEP 0] First record keys:', Object.keys(firstRecord))
+        console.log('🔍 [STEP 0] First record has data_json:', 'data_json' in firstRecord)
+        console.log('🔍 [STEP 0] First record data_json value:', firstRecord.data_json)
+        console.log('🔍 [STEP 0] First record data_json type:', typeof firstRecord.data_json)
+        console.log('🔍 [STEP 0] First record data_json length:', firstRecord.data_json?.length || 0)
+      } else {
+        console.warn('🔍 [STEP 0] No records in API response')
+      }
+
+      return data
     },
     staleTime: 2 * 60 * 1000, // 2 minutes (shorter than dashboard)
     refetchInterval: 5 * 60 * 1000, // 5 minutes

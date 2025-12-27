@@ -169,7 +169,17 @@ export const createColumns = ({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onViewDetails(record)}
+              onClick={() => {
+                // 🔍 STEP 1: Debug - Log raw record data
+                console.log('🔍 [STEP 1] Clicked Row Data:', record)
+                console.log('🔍 [STEP 1] Has data_json field:', 'data_json' in record)
+                console.log('🔍 [STEP 1] data_json value:', record.data_json)
+                console.log('🔍 [STEP 1] data_json type:', typeof record.data_json)
+                console.log('🔍 [STEP 1] data_json length:', record.data_json?.length || 0)
+                console.log('🔍 [STEP 1] All record keys:', Object.keys(record))
+
+                onViewDetails(record)
+              }}
               className="gap-2"
             >
               <Eye className="h-4 w-4" />
