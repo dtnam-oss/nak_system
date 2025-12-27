@@ -7,10 +7,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { ReconciliationRecord, ParsedDataJson } from "@/types/reconciliation"
+import { ReconciliationRecord } from "@/types/reconciliation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useMemo } from "react"
 import { AlertCircle } from "lucide-react"
 
 interface TripDetailsDialogProps {
@@ -24,70 +23,11 @@ export function TripDetailsDialog({
   onOpenChange,
   record,
 }: TripDetailsDialogProps) {
-  // 🔍 STEP 2: Debug - Log received props
-  console.log('🔍 [STEP 2] TripDetailsDialog received record:', record)
-  console.log('🔍 [STEP 2] Has data_json field:', record ? 'data_json' in record : 'NO RECORD')
-  console.log('🔍 [STEP 2] data_json value:', record?.data_json)
-  console.log('🔍 [STEP 2] data_json type:', typeof record?.data_json)
-  console.log('🔍 [STEP 2] Record keys:', record ? Object.keys(record) : 'NO RECORD')
-
-  // Safely parse data_json with comprehensive error handling
-  const { parsedData, error } = useMemo<{
-    parsedData: ParsedDataJson | null
-    error: string | null
-  }>(() => {
-    // Guard clause: no record
-    if (!record) {
-      console.log('🔍 [STEP 2] Guard: No record provided')
-      return { parsedData: null, error: null }
-    }
-
-    // Guard clause: no data_json field
-    if (!record.data_json) {
-      console.warn('🔍 [STEP 2] Guard: No data_json field for record:', record.maChuyenDi)
-      console.warn('🔍 [STEP 2] Available fields:', Object.keys(record))
-      return { parsedData: null, error: "Không có dữ liệu JSON" }
-    }
-
-    // Guard clause: empty string
-    if (typeof record.data_json === "string" && record.data_json.trim() === "") {
-      console.warn(`Empty data_json for record: ${record.maChuyenDi}`)
-      return { parsedData: null, error: "Dữ liệu JSON trống" }
-    }
-
-    try {
-      // Case 1: data_json is a string (from database)
-      if (typeof record.data_json === "string") {
-        const parsed = JSON.parse(record.data_json)
-
-        // Validate parsed structure
-        if (!parsed || typeof parsed !== "object") {
-          throw new Error("Invalid JSON structure")
-        }
-
-        return { parsedData: parsed as ParsedDataJson, error: null }
-      }
-
-      // Case 2: data_json is already an object (pre-parsed)
-      if (typeof record.data_json === "object") {
-        return { parsedData: record.data_json as unknown as ParsedDataJson, error: null }
-      }
-
-      // Case 3: Unknown type
-      throw new Error("Unknown data_json type")
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error"
-      console.error(`Failed to parse data_json for ${record.maChuyenDi}:`, {
-        error: errorMessage,
-        data_json: record.data_json,
-      })
-      return {
-        parsedData: null,
-        error: `Lỗi parse JSON: ${errorMessage}`,
-      }
-    }
-  }, [record])
+  // 🔍 Debug - Log received props
+  console.log('🔍 [TripDetailsDialog] Received record:', record)
+  console.log('🔍 [TripDetailsDialog] Has chiTietLoTrinh:', !!record?.chiTietLoTrinh)
+  console.log('🔍 [TripDetailsDialog] chiTietLoTrinh length:', record?.chiTietLoTrinh?.length || 0)
+  console.log('🔍 [TripDetailsDialog] soXe:', record?.soXe)
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -103,8 +43,13 @@ export function TripDetailsDialog({
   // Early return if no record
   if (!record) return null
 
-  const thongTin = parsedData?.thongTinChuyenDi
-  const chiTietLoTrinh = parsedData?.chiTietLoTrinh || []
+  // Access pre-parsed data directly from record
+  // Backend already parses data_json and returns chiTietLoTrinh and soXe
+  const chiTietLoTrinh = record.chiTietLoTrinh || []
+  const soXe = record.soXe || ""
+
+  console.log('✅ [TripDetailsDialog] Using chiTietLoTrinh:', chiTietLoTrinh.length, 'items')
+  console.log('✅ [TripDetailsDialog] Using soXe:', soXe)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -118,24 +63,6 @@ export function TripDetailsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Error State */}
-        {error && (
-          <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 mb-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-destructive mt-0.5 flex-shrink-0" />
-              <div>
-                <h4 className="text-sm font-semibold text-destructive mb-1">
-                  Không thể tải dữ liệu chi tiết
-                </h4>
-                <p className="text-sm text-destructive/80">{error}</p>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Đang hiển thị thông tin cơ bản từ dữ liệu chính.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="space-y-6">
           {/* Section A: General Information */}
           <div className="bg-muted/30 p-4 rounded-lg border border-border">
@@ -146,19 +73,31 @@ export function TripDetailsDialog({
               <div>
                 <p className="text-xs text-muted-foreground">Số xe</p>
                 <p className="text-sm font-medium text-foreground">
-                  {thongTin?.soXe || record.soXe || "-"}
+                  {soXe || "-"}
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Khách hàng cấp 1</p>
+                <p className="text-xs text-muted-foreground">Khách hàng</p>
                 <p className="text-sm font-medium text-foreground">
-                  {thongTin?.khCap1 || "-"}
+                  {record.tenKhachHang || "-"}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Tài xế</p>
                 <p className="text-sm font-medium text-foreground">
                   {record.tenTaiXe || "-"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Loại chuyến</p>
+                <p className="text-sm font-medium text-foreground">
+                  {record.loaiChuyen || "-"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Tên tuyến</p>
+                <p className="text-sm font-medium text-foreground">
+                  {record.tenTuyen || "-"}
                 </p>
               </div>
               <div>
@@ -174,6 +113,15 @@ export function TripDetailsDialog({
                 </p>
               </div>
               <div>
+                <p className="text-xs text-muted-foreground">Đơn vị vận chuyển</p>
+                <Badge
+                  variant={record.donViVanChuyen === "NAK" ? "success" : "secondary"}
+                  className="mt-1"
+                >
+                  {record.donViVanChuyen || "Không rõ"}
+                </Badge>
+              </div>
+              <div>
                 <p className="text-xs text-muted-foreground">Trạng thái</p>
                 <Badge
                   variant={
@@ -187,52 +135,23 @@ export function TripDetailsDialog({
                   {record.trangThai || "Không rõ"}
                 </Badge>
               </div>
-              {thongTin?.loaiCa && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Loại ca</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {thongTin.loaiCa}
-                  </p>
-                </div>
-              )}
-              {thongTin?.hinhThucTinhGia && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Hình thức tính giá</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {thongTin.hinhThucTinhGia}
-                  </p>
-                </div>
-              )}
-              {thongTin?.taiTrongTinhPhi !== undefined && thongTin.taiTrongTinhPhi !== null && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Tải trọng tính phí</p>
-                  <p className="text-sm font-medium text-foreground">
-                    {formatNumber(thongTin.taiTrongTinhPhi)} tấn
-                  </p>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Section B: Route Details (Critical) */}
+          {/* Section B: Route Details */}
           <div>
             <h3 className="text-sm font-semibold mb-3 text-foreground">
               Chi tiết lộ trình ({chiTietLoTrinh.length} điểm)
             </h3>
 
-            {!parsedData ? (
-              // No parsed data - show error state
+            {chiTietLoTrinh.length === 0 ? (
+              // No route data - show empty state
               <div className="text-center py-12 text-muted-foreground bg-muted/20 rounded-lg border border-border">
                 <AlertCircle className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                <p className="font-medium">Không có dữ liệu chi tiết cho chuyến này</p>
+                <p className="font-medium">Không có dữ liệu chi tiết lộ trình</p>
                 <p className="text-xs mt-1">
-                  {error || "Dữ liệu JSON không khả dụng hoặc không hợp lệ"}
+                  Chuyến đi chưa có thông tin lộ trình hoặc dữ liệu chưa được cập nhật
                 </p>
-              </div>
-            ) : chiTietLoTrinh.length === 0 ? (
-              // Parsed data exists but empty array
-              <div className="text-center py-8 text-muted-foreground bg-muted/20 rounded-lg border border-border">
-                <p>Không có điểm lộ trình nào được ghi nhận</p>
               </div>
             ) : (
               // Has route details - render table/cards
