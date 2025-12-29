@@ -14,15 +14,24 @@ export const dynamic = 'force-dynamic'
  * - fromDate (optional): Filter by date >= YYYY-MM-DD
  * - toDate (optional): Filter by date <= YYYY-MM-DD
  * - khachHang (optional): Filter by customer name (case-insensitive partial match)
- * - searchQuery (optional): Search across multiple fields
+ * - donViVanChuyen (optional): Filter by provider (NAK/VENDOR/OTHER)
+ * - loaiChuyen (optional): Filter by trip type (Một chiều/Hai chiều/Nhiều điểm)
+ * - loaiTuyen (optional): Filter by route type (Nội thành/Liên tỉnh/Đường dài)
+ * - searchQuery (optional): Search across order_id, customer, license_plate, route_name, driver_name
  * - status (optional): Filter by status (approved/pending/rejected)
  *
  * Response Format:
  * {
- *   "data": [ ...array of ReconciliationRecord objects... ],
- *   "count": number,
- *   "summary": { ...summary statistics... },
- *   "total": number
+ *   "records": [ ...array of ReconciliationRecord objects with full fields... ],
+ *   "summary": {
+ *     "totalOrders": number,
+ *     "totalAmount": number,
+ *     "totalDistance": number,
+ *     "approvedOrders": number,
+ *     "pendingOrders": number
+ *   },
+ *   "total": number,
+ *   "count": number
  * }
  */
 export async function GET(request: NextRequest) {
@@ -39,6 +48,9 @@ export async function GET(request: NextRequest) {
     const khachHang = searchParams.get('khachHang')
     const searchQuery = searchParams.get('searchQuery')
     const status = searchParams.get('status')
+    const donViVanChuyen = searchParams.get('donViVanChuyen')
+    const loaiChuyen = searchParams.get('loaiChuyen')
+    const loaiTuyen = searchParams.get('loaiTuyen')
 
     // Parse and validate limit
     const limit = Math.min(
@@ -84,13 +96,32 @@ export async function GET(request: NextRequest) {
       paramIndex++
     }
 
+    if (donViVanChuyen) {
+      conditions.push(`provider = $${paramIndex}`)
+      params.push(donViVanChuyen)
+      paramIndex++
+    }
+
+    if (loaiChuyen) {
+      conditions.push(`trip_type = $${paramIndex}`)
+      params.push(loaiChuyen)
+      paramIndex++
+    }
+
+    if (loaiTuyen) {
+      conditions.push(`route_type = $${paramIndex}`)
+      params.push(loaiTuyen)
+      paramIndex++
+    }
+
     if (searchQuery) {
-      // Search across multiple fields
+      // Search across multiple fields including new columns
       conditions.push(`(
         order_id ILIKE $${paramIndex} OR
         customer ILIKE $${paramIndex} OR
         license_plate ILIKE $${paramIndex} OR
-        route ILIKE $${paramIndex}
+        route_name ILIKE $${paramIndex} OR
+        driver_name ILIKE $${paramIndex}
       )`)
       params.push(`%${searchQuery}%`)
       paramIndex++
@@ -111,11 +142,17 @@ export async function GET(request: NextRequest) {
         order_id,
         date,
         license_plate,
-        route,
+        route_name,
         customer,
         weight,
         cost,
         status,
+        trip_type,
+        route_type,
+        driver_name,
+        provider,
+        total_distance,
+        details,
         created_at
       FROM reconciliation_orders
       ${whereClause}
@@ -133,23 +170,47 @@ export async function GET(request: NextRequest) {
     console.log('📊 [Postgres API] Rows returned:', result.rows.length)
 
     // Map database rows to frontend structure
-    const records = result.rows.map((row: any) => ({
-      id: row.id.toString(),
-      maChuyenDi: row.order_id,
-      ngayTao: formatDate(row.date),
-      tenKhachHang: row.customer || '',
-      loaiChuyen: '', // Not in current schema
-      loaiTuyen: '', // Not in current schema
-      tenTuyen: row.route || '',
-      tenTaiXe: '', // Not in current schema
-      donViVanChuyen: '', // Not in current schema
-      trangThai: mapStatus(row.status),
-      tongQuangDuong: 0, // Not in current schema
-      tongDoanhThu: parseFloat(row.cost) || 0,
-      soXe: row.license_plate || '',
-      chiTietLoTrinh: [], // Not in current schema
-      data_json: '', // Not in current schema
-    }))
+    const records = result.rows.map((row: any) => {
+      // Parse JSONB details if available
+      let chiTietLoTrinh: any[] = []
+      let dataJson = ''
+
+      if (row.details) {
+        try {
+          const details = typeof row.details === 'string'
+            ? JSON.parse(row.details)
+            : row.details
+
+          // Extract chiTietLoTrinh array
+          if (details.chiTietLoTrinh && Array.isArray(details.chiTietLoTrinh)) {
+            chiTietLoTrinh = details.chiTietLoTrinh
+          }
+
+          // Store raw JSON for TripDetailsDialog fallback
+          dataJson = JSON.stringify(details)
+        } catch (err) {
+          console.error('Error parsing details JSONB:', err)
+        }
+      }
+
+      return {
+        id: row.id.toString(),
+        maChuyenDi: row.order_id,
+        ngayTao: formatDate(row.date),
+        tenKhachHang: row.customer || '',
+        loaiChuyen: row.trip_type || '',
+        loaiTuyen: row.route_type || '',
+        tenTuyen: row.route_name || '',
+        tenTaiXe: row.driver_name || '',
+        donViVanChuyen: row.provider || '',
+        trangThai: mapStatus(row.status),
+        tongQuangDuong: parseFloat(row.total_distance) || 0,
+        tongDoanhThu: parseFloat(row.cost) || 0,
+        soXe: row.license_plate || '',
+        chiTietLoTrinh: chiTietLoTrinh,
+        data_json: dataJson,
+      }
+    })
 
     // Calculate summary statistics
     const summary = {
