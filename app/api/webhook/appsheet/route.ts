@@ -124,6 +124,37 @@ function parseDataJson(data: any): any {
   return {};
 }
 
+// Helper: Format date to YYYY-MM-DD
+function formatDate(val: any): string {
+  if (!val) return new Date().toISOString().split('T')[0];
+
+  const str = String(val).trim();
+
+  // Already in YYYY-MM-DD format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    return str;
+  }
+
+  // DD/MM/YYYY format (AppSheet default)
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
+    const [day, month, year] = str.split('/');
+    return `${year}-${month}-${day}`;
+  }
+
+  // Try parsing as Date object
+  try {
+    const date = new Date(val);
+    if (!isNaN(date.getTime())) {
+      return date.toISOString().split('T')[0];
+    }
+  } catch (e) {
+    // Fall through to default
+  }
+
+  // Default to today
+  return new Date().toISOString().split('T')[0];
+}
+
 // ==================== MAIN WEBHOOK HANDLER ====================
 
 export async function POST(request: Request) {
@@ -180,7 +211,7 @@ export async function POST(request: Request) {
 
     // 4.3 Extract and normalize fields
     const orderId = body.maChuyenDi;
-    const date = body.ngayTao || new Date().toISOString().split('T')[0];
+    const date = formatDate(body.ngayTao);
     const customer = body.tenKhachHang || null;
     const provider = normalizeProvider(body.donViVanChuyen);
     const tripType = normalizeTripType(body.loaiChuyen);
