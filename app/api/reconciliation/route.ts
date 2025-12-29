@@ -1,164 +1,254 @@
+import { sql } from '@vercel/postgres'
 import { NextRequest, NextResponse } from 'next/server'
-import { unstable_cache } from 'next/cache'
-import { getReconciliationData } from '@/lib/services/gas-api'
-import type { ReconciliationFilters } from '@/types/reconciliation'
 
-// Use Node.js runtime instead of Edge for longer timeout (60s vs 10s on Vercel Hobby)
-export const runtime = 'nodejs'
-// Increased max duration to 60 seconds (Vercel Hobby limit for Node.js)
-export const maxDuration = 60
+// Force dynamic rendering to avoid stale cached data
+export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/reconciliation
- * Cached for 60 seconds to prevent rate limits
- * Query params:
- * - fromDate (optional): YYYY-MM-DD
- * - toDate (optional): YYYY-MM-DD
- * - khachHang (optional): Customer name
- * - donViVanChuyen (optional): NAK/VENDOR
- * - loaiTuyen (optional): Route type
- * - loaiChuyen (optional): Trip type
- * - searchQuery (optional): Search text
- * - page (optional): Page number
- * - limit (optional): Items per page
+ *
+ * Fetches reconciliation orders from Vercel Postgres database
+ *
+ * Query Parameters:
+ * - limit (optional): Number of records to return (default: 100, max: 1000)
+ * - fromDate (optional): Filter by date >= YYYY-MM-DD
+ * - toDate (optional): Filter by date <= YYYY-MM-DD
+ * - khachHang (optional): Filter by customer name (case-insensitive partial match)
+ * - searchQuery (optional): Search across multiple fields
+ * - status (optional): Filter by status (approved/pending/rejected)
+ *
+ * Response Format:
+ * {
+ *   "data": [ ...array of ReconciliationRecord objects... ],
+ *   "count": number,
+ *   "summary": { ...summary statistics... },
+ *   "total": number
+ * }
  */
 export async function GET(request: NextRequest) {
   const startTime = Date.now()
 
   try {
-    console.log('🚀 [API Route] Request started')
+    console.log('🚀 [Postgres API] Request started')
 
+    // Extract query parameters
     const searchParams = request.nextUrl.searchParams
+    const limitParam = searchParams.get('limit')
     const fromDate = searchParams.get('fromDate')
     const toDate = searchParams.get('toDate')
     const khachHang = searchParams.get('khachHang')
-    const donViVanChuyen = searchParams.get('donViVanChuyen')
-    const loaiTuyen = searchParams.get('loaiTuyen')
-    const loaiChuyen = searchParams.get('loaiChuyen')
     const searchQuery = searchParams.get('searchQuery')
+    const status = searchParams.get('status')
 
-    // Build filters object
-    const filters: ReconciliationFilters = {}
-    if (fromDate) filters.fromDate = fromDate
-    if (toDate) filters.toDate = toDate
-    if (khachHang) filters.khachHang = khachHang
-    if (donViVanChuyen) filters.donViVanChuyen = donViVanChuyen
-    if (loaiTuyen) filters.loaiTuyen = loaiTuyen
-    if (loaiChuyen) filters.loaiChuyen = loaiChuyen
-    if (searchQuery) filters.searchQuery = searchQuery
-
-    console.log('🔍 [API Route] Filters:', filters)
-
-    // Create cache key based on filters
-    const cacheKey = JSON.stringify(filters)
-
-    // Fetch from Google Apps Script with caching
-    const getCachedData = unstable_cache(
-      async () => {
-        return await getReconciliationData(
-          Object.keys(filters).length > 0 ? filters : undefined
-        )
-      },
-      [`reconciliation-${cacheKey}`],
-      {
-        revalidate: 60, // Cache for 60 seconds
-        tags: ['reconciliation'],
-      }
+    // Parse and validate limit
+    const limit = Math.min(
+      Math.max(1, parseInt(limitParam || '100')),
+      1000
     )
 
-    // Add timeout protection with race condition
-    const TIMEOUT_MS = 55000 // 55 seconds (leave 5s buffer for Vercel's 60s limit)
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('REQUEST_TIMEOUT'))
-      }, TIMEOUT_MS)
+    console.log('🔍 [Postgres API] Query params:', {
+      limit,
+      fromDate,
+      toDate,
+      khachHang,
+      searchQuery,
+      status
     })
 
-    let result
-    try {
-      result = await Promise.race([
-        getCachedData(),
-        timeoutPromise
-      ])
-    } catch (error) {
-      // Check if it's our custom timeout
-      if (error instanceof Error && error.message === 'REQUEST_TIMEOUT') {
-        const elapsed = Date.now() - startTime
-        console.error(`⏱️ [API Route] Request timeout after ${elapsed}ms`)
-        return NextResponse.json(
-          {
-            error: 'Yêu cầu xử lý dữ liệu quá lâu (timeout). Vui lòng thử lại với bộ lọc để giảm lượng dữ liệu hoặc thử lại sau.',
-            type: 'TIMEOUT',
-            elapsed: elapsed
-          },
-          { status: 504 } // 504 Gateway Timeout
-        )
-      }
-      throw error // Re-throw other errors
+    // Build WHERE clause dynamically
+    const conditions: string[] = []
+    const params: any[] = []
+    let paramIndex = 1
+
+    if (fromDate) {
+      conditions.push(`date >= $${paramIndex}`)
+      params.push(fromDate)
+      paramIndex++
+    }
+
+    if (toDate) {
+      conditions.push(`date <= $${paramIndex}`)
+      params.push(toDate)
+      paramIndex++
+    }
+
+    if (khachHang) {
+      conditions.push(`customer ILIKE $${paramIndex}`)
+      params.push(`%${khachHang}%`)
+      paramIndex++
+    }
+
+    if (status) {
+      conditions.push(`status = $${paramIndex}`)
+      params.push(status)
+      paramIndex++
+    }
+
+    if (searchQuery) {
+      // Search across multiple fields
+      conditions.push(`(
+        order_id ILIKE $${paramIndex} OR
+        customer ILIKE $${paramIndex} OR
+        license_plate ILIKE $${paramIndex} OR
+        route ILIKE $${paramIndex}
+      )`)
+      params.push(`%${searchQuery}%`)
+      paramIndex++
+    }
+
+    const whereClause = conditions.length > 0
+      ? `WHERE ${conditions.join(' AND ')}`
+      : ''
+
+    // Add limit as the last parameter
+    params.push(limit)
+    const limitClause = `LIMIT $${paramIndex}`
+
+    // Construct the SQL query
+    const query = `
+      SELECT
+        id,
+        order_id,
+        date,
+        license_plate,
+        route,
+        customer,
+        weight,
+        cost,
+        status,
+        created_at
+      FROM reconciliation_orders
+      ${whereClause}
+      ORDER BY date DESC, created_at DESC
+      ${limitClause}
+    `
+
+    console.log('📊 [Postgres API] Executing query:', query)
+    console.log('📊 [Postgres API] Query params:', params)
+
+    // Execute the query
+    const result = await sql.query(query, params)
+
+    console.log('✅ [Postgres API] Query successful')
+    console.log('📊 [Postgres API] Rows returned:', result.rows.length)
+
+    // Map database rows to frontend structure
+    const records = result.rows.map((row: any) => ({
+      id: row.id.toString(),
+      maChuyenDi: row.order_id,
+      ngayTao: formatDate(row.date),
+      tenKhachHang: row.customer || '',
+      loaiChuyen: '', // Not in current schema
+      loaiTuyen: '', // Not in current schema
+      tenTuyen: row.route || '',
+      tenTaiXe: '', // Not in current schema
+      donViVanChuyen: '', // Not in current schema
+      trangThai: mapStatus(row.status),
+      tongQuangDuong: 0, // Not in current schema
+      tongDoanhThu: parseFloat(row.cost) || 0,
+      soXe: row.license_plate || '',
+      chiTietLoTrinh: [], // Not in current schema
+      data_json: '', // Not in current schema
+    }))
+
+    // Calculate summary statistics
+    const summary = {
+      totalOrders: records.length,
+      totalAmount: records.reduce((sum: number, r: any) => sum + r.tongDoanhThu, 0),
+      totalDistance: records.reduce((sum: number, r: any) => sum + r.tongQuangDuong, 0),
+      approvedOrders: records.filter((r: any) => r.trangThai === 'Đã duyệt').length,
+      pendingOrders: records.filter((r: any) => r.trangThai === 'Chờ duyệt').length,
     }
 
     const elapsed = Date.now() - startTime
-    console.log(`✅ [API Route] Request completed in ${elapsed}ms`)
+    console.log(`✅ [Postgres API] Request completed in ${elapsed}ms`)
 
-    // Type assertion after Promise.race
-    const typedResult = result as Awaited<ReturnType<typeof getCachedData>>
-
-    if (!typedResult.success) {
-      console.error('❌ [API Route] Backend returned error:', typedResult.error)
-      return NextResponse.json(
-        {
-          error: typedResult.error || 'Không thể lấy dữ liệu từ Google Apps Script',
-          type: 'BACKEND_ERROR'
-        },
-        { status: 500 }
-      )
-    }
-
-    return NextResponse.json(typedResult.data, {
-      headers: {
-        'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
-        'X-Response-Time': `${elapsed}ms`
+    return NextResponse.json(
+      {
+        records,
+        summary,
+        total: records.length,
+        count: records.length,
       },
-    })
+      {
+        headers: {
+          'X-Response-Time': `${elapsed}ms`,
+          'Cache-Control': 'no-store, must-revalidate',
+        },
+      }
+    )
   } catch (error) {
     const elapsed = Date.now() - startTime
-    console.error('❌ [API Route] Unhandled error:', error)
+    console.error('❌ [Postgres API] Database error:', error)
 
     // Determine error type and message
-    let errorMessage = 'Lỗi server không xác định'
-    let errorType = 'SERVER_ERROR'
+    let errorMessage = 'Lỗi kết nối database'
     let statusCode = 500
 
     if (error instanceof Error) {
-      console.error('❌ [API Route] Error name:', error.name)
-      console.error('❌ [API Route] Error message:', error.message)
-      console.error('❌ [API Route] Error stack:', error.stack)
+      console.error('❌ [Postgres API] Error name:', error.name)
+      console.error('❌ [Postgres API] Error message:', error.message)
+      console.error('❌ [Postgres API] Error stack:', error.stack)
 
-      // Check for specific error types
-      if (error.name === 'AbortError') {
-        errorMessage = 'Yêu cầu bị hủy (AbortError). Vui lòng thử lại.'
-        errorType = 'ABORT_ERROR'
-        statusCode = 499 // Client Closed Request
-      } else if (error.message.includes('timeout')) {
-        errorMessage = 'Hết thời gian chờ kết nối. Vui lòng thử lại sau.'
-        errorType = 'TIMEOUT'
-        statusCode = 504
-      } else if (error.message.includes('fetch')) {
-        errorMessage = 'Không thể kết nối đến Google Apps Script. Vui lòng kiểm tra kết nối mạng.'
-        errorType = 'NETWORK_ERROR'
+      if (error.message.includes('connect')) {
+        errorMessage = 'Không thể kết nối đến database. Vui lòng kiểm tra cấu hình POSTGRES_URL.'
         statusCode = 503 // Service Unavailable
+      } else if (error.message.includes('relation') || error.message.includes('table')) {
+        errorMessage = 'Bảng reconciliation_orders không tồn tại. Vui lòng chạy migration.'
+        statusCode = 500
+      } else if (error.message.includes('syntax')) {
+        errorMessage = 'Lỗi cú pháp SQL. Vui lòng liên hệ admin.'
+        statusCode = 500
       } else {
-        errorMessage = error.message
+        errorMessage = `Lỗi database: ${error.message}`
       }
     }
 
     return NextResponse.json(
       {
         error: errorMessage,
-        type: errorType,
-        elapsed: elapsed
+        type: 'DATABASE_ERROR',
+        elapsed: elapsed,
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: statusCode }
+      {
+        status: statusCode,
+        headers: {
+          'X-Response-Time': `${elapsed}ms`,
+        },
+      }
     )
   }
+}
+
+/**
+ * Helper: Format date to Vietnamese format
+ */
+function formatDate(date: Date | string): string {
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return String(date)
+
+    // Format: DD/MM/YYYY
+    const day = d.getDate().toString().padStart(2, '0')
+    const month = (d.getMonth() + 1).toString().padStart(2, '0')
+    const year = d.getFullYear()
+
+    return `${day}/${month}/${year}`
+  } catch {
+    return String(date)
+  }
+}
+
+/**
+ * Helper: Map database status to Vietnamese display text
+ */
+function mapStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    approved: 'Đã duyệt',
+    pending: 'Chờ duyệt',
+    rejected: 'Từ chối',
+  }
+
+  return statusMap[status] || status
 }
