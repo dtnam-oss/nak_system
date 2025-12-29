@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-// 1. Hàm làm sạch số (giữ nguyên)
 function cleanNumber(val: any): number {
   if (typeof val === 'number') return val;
   if (!val) return 0;
@@ -11,22 +10,16 @@ function cleanNumber(val: any): number {
   return parseFloat(str) || 0;
 }
 
-// 2. Hàm chuẩn hóa Đơn vị vận chuyển (Provider)
+// Chuẩn hóa Đơn vị vận chuyển
 function normalizeProvider(val: any): string {
   if (!val) return 'OTHER';
   const s = String(val).toUpperCase().trim();
-  
-  // Nếu có chữ NAK -> NAK
   if (s.includes('NAK')) return 'NAK';
-  
-  // Nếu là xe ngoài, vendor, đối tác -> VENDOR
   if (s.includes('VENDOR') || s.includes('XE NGOÀI') || s.includes('ĐỐI TÁC')) return 'VENDOR';
-  
-  // Còn lại cho vào OTHER
   return 'OTHER';
 }
 
-// 3. Hàm chuẩn hóa Loại tuyến (Route Type)
+// --- CẬP NHẬT: Chuẩn hóa Loại tuyến ---
 function normalizeRouteType(val: any): string | null {
   if (!val) return null;
   const s = String(val).toLowerCase().trim();
@@ -35,11 +28,14 @@ function normalizeRouteType(val: any): string | null {
   if (s.includes('liên tỉnh')) return 'Liên tỉnh';
   if (s.includes('đường dài')) return 'Đường dài';
   
-  // Nếu không khớp cái nào, trả về NULL để không vi phạm constraint
+  // MỚI THÊM
+  if (s.includes('cố định')) return 'Cố định';
+  if (s.includes('tăng cường')) return 'Tăng cường';
+  
   return null; 
 }
 
-// 4. Hàm chuẩn hóa Loại chuyến (Trip Type)
+// --- CẬP NHẬT: Chuẩn hóa Loại chuyến ---
 function normalizeTripType(val: any): string | null {
   if (!val) return null;
   const s = String(val).toLowerCase().trim();
@@ -47,6 +43,10 @@ function normalizeTripType(val: any): string | null {
   if (s.includes('một chiều') || s.includes('1 chiều')) return 'Một chiều';
   if (s.includes('hai chiều') || s.includes('2 chiều') || s.includes('khứ hồi')) return 'Hai chiều';
   if (s.includes('nhiều điểm')) return 'Nhiều điểm';
+
+  // MỚI THÊM
+  if (s.includes('theo tuyến')) return 'Theo tuyến';
+  if (s.includes('theo ca')) return 'Theo ca';
   
   return null;
 }
@@ -71,7 +71,6 @@ export async function POST(request: Request) {
 
     for (const record of records) {
       try {
-        // Parse JSON
         let detailsObj = record.data_json;
         if (typeof detailsObj === 'string') {
           try { detailsObj = JSON.parse(detailsObj); } catch (e) { detailsObj = {}; }
@@ -88,11 +87,10 @@ export async function POST(request: Request) {
         if (stt.includes('đã duyệt') || stt.includes('approved')) status = 'approved';
         else if (stt.includes('từ chối') || stt.includes('rejected')) status = 'rejected';
 
-        // --- ÁP DỤNG CHUẨN HÓA DỮ LIỆU ---
+        // Áp dụng hàm chuẩn hóa mới
         const provider = normalizeProvider(record.donViVanChuyen);
         const routeType = normalizeRouteType(record.loaiTuyen);
         const tripType = normalizeTripType(record.loaiChuyen);
-        // ----------------------------------
 
         await sql`
           INSERT INTO reconciliation_orders (
@@ -121,7 +119,6 @@ export async function POST(request: Request) {
       } catch (err: any) {
         console.error(`Import Error [${record.maChuyenDi}]:`, err.message);
         failedCount++;
-        // Lưu lại lỗi chi tiết để trả về cho Apps Script xem
         errors.push({ id: record.maChuyenDi, msg: err.message });
       }
     }
