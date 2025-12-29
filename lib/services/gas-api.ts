@@ -115,6 +115,10 @@ export async function getReconciliationData(
       url += `&filters=${filtersJson}`
     }
 
+    console.log('🔍 [GAS API] Fetching reconciliation data...')
+    console.log('🔍 [GAS API] URL:', url)
+    console.log('🔍 [GAS API] Timeout:', API_TIMEOUT, 'ms')
+
     const response = await fetchWithTimeout(url, {
       method: 'GET',
       headers: {
@@ -122,14 +126,27 @@ export async function getReconciliationData(
       },
     })
 
+    console.log('🔍 [GAS API] Response status:', response.status)
+    console.log('🔍 [GAS API] Response ok:', response.ok)
+
     if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Could not read error response')
+      console.error('❌ [GAS API] Error response:', errorText)
       throw new Error(`HTTP error! status: ${response.status}`)
     }
 
     const data = await response.json()
+    console.log('✅ [GAS API] Successfully received data')
     return data
   } catch (error) {
-    console.error('Error fetching reconciliation data:', error)
+    console.error('❌ [GAS API] Error fetching reconciliation data:', error)
+    if (error instanceof Error) {
+      console.error('❌ [GAS API] Error name:', error.name)
+      console.error('❌ [GAS API] Error message:', error.message)
+      if (error.name === 'AbortError') {
+        console.error('❌ [GAS API] Request TIMEOUT after', API_TIMEOUT, 'ms')
+      }
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',
