@@ -222,8 +222,7 @@ export async function POST(request: Request) {
         status = EXCLUDED.status,
         license_plate = EXCLUDED.license_plate,
         weight = EXCLUDED.weight,
-        details = EXCLUDED.details,
-        updated_at = NOW();
+        details = EXCLUDED.details;
     `;
 
     console.log(`Upserted order: ${orderId}`);
