@@ -1,5 +1,11 @@
 import { sql } from '@vercel/postgres'
 import { NextRequest, NextResponse } from 'next/server'
+import type {
+  ReconciliationDatabaseRow,
+  ReconciliationDetails,
+  ReconciliationRecord,
+  ChiTietLoTrinh,
+} from '@/types/reconciliation'
 
 // Force dynamic rendering to avoid stale cached data
 export const dynamic = 'force-dynamic'
@@ -170,14 +176,15 @@ export async function GET(request: NextRequest) {
     console.log('📊 [Postgres API] Rows returned:', result.rows.length)
 
     // Map database rows to frontend structure
-    const records = result.rows.map((row: any) => {
+    const records: ReconciliationRecord[] = result.rows.map((row: ReconciliationDatabaseRow) => {
       // Parse JSONB details if available
-      let chiTietLoTrinh: any[] = []
+      let chiTietLoTrinh: ChiTietLoTrinh[] = []
       let dataJson = ''
 
       if (row.details) {
         try {
-          const details = typeof row.details === 'string'
+          // Handle JSONB (can be object or string depending on driver)
+          const details: ReconciliationDetails = typeof row.details === 'string'
             ? JSON.parse(row.details)
             : row.details
 
@@ -189,7 +196,9 @@ export async function GET(request: NextRequest) {
           // Store raw JSON for TripDetailsDialog fallback
           dataJson = JSON.stringify(details)
         } catch (err) {
-          console.error('Error parsing details JSONB:', err)
+          console.error('❌ [Postgres API] Error parsing details JSONB:', err)
+          console.error('❌ [Postgres API] Row ID:', row.id)
+          console.error('❌ [Postgres API] Details value:', row.details)
         }
       }
 
@@ -204,8 +213,8 @@ export async function GET(request: NextRequest) {
         tenTaiXe: row.driver_name || '',
         donViVanChuyen: row.provider || '',
         trangThai: mapStatus(row.status),
-        tongQuangDuong: parseFloat(row.total_distance) || 0,
-        tongDoanhThu: parseFloat(row.cost) || 0,
+        tongQuangDuong: parseFloat(String(row.total_distance || 0)),
+        tongDoanhThu: parseFloat(String(row.cost || 0)),
         soXe: row.license_plate || '',
         chiTietLoTrinh: chiTietLoTrinh,
         data_json: dataJson,
@@ -215,10 +224,10 @@ export async function GET(request: NextRequest) {
     // Calculate summary statistics
     const summary = {
       totalOrders: records.length,
-      totalAmount: records.reduce((sum: number, r: any) => sum + r.tongDoanhThu, 0),
-      totalDistance: records.reduce((sum: number, r: any) => sum + r.tongQuangDuong, 0),
-      approvedOrders: records.filter((r: any) => r.trangThai === 'Đã duyệt').length,
-      pendingOrders: records.filter((r: any) => r.trangThai === 'Chờ duyệt').length,
+      totalAmount: records.reduce((sum, record) => sum + record.tongDoanhThu, 0),
+      totalDistance: records.reduce((sum, record) => sum + record.tongQuangDuong, 0),
+      approvedOrders: records.filter((record) => record.trangThai === 'Đã duyệt').length,
+      pendingOrders: records.filter((record) => record.trangThai === 'Chờ duyệt').length,
     }
 
     const elapsed = Date.now() - startTime

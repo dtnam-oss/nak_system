@@ -34,6 +34,20 @@ export interface ParsedDataJson {
     loaiCa?: string
     taiTrongTinhPhi?: number
     hinhThucTinhGia?: string
+    taiXe?: string
+  }
+  chiTietLoTrinh?: ChiTietLoTrinh[]
+}
+
+// Database JSONB structure for details column
+export interface ReconciliationDetails {
+  thongTinChuyenDi?: {
+    soXe?: string
+    taiXe?: string
+    quangDuong?: number
+    donGia?: number
+    taiTrong?: number
+    soChieu?: number
   }
   chiTietLoTrinh?: ChiTietLoTrinh[]
 }
@@ -80,4 +94,25 @@ export interface ReconciliationApiResponse {
     total: number
   }
   error?: string
+}
+
+// Database row type (mirrors Postgres table structure)
+export interface ReconciliationDatabaseRow {
+  id: number
+  order_id: string
+  date: Date | string
+  license_plate: string
+  customer: string | null
+  weight: number | null
+  cost: number | null
+  status: string
+  trip_type: string | null
+  route_type: string | null
+  route_name: string | null
+  driver_name: string | null
+  provider: string | null
+  total_distance: number | null
+  details: ReconciliationDetails | string | null
+  created_at: Date | string
+  updated_at: Date | string
 }
