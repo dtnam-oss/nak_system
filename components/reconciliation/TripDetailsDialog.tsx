@@ -45,11 +45,32 @@ export function TripDetailsDialog({
 
   // Access pre-parsed data directly from record
   // Backend already parses data_json and returns chiTietLoTrinh and soXe
-  const chiTietLoTrinh = record.chiTietLoTrinh || []
-  const soXe = record.soXe || ""
+  let chiTietLoTrinh = record.chiTietLoTrinh || []
+  let soXe = record.soXe || ""
 
-  console.log('✅ [TripDetailsDialog] Using chiTietLoTrinh:', chiTietLoTrinh.length, 'items')
-  console.log('✅ [TripDetailsDialog] Using soXe:', soXe)
+  // FALLBACK: If backend didn't parse, try parsing data_json on frontend
+  if (chiTietLoTrinh.length === 0 && record.data_json) {
+    console.warn('⚠️ [TripDetailsDialog] Backend did not parse chiTietLoTrinh, parsing on frontend...')
+    try {
+      const parsed = JSON.parse(record.data_json)
+      console.log('🔍 [TripDetailsDialog] Parsed JSON keys:', Object.keys(parsed))
+
+      if (parsed.chiTietLoTrinh && Array.isArray(parsed.chiTietLoTrinh)) {
+        chiTietLoTrinh = parsed.chiTietLoTrinh
+        console.log('✅ [TripDetailsDialog] Frontend parsed chiTietLoTrinh:', chiTietLoTrinh.length, 'items')
+      }
+
+      if (parsed.thongTinChuyenDi && parsed.thongTinChuyenDi.soXe) {
+        soXe = parsed.thongTinChuyenDi.soXe
+        console.log('✅ [TripDetailsDialog] Frontend parsed soXe:', soXe)
+      }
+    } catch (err) {
+      console.error('❌ [TripDetailsDialog] Failed to parse data_json on frontend:', err)
+    }
+  }
+
+  console.log('✅ [TripDetailsDialog] Final chiTietLoTrinh:', chiTietLoTrinh.length, 'items')
+  console.log('✅ [TripDetailsDialog] Final soXe:', soXe)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
