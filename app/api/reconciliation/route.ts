@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
       return {
         id: row.id.toString(),
         maChuyenDi: row.order_id,
-        ngayTao: formatDate(row.date),
+        ngayTao: row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0],
         tenKhachHang: row.customer || '',
         loaiChuyen: row.trip_type || '',
         loaiTuyen: row.route_type || '',

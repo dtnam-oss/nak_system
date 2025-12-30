@@ -45,10 +45,10 @@ export const createColumns = ({
     },
     {
       accessorKey: "ngayTao",
-      header: "Ngày tạo",
+      header: "Ngày",
       cell: ({ row }) => (
         <div className="text-foreground min-w-[100px]">
-          {formatDate(row.getValue("ngayTao"))}
+          {row.getValue("ngayTao")}
         </div>
       ),
     },
