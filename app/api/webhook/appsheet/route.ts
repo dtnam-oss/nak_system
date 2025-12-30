@@ -32,7 +32,6 @@ interface NormalizedPayload {
   tripType: string | null;
   routeType: string | null;
   routeName: string;
-  licensePlate: string;
   weight: number;
   details: any;
 }
@@ -176,27 +175,6 @@ function normalizeRouteType(val: any): string | null {
 }
 
 /**
- * Extract license plate from various sources
- */
-function extractLicensePlate(payload: GASPayload, details: any): string {
-  // Priority order:
-  // 1. Top-level bienSoXe or soXe
-  // 2. From chiTietLoTrinh array (first record)
-  // 3. Default to orderId if nothing found
-  
-  if ((payload as any).bienSoXe) return String((payload as any).bienSoXe);
-  if ((payload as any).soXe) return String((payload as any).soXe);
-  
-  if (details?.chiTietLoTrinh && Array.isArray(details.chiTietLoTrinh) && details.chiTietLoTrinh.length > 0) {
-    const firstItem = details.chiTietLoTrinh[0];
-    if (firstItem.bien_kiem_soat) return String(firstItem.bien_kiem_soat);
-  }
-  
-  // Fallback: use orderId
-  return payload.maChuyenDi || 'UNKNOWN';
-}
-
-/**
  * Calculate total weight from chiTietLoTrinh
  */
 function calculateTotalWeight(details: any): number {
@@ -291,7 +269,6 @@ function normalizePayload(payload: GASPayload): NormalizedPayload {
   const routeName = generateRouteName(routeType, customer, (payload as any).tenTuyen);
   console.log(`[NORMALIZE] Generated routeName: "${routeName}"`);
   
-  const licensePlate = extractLicensePlate(payload, details);
   const weight = calculateTotalWeight(details);
   
   const normalized: NormalizedPayload = {
@@ -306,7 +283,6 @@ function normalizePayload(payload: GASPayload): NormalizedPayload {
     tripType,
     routeType,
     routeName,
-    licensePlate,
     weight,
     details
   };
@@ -412,7 +388,6 @@ export async function POST(request: Request) {
     console.log(`   - Trip Type: ${normalized.tripType}`);
     console.log(`   - Route Type: ${normalized.routeType}`);
     console.log(`   - Route Name: ${normalized.routeName}`);
-    console.log(`   - License Plate: ${normalized.licensePlate}`);
     console.log(`   - Weight: ${normalized.weight}`);
 
     // 6. Execute UPSERT with normalized data
@@ -434,7 +409,6 @@ export async function POST(request: Request) {
           total_distance, 
           cost, 
           status,
-          license_plate, 
           weight, 
           details
         ) VALUES (
@@ -449,7 +423,6 @@ export async function POST(request: Request) {
           ${normalized.totalDistance},
           ${normalized.cost},
           ${normalized.status},
-          ${normalized.licensePlate},
           ${normalized.weight},
           ${detailsJson}
         )
@@ -464,7 +437,6 @@ export async function POST(request: Request) {
           total_distance = EXCLUDED.total_distance,
           cost = EXCLUDED.cost,
           status = EXCLUDED.status,
-          license_plate = EXCLUDED.license_plate,
           weight = EXCLUDED.weight,
           details = EXCLUDED.details,
           updated_at = CURRENT_TIMESTAMP

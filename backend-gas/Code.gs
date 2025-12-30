@@ -469,12 +469,30 @@ function formatDate(value) {
  * @param {Object} payload - JSON payload
  * @returns {Object} Response từ API
  */
+/**
+ * Gửi payload tới Backend API
+ * 
+ * @param {Object} payload - JSON payload
+ * @returns {Object} Response từ API
+ */
 function sendToBackendAPI(payload) {
   const config = getConfig();
   
+  // --- DEBUG LOG: Kiểm tra Key trước khi gửi ---
+  // Log này giúp bạn yên tâm là Key đã được lấy ra
+  logInfo(`🔑 Using API Key: ${config.API.KEY}`); 
+  // ---------------------------------------------
+
   const options = {
     method: 'post',
     contentType: config.API.CONTENT_TYPE,
+    
+    // 👇👇👇 ĐÂY LÀ PHẦN BẠN ĐANG BỊ THIẾU 👇👇👇
+    headers: {
+      'x-api-key': config.API.KEY
+    },
+    // 👆👆👆 ------------------------------- 👆👆👆
+    
     payload: JSON.stringify(payload),
     muteHttpExceptions: true, // Để xử lý error response
     timeout: config.API.TIMEOUT
@@ -593,3 +611,128 @@ function testGetDetailData() {
   Logger.log('Detail Data:');
   Logger.log(JSON.stringify(data, null, 2));
 }
+
+
+// =============================================================================
+// MIGRATION TOOLS - CHẠY THỦ CÔNG TỪ TRÌNH SOẠN THẢO
+// =============================================================================
+
+const MIGRATION_OPTS = {
+  BATCH_SIZE: 25, // Số lượng đơn xử lý mỗi lần chạy. Tăng lên 50 để nhanh hơn.
+  PROP_KEY: 'MIGRATION_LAST_ROW_INDEX' // Biến lưu vị trí dòng
+};
+
+/**
+ * 1. HÀM RESET: Chạy hàm này ĐẦU TIÊN nếu muốn bắt đầu lại từ dòng 1
+ */
+function manualResetMigration() {
+  PropertiesService.getScriptProperties().deleteProperty(MIGRATION_OPTS.PROP_KEY);
+  Logger.log("✅ [RESET] Đã xóa bộ đếm. Lần chạy tới sẽ bắt đầu từ dòng đầu tiên.");
+}
+
+/**
+ * 2. HÀM KIỂM TRA: Xem đang chạy đến đâu rồi
+ */
+function manualCheckStatus() {
+  const scriptProps = PropertiesService.getScriptProperties();
+  const lastRow = parseInt(scriptProps.getProperty(MIGRATION_OPTS.PROP_KEY) || '1');
+  Logger.log(`ℹ️ [STATUS] Hệ thống đang dừng ở dòng: ${lastRow}`);
+  Logger.log(`ℹ️ [STATUS] Lần chạy tiếp theo sẽ xử lý từ dòng: ${lastRow + 1}`);
+}
+
+/**
+ * 3. HÀM CHÍNH: Chạy hàm này NHIỀU LẦN để đồng bộ dữ liệu
+ */
+function manualRunMigrationBatch() {
+  const config = getConfig();
+  const scriptProps = PropertiesService.getScriptProperties();
+
+  Logger.log("🔄 Đang khởi tạo kết nối đến Spreadsheet...");
+
+  // 1. Mở Sheet Master qua ID
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(config.SHEET_NAMES.MASTER);
+  
+  if (!sheet) {
+    Logger.log(`❌ LỖI: Không tìm thấy sheet "${config.SHEET_NAMES.MASTER}"`);
+    return;
+  }
+
+  // 2. Xác định dòng bắt đầu
+  let lastRowIndex = parseInt(scriptProps.getProperty(MIGRATION_OPTS.PROP_KEY) || '1');
+  let startRow = lastRowIndex + 1;
+  const totalRows = sheet.getLastRow();
+
+  if (startRow > totalRows) {
+    Logger.log("✅ [HOÀN TẤT] Toàn bộ dữ liệu đã được xử lý. Không còn dòng nào mới.");
+    return;
+  }
+
+  // 3. Tìm cột ID
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const idColIndex = getColumnIndex(headers, config.FOREIGN_KEY.MASTER_COLUMN);
+
+  if (idColIndex === -1) {
+    Logger.log(`❌ Lỗi: Không tìm thấy cột ID "${config.FOREIGN_KEY.MASTER_COLUMN}"`);
+    return;
+  }
+
+  // 4. Lấy dữ liệu Batch
+  const numRows = Math.min(MIGRATION_OPTS.BATCH_SIZE, totalRows - startRow + 1);
+  Logger.log(`🚀 BẮT ĐẦU BATCH: Xử lý từ dòng ${startRow} đến ${startRow + numRows - 1} (Tổng: ${totalRows})`);
+  
+  const dataRange = sheet.getRange(startRow, 1, numRows, sheet.getLastColumn());
+  const dataValues = dataRange.getValues();
+
+  let success = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  // 5. Vòng lặp xử lý
+  for (let i = 0; i < dataValues.length; i++) {
+    const row = dataValues[i];
+    const tripId = row[idColIndex]; 
+
+    // Kiểm tra ID rỗng
+    if (!tripId || String(tripId).trim() === '') {
+      skipped++;
+      continue;
+    }
+
+    try {
+      // Gọi lại hàm logic chính
+      // Lưu ý: Dùng 'Add' để kích hoạt Upsert
+      const result = syncTripToBackend(tripId, 'Add');
+
+      if (result.success) {
+        success++;
+        Logger.log(`✅ OK [${tripId}]`);
+      } else {
+        errors++;
+        Logger.log(`❌ FAIL [${tripId}]: ${result.message}`);
+      }
+    } catch (e) {
+      errors++;
+      Logger.log(`🔥 ERROR [${tripId}]: ${e.toString()}`);
+    }
+  }
+
+  // 6. Lưu vị trí mới
+  const nextRowIndex = startRow + numRows - 1;
+  scriptProps.setProperty(MIGRATION_OPTS.PROP_KEY, String(nextRowIndex));
+
+  // 7. Tổng kết
+  Logger.log("---------------------------------------------------");
+  Logger.log(`🏁 KẾT THÚC BATCH.`);
+  Logger.log(`- Thành công: ${success}`);
+  Logger.log(`- Lỗi: ${errors}`);
+  Logger.log(`- Bỏ qua (No ID): ${skipped}`);
+  Logger.log(`📍 Đã lưu vị trí dòng: ${nextRowIndex}`);
+  
+  if (nextRowIndex < totalRows) {
+    Logger.log(`👉 HÃY CHẠY LẠI HÀM 'manualRunMigrationBatch' ĐỂ TIẾP TỤC.`);
+  } else {
+    Logger.log(`🎉 CHÚC MỪNG! ĐÃ HOÀN THÀNH TOÀN BỘ DỮ LIỆU.`);
+  }
+}
+

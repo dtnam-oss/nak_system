@@ -52,7 +52,6 @@ const CONFIG = {
   DETAIL_COLUMNS: {
     // Tên cột trong Sheet -> Key trong JSON (camelCase format for frontend)
     'Id': 'id',
-    'ma_chuyen_di': 'maChuyenDi',
     'loai_tuyen_khach_hang': 'loaiTuyenKH',
     'lo_trinh': 'loTrinh',
     'lo_trinh_chi_tiet_theo_diem': 'loTrinh',  // Use primary loTrinh field

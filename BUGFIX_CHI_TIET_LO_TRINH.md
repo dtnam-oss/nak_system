@@ -70,9 +70,8 @@ interface ChiTietLoTrinh {
   thuTu: number           // Sequence number (1, 2, 3...)
   id: string              // Unique ID
   loaiTuyenKH: string     // Route type for customer
-  maTuyen: string         // Route code
+  maTuyen: string         // Route code (displayed in "Mã tuyến" column)
   loTrinh: string         // Route description
-  maChuyenDi: string      // Trip ID (changed from maTem)
   quangDuong: number      // Distance (km)
   taiTrong: number        // Weight (tons)
   taiTrongTinhPhi: number // Chargeable weight
@@ -85,22 +84,21 @@ interface ChiTietLoTrinh {
 
 ### Sheet Column Names (chi_tiet_chuyen_di)
 
-| Sheet Column               | JSON Key (camelCase)  | Type   |
-|---------------------------|-----------------------|--------|
-| Id                        | id                    | string |
-| ma_chuyen_di              | maChuyenDi            | string |
-| loai_tuyen_khach_hang     | loaiTuyenKH           | string |
-| lo_trinh                  | loTrinh               | string |
-| ma_chuyen_di_kh           | maTuyen               | string |
-| bien_kiem_soat            | bienKiemSoat          | string |
-| tai_trong                 | taiTrong              | number |
-| quang_duong               | quangDuong            | number |
-| so_chieu                  | soChieu               | number |
-| don_gia                   | donGia                | number |
-| thanh_tien                | thanhTien             | number |
-| tai_trong_tinh_phi        | taiTrongTinhPhi       | number |
-| hinh_thuc_tinh_gia        | hinhThucTinhGia       | string |
-| ten_khach_hang_cap_1      | tenKhachHangCap1      | string |
+| Sheet Column               | JSON Key (camelCase)  | Type   | Display Column |
+|---------------------------|-----------------------|--------|----------------|
+| Id                        | id                    | string | -              |
+| loai_tuyen_khach_hang     | loaiTuyenKH           | string | Loại tuyến KH  |
+| lo_trinh                  | loTrinh               | string | Lộ trình       |
+| ma_chuyen_di_kh           | maTuyen               | string | **Mã tuyến**   |
+| bien_kiem_soat            | bienKiemSoat          | string | -              |
+| tai_trong                 | taiTrong              | number | Tải trọng      |
+| quang_duong               | quangDuong            | number | Quãng đường    |
+| so_chieu                  | soChieu               | number | -              |
+| don_gia                   | donGia                | number | -              |
+| thanh_tien                | thanhTien             | number | Thành tiền     |
+| tai_trong_tinh_phi        | taiTrongTinhPhi       | number | -              |
+| hinh_thuc_tinh_gia        | hinhThucTinhGia       | string | -              |
+| ten_khach_hang_cap_1      | tenKhachHangCap1      | string | -              |
 
 ## 📊 Data Flow
 

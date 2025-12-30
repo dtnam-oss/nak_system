@@ -186,7 +186,7 @@ export function TripDetailsDialog({
                           Thứ tự
                         </th>
                         <th className="px-3 py-2 text-left font-medium text-muted-foreground border-b border-border">
-                          Mã chuyến đi
+                          Mã tuyến
                         </th>
                         <th className="px-3 py-2 text-left font-medium text-muted-foreground border-b border-border min-w-[200px]">
                           Lộ trình
@@ -214,7 +214,7 @@ export function TripDetailsDialog({
                             {item.thuTu || index + 1}
                           </td>
                           <td className="px-3 py-2 text-foreground">
-                            {item.maChuyenDi || "-"}
+                            {item.maTuyen || "-"}
                           </td>
                           <td className="px-3 py-2">
                             <div className="font-medium text-primary">
@@ -280,7 +280,7 @@ export function TripDetailsDialog({
                         <CardTitle className="text-sm flex items-center justify-between">
                           <span>Điểm {item.thuTu || index + 1}</span>
                           <Badge variant="outline" className="ml-2">
-                            {item.maChuyenDi || "-"}
+                            {item.maTuyen || "-"}
                           </Badge>
                         </CardTitle>
                       </CardHeader>

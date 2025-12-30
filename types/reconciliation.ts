@@ -58,7 +58,6 @@ export interface ChiTietLoTrinh {
   loaiTuyenKH: string
   maTuyen: string
   loTrinh: string
-  maChuyenDi: string  // Changed from maTem to maChuyenDi
   quangDuong: number
   taiTrong: number
   taiTrongTinhPhi: number
@@ -101,7 +100,6 @@ export interface ReconciliationDatabaseRow {
   id: number
   order_id: string
   date: Date | string
-  license_plate: string
   customer: string | null
   weight: number | null
   cost: number | null

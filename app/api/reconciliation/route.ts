@@ -150,7 +150,6 @@ export async function GET(request: NextRequest) {
         id,
         order_id,
         date,
-        license_plate,
         route_name,
         customer,
         weight,
@@ -218,7 +217,7 @@ export async function GET(request: NextRequest) {
         trangThai: mapStatus(row.status),
         tongQuangDuong: parseFloat(String(row.total_distance || 0)),
         tongDoanhThu: parseFloat(String(row.cost || 0)),
-        soXe: row.license_plate || '',
+        soXe: '',  // Removed: license_plate column dropped from DB
         chiTietLoTrinh: chiTietLoTrinh,
         data_json: dataJson,
       }
