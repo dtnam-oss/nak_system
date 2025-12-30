@@ -58,10 +58,10 @@ export async function GET(request: NextRequest) {
     const loaiChuyen = searchParams.get('loaiChuyen')
     const loaiTuyen = searchParams.get('loaiTuyen')
 
-    // Parse and validate limit
+    // Parse and validate limit (increase default to 500 for better UX)
     const limit = Math.min(
-      Math.max(1, parseInt(limitParam || '100')),
-      1000
+      Math.max(1, parseInt(limitParam || '500')),
+      5000 // Increase max to 5000
     )
 
     console.log('🔍 [Postgres API] Query params:', {
@@ -70,7 +70,10 @@ export async function GET(request: NextRequest) {
       toDate,
       khachHang,
       searchQuery,
-      status
+      status,
+      donViVanChuyen,
+      loaiChuyen,
+      loaiTuyen
     })
 
     // Build WHERE clause dynamically
@@ -221,24 +224,45 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    // Calculate summary statistics
+    // IMPORTANT: Calculate summary from ALL matching records, not just limited ones
+    // Execute separate query for accurate summary statistics
+    const summaryQuery = `
+      SELECT
+        COUNT(*) as total_orders,
+        COALESCE(SUM(cost), 0) as total_amount,
+        COALESCE(SUM(total_distance), 0) as total_distance,
+        COUNT(CASE WHEN status = 'approved' THEN 1 END) as approved_orders,
+        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_orders
+      FROM reconciliation_orders
+      ${whereClause}
+    `
+
+    console.log('📊 [Postgres API] Executing summary query...')
+    const summaryResult = await sql.query(summaryQuery, params.slice(0, -1)) // Remove limit param
+    const summaryRow = summaryResult.rows[0]
+
     const summary = {
-      totalOrders: records.length,
-      totalAmount: records.reduce((sum, record) => sum + record.tongDoanhThu, 0),
-      totalDistance: records.reduce((sum, record) => sum + record.tongQuangDuong, 0),
-      approvedOrders: records.filter((record) => record.trangThai === 'Đã duyệt').length,
-      pendingOrders: records.filter((record) => record.trangThai === 'Chờ duyệt').length,
+      totalOrders: parseInt(summaryRow.total_orders || '0'),
+      totalAmount: parseFloat(summaryRow.total_amount || '0'),
+      totalDistance: parseFloat(summaryRow.total_distance || '0'),
+      approvedOrders: parseInt(summaryRow.approved_orders || '0'),
+      pendingOrders: parseInt(summaryRow.pending_orders || '0'),
     }
+
+    console.log('📊 [Postgres API] Summary calculated:', summary)
+
+    console.log('📊 [Postgres API] Summary calculated:', summary)
 
     const elapsed = Date.now() - startTime
     console.log(`✅ [Postgres API] Request completed in ${elapsed}ms`)
+    console.log(`📊 [Postgres API] Records returned: ${records.length} / Total matching: ${summary.totalOrders}`)
 
     return NextResponse.json(
       {
         records,
         summary,
-        total: records.length,
-        count: records.length,
+        total: summary.totalOrders, // Total matching records (not limited)
+        count: records.length, // Records returned in this page
       },
       {
         headers: {
