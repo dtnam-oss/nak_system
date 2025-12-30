@@ -50,21 +50,23 @@ const CONFIG = {
   // COLUMN MAPPINGS - Detail Sheet (chi_tiet_chuyen_di)
   // =============================================================================
   DETAIL_COLUMNS: {
-    // Tên cột trong Sheet -> Key trong JSON
-    'Id': 'Id',
-    'loai_tuyen_khach_hang': 'loai_tuyen_khach_hang',
-    'lo_trinh': 'lo_trinh',
-    'lo_trinh_chi_tiet_theo_diem': 'lo_trinh_chi_tiet',
-    'ma_chuyen_di_kh': 'ma_chuyen_di_kh',
-    'bien_kiem_soat': 'bien_kiem_soat',
-    'tai_trong': 'tai_trong',
-    'quang_duong': 'quang_duong',
-    'so_chieu': 'so_chieu',
-    'don_gia': 'don_gia',
-    'loai_ca': 'loai_ca',
-    'tai_trong_tinh_phi': 'tai_trong_tinh_phi',
-    'hinh_thuc_tinh_gia': 'hinh_thuc_tinh_gia',
-    'ten_khach_hang_cap_1': 'ten_khach_hang_cap_1'
+    // Tên cột trong Sheet -> Key trong JSON (camelCase format for frontend)
+    'Id': 'id',
+    'ma_tem': 'maTem',
+    'loai_tuyen_khach_hang': 'loaiTuyenKH',
+    'lo_trinh': 'loTrinh',
+    'lo_trinh_chi_tiet_theo_diem': 'loTrinh',  // Use primary loTrinh field
+    'ma_chuyen_di_kh': 'maTuyen',
+    'bien_kiem_soat': 'bienKiemSoat',
+    'tai_trong': 'taiTrong',
+    'quang_duong': 'quangDuong',
+    'so_chieu': 'soChieu',
+    'don_gia': 'donGia',
+    'thanh_tien': 'thanhTien',
+    'loai_ca': 'loaiCa',
+    'tai_trong_tinh_phi': 'taiTrongTinhPhi',
+    'hinh_thuc_tinh_gia': 'hinhThucTinhGia',
+    'ten_khach_hang_cap_1': 'tenKhachHangCap1'
   },
 
   // =============================================================================
@@ -94,6 +96,7 @@ const CONFIG = {
     'quang_duong',
     'so_chieu',
     'don_gia',
+    'thanh_tien',
     'tai_trong_tinh_phi'
   ],
 

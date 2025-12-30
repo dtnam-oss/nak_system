@@ -244,12 +244,36 @@ function getDetailData(tripId) {
   
   // Lọc và map các rows có ma_chuyen_di = tripId
   const detailRecords = [];
+  let thuTu = 1; // Counter for sequence number
+  
   for (let i = 1; i < values.length; i++) {
     const row = values[i];
     const currentTripId = String(row[tripIdIndex]).trim();
     
     if (currentTripId === String(tripId).trim()) {
       const mappedRow = mapDetailRow(row, headers);
+      
+      // Add thuTu (sequence number)
+      mappedRow.thuTu = thuTu++;
+      
+      // Calculate thanhTien (amount) if not already present
+      // Formula: thanhTien = donGia * taiTrongTinhPhi * soChieu (or variations)
+      if (!mappedRow.thanhTien || mappedRow.thanhTien === 0) {
+        const donGia = parseNumber(mappedRow.donGia);
+        const taiTrong = parseNumber(mappedRow.taiTrongTinhPhi || mappedRow.taiTrong);
+        const soChieu = parseNumber(mappedRow.soChieu || 1);
+        const quangDuong = parseNumber(mappedRow.quangDuong);
+        
+        // Try different calculation methods based on available data
+        if (donGia > 0 && taiTrong > 0) {
+          mappedRow.thanhTien = donGia * taiTrong * soChieu;
+        } else if (donGia > 0 && quangDuong > 0) {
+          mappedRow.thanhTien = donGia * quangDuong * soChieu;
+        } else {
+          mappedRow.thanhTien = 0;
+        }
+      }
+      
       detailRecords.push(mappedRow);
     }
   }
