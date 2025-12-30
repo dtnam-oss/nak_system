@@ -31,13 +31,6 @@ GET ?action=getDashboardReportWithFilters&filters={...}
 - SPREADSHEET_ID: `18pS9YMZSwZCVBt_anIGn3GN4qFoPpMtALQm4YvMDd-g`
 - VEHICLE_SPREADSHEET_ID: `1fzepYrS-o5zc01h7nQFzJSOwagoTvOgoiDQHrTLB12E`
 
-**Sheet Names:**
-- KE_TOAN: 'ke_toan'
-- TONG_QUAN: 'tong_quan'
-- DOI_XE: 'doi_xe'
-- BAO_CAO_GHN: 'bao_cao_ghn'
-- BAO_CAO_JNT: 'bao_cao_jnt_tuyen_nhanh'
-- PHUONG_TIEN: 'phuong_tien'
 
 **Actions:**
 - GET_DATA, GET_REPORT_DATA, GET_VEHICLE_DATA
