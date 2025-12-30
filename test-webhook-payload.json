@@ -1,0 +1,33 @@
+{
+  "Action": "Add",
+  "maChuyenDi": "TEST_20241230_001",
+  "ngayTao": "30/12/2024",
+  "bienSoXe": "51A-12345",
+  "tenTaiXe": "Nguyen Van Test",
+  "tenKhachHang": "ABC Test Company",
+  "donViVanChuyen": "NAK",
+  "loaiChuyen": "Một chiều",
+  "loaiTuyen": "Liên tỉnh",
+  "tenTuyen": "TP.HCM - Bình Dương",
+  "tongQuangDuong": 35,
+  "tongDoanhThu": 5000000,
+  "trongLuong": 25.5,
+  "trangThai": "Hoàn tất",
+  "data_json": {
+    "thongTinChuyenDi": {
+      "bienSoXe": "51A-12345",
+      "tenTaiXe": "Nguyen Van Test",
+      "loaiXe": "Tải thùng",
+      "taiTrong": 25.5
+    },
+    "chiTietLoTrinh": [
+      {
+        "diemDi": "TP.HCM",
+        "diemDen": "Bình Dương",
+        "khoangCach": 35,
+        "trongLuong": 25.5,
+        "doanhThu": 5000000
+      }
+    ]
+  }
+}

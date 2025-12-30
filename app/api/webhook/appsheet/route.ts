@@ -159,18 +159,66 @@ function formatDate(val: any): string {
 
 export async function POST(request: Request) {
   try {
+    // ==================== DEBUG LOGGING START ====================
+    console.log('[APPSHEET_DEBUG] ========== NEW WEBHOOK REQUEST ==========');
+    console.log('[APPSHEET_DEBUG] Timestamp:', new Date().toISOString());
+
+    // Log all headers
+    const headers: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    console.log('[APPSHEET_DEBUG] Headers:', JSON.stringify(headers, null, 2));
+
+    // Get raw body as text first (to avoid "Body is unusable" error)
+    let rawBody: string;
+    try {
+      rawBody = await request.text();
+      console.log('[APPSHEET_DEBUG] Raw Body (text):', rawBody);
+      console.log('[APPSHEET_DEBUG] Raw Body Length:', rawBody.length);
+    } catch (textError: any) {
+      console.error('[APPSHEET_DEBUG] ERROR reading raw body:', textError.message);
+      return NextResponse.json({
+        error: 'Failed to read request body',
+        message: textError.message
+      }, { status: 400 });
+    }
+
+    // Parse JSON from raw body
+    let body: any;
+    try {
+      body = JSON.parse(rawBody);
+      console.log('[APPSHEET_DEBUG] Parsed JSON successfully');
+      console.log('[APPSHEET_DEBUG] Parsed Body:', JSON.stringify(body, null, 2));
+    } catch (parseError: any) {
+      console.error('[APPSHEET_DEBUG] ERROR parsing JSON:', parseError.message);
+      console.error('[APPSHEET_DEBUG] JSON Parse Error at position:', parseError.message.match(/position (\d+)/)?.[1] || 'unknown');
+      return NextResponse.json({
+        error: 'Invalid JSON format',
+        message: parseError.message,
+        receivedBody: rawBody.substring(0, 500) // Return first 500 chars for inspection
+      }, { status: 400 });
+    }
+
+    console.log('[APPSHEET_DEBUG] ========== DEBUG LOGGING END ==========');
+    // ==================== DEBUG LOGGING END ====================
+
     // 1. Authentication
     const apiKey = request.headers.get('x-api-key');
     const expectedKey = process.env.APPSHEET_SECRET_KEY || process.env.MIGRATION_SECRET;
 
     if (apiKey !== expectedKey) {
-      console.error('Unauthorized webhook attempt');
+      console.error('[APPSHEET_DEBUG] Authentication failed - Invalid API key');
+      console.error('[APPSHEET_DEBUG] Expected key prefix:', expectedKey?.substring(0, 10) + '...');
+      console.error('[APPSHEET_DEBUG] Received key prefix:', apiKey?.substring(0, 10) + '...');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Parse request body
-    const body = await request.json();
-    console.log('Webhook received:', { Action: body.Action, maChuyenDi: body.maChuyenDi });
+    console.log('[APPSHEET_DEBUG] Authentication successful');
+
+    // 2. Parse request body (already parsed above)
+    console.log('[APPSHEET_DEBUG] Webhook Action:', body.Action);
+    console.log('[APPSHEET_DEBUG] Order ID (maChuyenDi):', body.maChuyenDi);
 
     // 3. Handle DELETE action
     if (body.Action === 'Delete') {
@@ -198,65 +246,140 @@ export async function POST(request: Request) {
     }
 
     // 4. Handle UPSERT (Add/Update)
+    console.log('[APPSHEET_DEBUG] Starting UPSERT process...');
 
     // 4.1 Validate required field
     if (!body.maChuyenDi) {
+      console.error('[APPSHEET_DEBUG] ERROR: Missing maChuyenDi field');
       return NextResponse.json({
         error: 'Missing required field: maChuyenDi'
       }, { status: 400 });
     }
 
     // 4.2 Parse data_json safely
+    console.log('[APPSHEET_DEBUG] Parsing data_json field...');
+    console.log('[APPSHEET_DEBUG] data_json type:', typeof body.data_json);
+    console.log('[APPSHEET_DEBUG] data_json value:', JSON.stringify(body.data_json, null, 2));
+
     const detailsObj = parseDataJson(body.data_json);
+    console.log('[APPSHEET_DEBUG] Parsed detailsObj:', JSON.stringify(detailsObj, null, 2));
 
     // 4.3 Extract and normalize fields
+    console.log('[APPSHEET_DEBUG] Extracting and normalizing fields...');
+
     const orderId = body.maChuyenDi;
+    console.log('[APPSHEET_DEBUG] - orderId:', orderId);
+
     const date = formatDate(body.ngayTao);
+    console.log('[APPSHEET_DEBUG] - date (raw):', body.ngayTao, '→ (normalized):', date);
+
     const customer = body.tenKhachHang || null;
+    console.log('[APPSHEET_DEBUG] - customer:', customer);
+
     const provider = normalizeProvider(body.donViVanChuyen);
+    console.log('[APPSHEET_DEBUG] - provider (raw):', body.donViVanChuyen, '→ (normalized):', provider);
+
     const tripType = normalizeTripType(body.loaiChuyen);
+    console.log('[APPSHEET_DEBUG] - tripType (raw):', body.loaiChuyen, '→ (normalized):', tripType);
+
     const routeType = normalizeRouteType(body.loaiTuyen);
+    console.log('[APPSHEET_DEBUG] - routeType (raw):', body.loaiTuyen, '→ (normalized):', routeType);
+
     const routeName = body.tenTuyen || null;
+    console.log('[APPSHEET_DEBUG] - routeName:', routeName);
+
     const driverName = body.tenTaiXe || null;
+    console.log('[APPSHEET_DEBUG] - driverName:', driverName);
+
     const totalDistance = cleanNumber(body.tongQuangDuong);
+    console.log('[APPSHEET_DEBUG] - totalDistance (raw):', body.tongQuangDuong, '→ (cleaned):', totalDistance);
+
     const cost = cleanNumber(body.tongDoanhThu);
+    console.log('[APPSHEET_DEBUG] - cost (raw):', body.tongDoanhThu, '→ (cleaned):', cost);
+
     const status = normalizeStatus(body.trangThai);
+    console.log('[APPSHEET_DEBUG] - status (raw):', body.trangThai, '→ (normalized):', status);
+
     const licensePlate = extractLicensePlate(body, detailsObj);
+    console.log('[APPSHEET_DEBUG] - licensePlate:', licensePlate);
+
     const weight = calculateTotalWeight(body, detailsObj);
+    console.log('[APPSHEET_DEBUG] - weight:', weight);
+
     const details = JSON.stringify(detailsObj);
+    console.log('[APPSHEET_DEBUG] - details (JSONB) length:', details.length);
 
     // 4.4 Execute UPSERT
-    await sql`
-      INSERT INTO reconciliation_orders (
-        order_id, date, customer,
-        trip_type, route_type, route_name,
-        driver_name, provider,
-        total_distance, cost, status,
-        license_plate, weight, details
-      ) VALUES (
-        ${orderId}, ${date}, ${customer},
-        ${tripType}, ${routeType}, ${routeName},
-        ${driverName}, ${provider},
-        ${totalDistance}, ${cost}, ${status},
-        ${licensePlate}, ${weight}, ${details}
-      )
-      ON CONFLICT (order_id) DO UPDATE SET
-        date = EXCLUDED.date,
-        customer = EXCLUDED.customer,
-        trip_type = EXCLUDED.trip_type,
-        route_type = EXCLUDED.route_type,
-        route_name = EXCLUDED.route_name,
-        driver_name = EXCLUDED.driver_name,
-        provider = EXCLUDED.provider,
-        total_distance = EXCLUDED.total_distance,
-        cost = EXCLUDED.cost,
-        status = EXCLUDED.status,
-        license_plate = EXCLUDED.license_plate,
-        weight = EXCLUDED.weight,
-        details = EXCLUDED.details;
-    `;
+    console.log('[APPSHEET_DEBUG] Executing database UPSERT...');
+    console.log('[APPSHEET_DEBUG] SQL Parameters:', {
+      orderId,
+      date,
+      customer,
+      tripType,
+      routeType,
+      routeName,
+      driverName,
+      provider,
+      totalDistance,
+      cost,
+      status,
+      licensePlate,
+      weight,
+      detailsLength: details.length
+    });
 
-    console.log(`Upserted order: ${orderId}`);
+    try {
+      const result = await sql`
+        INSERT INTO reconciliation_orders (
+          order_id, date, customer,
+          trip_type, route_type, route_name,
+          driver_name, provider,
+          total_distance, cost, status,
+          license_plate, weight, details
+        ) VALUES (
+          ${orderId}, ${date}, ${customer},
+          ${tripType}, ${routeType}, ${routeName},
+          ${driverName}, ${provider},
+          ${totalDistance}, ${cost}, ${status},
+          ${licensePlate}, ${weight}, ${details}
+        )
+        ON CONFLICT (order_id) DO UPDATE SET
+          date = EXCLUDED.date,
+          customer = EXCLUDED.customer,
+          trip_type = EXCLUDED.trip_type,
+          route_type = EXCLUDED.route_type,
+          route_name = EXCLUDED.route_name,
+          driver_name = EXCLUDED.driver_name,
+          provider = EXCLUDED.provider,
+          total_distance = EXCLUDED.total_distance,
+          cost = EXCLUDED.cost,
+          status = EXCLUDED.status,
+          license_plate = EXCLUDED.license_plate,
+          weight = EXCLUDED.weight,
+          details = EXCLUDED.details;
+      `;
+
+      console.log('[APPSHEET_DEBUG] Database UPSERT successful');
+      console.log('[APPSHEET_DEBUG] SQL Result:', result);
+      console.log(`[APPSHEET_DEBUG] Upserted order: ${orderId}`);
+
+    } catch (dbError: any) {
+      console.error('[APPSHEET_DEBUG] ========== DATABASE ERROR ==========');
+      console.error('[APPSHEET_DEBUG] Database operation failed:', dbError.message);
+      console.error('[APPSHEET_DEBUG] Error name:', dbError.name);
+      console.error('[APPSHEET_DEBUG] Error code:', dbError.code);
+      console.error('[APPSHEET_DEBUG] Error stack:', dbError.stack);
+      console.error('[APPSHEET_DEBUG] Failed order_id:', orderId);
+
+      return NextResponse.json({
+        error: 'Database error',
+        message: dbError.message,
+        code: dbError.code,
+        orderId: orderId
+      }, { status: 500 });
+    }
+
+    console.log('[APPSHEET_DEBUG] Returning success response...');
 
     return NextResponse.json({
       success: true,
@@ -275,11 +398,15 @@ export async function POST(request: Request) {
     });
 
   } catch (error: any) {
-    console.error('Webhook error:', error);
+    console.error('[APPSHEET_DEBUG] ========== GLOBAL ERROR ==========');
+    console.error('[APPSHEET_DEBUG] Global error caught:', error.message);
+    console.error('[APPSHEET_DEBUG] Error name:', error.name);
+    console.error('[APPSHEET_DEBUG] Error stack:', error.stack);
 
     return NextResponse.json({
       error: 'Internal server error',
-      message: error.message
+      message: error.message,
+      stack: error.stack
     }, { status: 500 });
   }
 }
