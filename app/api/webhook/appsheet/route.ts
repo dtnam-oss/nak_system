@@ -17,6 +17,7 @@ interface GASPayload {
   donViVanChuyen?: string;
   loaiChuyen?: string;
   loaiTuyen?: string;
+  tenTuyen?: string; // NEW: Route name from GAS
   data_json?: any;
 }
 
@@ -287,9 +288,10 @@ function normalizePayload(payload: GASPayload): NormalizedPayload {
   const tripType = normalizeTripType(payload.loaiChuyen);
   const routeType = normalizeRouteType(payload.loaiTuyen);
   
-  // Generate route name if not provided
-  const routeName = generateRouteName(routeType, customer, (payload as any).tenTuyen);
-  console.log(`[NORMALIZE] Generated routeName: "${routeName}"`);
+  // CRITICAL: Map tenTuyen -> route_name with fallback logic
+  // Priority: 1. Use tenTuyen if provided, 2. Auto-generate from routeType + customer
+  const routeName = generateRouteName(routeType, customer, payload.tenTuyen);
+  console.log(`[NORMALIZE] tenTuyen: "${payload.tenTuyen}" -> routeName: "${routeName}"`);
   
   const licensePlate = extractLicensePlate(payload, details);
   const weight = calculateTotalWeight(details);

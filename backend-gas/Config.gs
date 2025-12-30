@@ -38,6 +38,7 @@ const CONFIG = {
     'ten_khach_hang': 'tenKhachHang',
     'loai_chuyen': 'loaiChuyen',
     'loai_tuyen': 'loaiTuyen',
+    'ten_tuyen': 'tenTuyen',                 // NEW: Route name mapping
     'ten_tai_xe': 'tenTaiXe',
     'don_vi_van_chuyen': 'donViVanChuyen',
     'trang_thai_chuyen_di': 'trangThai',
