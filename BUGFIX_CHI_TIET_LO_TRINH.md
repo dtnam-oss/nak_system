@@ -72,7 +72,7 @@ interface ChiTietLoTrinh {
   loaiTuyenKH: string     // Route type for customer
   maTuyen: string         // Route code
   loTrinh: string         // Route description
-  maTem: string           // Stamp code
+  maChuyenDi: string      // Trip ID (changed from maTem)
   quangDuong: number      // Distance (km)
   taiTrong: number        // Weight (tons)
   taiTrongTinhPhi: number // Chargeable weight
@@ -88,7 +88,7 @@ interface ChiTietLoTrinh {
 | Sheet Column               | JSON Key (camelCase)  | Type   |
 |---------------------------|-----------------------|--------|
 | Id                        | id                    | string |
-| ma_tem                    | maTem                 | string |
+| ma_chuyen_di              | maChuyenDi            | string |
 | loai_tuyen_khach_hang     | loaiTuyenKH           | string |
 | lo_trinh                  | loTrinh               | string |
 | ma_chuyen_di_kh           | maTuyen               | string |

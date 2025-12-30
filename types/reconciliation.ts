@@ -58,7 +58,7 @@ export interface ChiTietLoTrinh {
   loaiTuyenKH: string
   maTuyen: string
   loTrinh: string
-  maTem: string
+  maChuyenDi: string  // Changed from maTem to maChuyenDi
   quangDuong: number
   taiTrong: number
   taiTrongTinhPhi: number
