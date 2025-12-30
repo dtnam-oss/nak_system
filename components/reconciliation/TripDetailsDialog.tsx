@@ -186,6 +186,9 @@ export function TripDetailsDialog({
                           Thứ tự
                         </th>
                         <th className="px-3 py-2 text-left font-medium text-muted-foreground border-b border-border">
+                          Biển kiểm soát
+                        </th>
+                        <th className="px-3 py-2 text-left font-medium text-muted-foreground border-b border-border">
                           Mã tuyến
                         </th>
                         <th className="px-3 py-2 text-left font-medium text-muted-foreground border-b border-border min-w-[200px]">
@@ -214,6 +217,9 @@ export function TripDetailsDialog({
                             {item.thuTu || index + 1}
                           </td>
                           <td className="px-3 py-2 text-foreground">
+                            {item.bienKiemSoat || "-"}
+                          </td>
+                          <td className="px-3 py-2 text-foreground">
                             {item.maTuyen || "-"}
                           </td>
                           <td className="px-3 py-2">
@@ -240,7 +246,7 @@ export function TripDetailsDialog({
                     </tbody>
                     <tfoot className="bg-muted/30 border-t-2 border-border">
                       <tr>
-                        <td colSpan={3} className="px-3 py-2 font-semibold text-foreground">
+                        <td colSpan={4} className="px-3 py-2 font-semibold text-foreground">
                           Tổng cộng
                         </td>
                         <td className="px-3 py-2 text-right font-semibold text-foreground">
@@ -291,6 +297,11 @@ export function TripDetailsDialog({
                         {item.loaiTuyenKH && (
                           <div className="text-xs text-muted-foreground">
                             {item.loaiTuyenKH}
+                          </div>
+                        )}
+                        {item.bienKiemSoat && (
+                          <div className="text-xs text-muted-foreground">
+                            <span className="font-medium">Biển kiểm soát:</span> {item.bienKiemSoat}
                           </div>
                         )}
                         <div className="grid grid-cols-2 gap-2 pt-2 border-t border-border">
