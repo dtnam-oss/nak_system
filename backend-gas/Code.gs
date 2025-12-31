@@ -824,6 +824,61 @@ function testLoadPricingCache() {
 }
 
 /**
+ * Debug specific route pricing from bang_gia table
+ * Use this to verify don_gia, chi_phi_luong_tx, chi_phi_khoan_ncc values
+ */
+function debugPricingForSpecificRoute() {
+  Logger.log('========================================');
+  Logger.log('🔍 DEBUG PRICING FOR SPECIFIC ROUTE');
+  Logger.log('========================================\n');
+  
+  const priceMaps = loadPricingCache();
+  
+  // Check the route from the screenshot
+  const routeName = "5. Nội thành Hà Nội | 14m3";
+  const normalizedKey = routeName.toLowerCase();
+  
+  Logger.log(`Looking up route: "${routeName}"`);
+  Logger.log(`Normalized key: "${normalizedKey}"`);
+  Logger.log(`\nFound in mapTheoCa:`);
+  
+  const pricing = priceMaps.mapTheoCa[normalizedKey];
+  if (pricing) {
+    Logger.log(`  ✅ FOUND!`);
+    Logger.log(`  - don_gia (Revenue): ${pricing.donGia}`);
+    Logger.log(`  - chi_phi_luong_tx (NAK Cost): ${pricing.chiPhiLuongTX}`);
+    Logger.log(`  - chi_phi_khoan_ncc (VENDOR Cost): ${pricing.chiPhiKhoanNCC}`);
+    Logger.log(`\n🎯 EXPECTED FOR THIS ORDER:`);
+    Logger.log(`  - Provider: VENDOR`);
+    Logger.log(`  - tongDoanhThu (revenue) should be: ${pricing.donGia}`);
+    Logger.log(`  - tongChiPhi (cost) should be: ${pricing.chiPhiKhoanNCC}`);
+    Logger.log(`\n📊 ACTUAL IN DATABASE (from screenshot):`);
+    Logger.log(`  - revenue column: 1,200,000`);
+    Logger.log(`  - cost column: 33,000,000`);
+    Logger.log(`\n❓ ANALYSIS:`);
+    if (pricing.donGia === 1200000 && pricing.chiPhiKhoanNCC === 33000000) {
+      Logger.log(`  ✅ GAS pricing values are CORRECT!`);
+      Logger.log(`  ✅ Backend INSERT column swap fix should resolve this.`);
+    } else if (pricing.donGia === 33000000 && pricing.chiPhiKhoanNCC === 1200000) {
+      Logger.log(`  ❌ PRICING TABLE IS WRONG!`);
+      Logger.log(`  ❌ don_gia and chi_phi_khoan_ncc are SWAPPED in bang_gia!`);
+      Logger.log(`  🔧 FIX: Swap values in bang_gia table for this route.`);
+    } else {
+      Logger.log(`  ⚠️  Values don't match screenshot. Manual investigation needed.`);
+      Logger.log(`  Expected revenue: ${pricing.donGia}, cost: ${pricing.chiPhiKhoanNCC}`);
+    }
+  } else {
+    Logger.log(`  ❌ NOT FOUND in mapTheoCa!`);
+    Logger.log(`\nAvailable routes in mapTheoCa:`);
+    Object.keys(priceMaps.mapTheoCa).forEach(key => {
+      Logger.log(`  - "${key}"`);
+    });
+  }
+  
+  Logger.log('\n========================================');
+}
+
+/**
  * Test auto pricing calculation
  * 
  * HƯỚNG DẪN SỬ DỤNG:
