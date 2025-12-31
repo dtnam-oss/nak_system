@@ -567,11 +567,11 @@ function calculateTripCost(payload, priceMaps) {
     for (let i = 0; i < chiTietLoTrinh.length; i++) {
       const item = chiTietLoTrinh[i];
       
-      // Get loTrinh value and normalize for lookup
+      // ✅ Sử dụng loTrinh (từ cột 'lo_trinh') để lookup với ma_tuyen trong bảng giá
       const loTrinh = String(item.loTrinh || '').trim();
       const lookupKey = loTrinh.toLowerCase();
       
-      // Lookup price in mapTheoTuyen
+      // Lookup price in mapTheoTuyen (ma_tuyen from bang_gia)
       const price = mapTheoTuyen[lookupKey] || 0;
       
       // Update don_gia in detail item
@@ -785,41 +785,82 @@ function testLoadPricingCache() {
 
 /**
  * Test auto pricing calculation
+ * 
+ * HƯỚNG DẪN SỬ DỤNG:
+ * 1. Kiểm tra bảng bang_gia và lấy các giá trị ma_tuyen thực tế
+ * 2. Cập nhật loTrinh trong mock data với ma_tuyen từ bảng giá
+ * 3. Chạy hàm để xem kết quả tính giá tự động
  */
 function testAutoPricing() {
-  // Create a mock payload for testing
-  const mockPayload = {
+  // === TEST CASE 1: Theo Tuyến (Line Item Pricing) ===
+  Logger.log('=== TEST CASE 1: THEO TUYẾN ===');
+  
+  const mockPayloadTheoTuyen = {
     maChuyenDi: 'TEST-001',
-    loaiChuyen: 'Theo tuyến', // Change to 'Theo ca' to test package pricing
+    loaiChuyen: 'Theo tuyến',  // ✅ Tính giá theo từng chi tiết
     tenTuyen: 'Nội tỉnh Sơn La 03',
     tongDoanhThu: 0,
     data_json: {
       chiTietLoTrinh: [
         {
           thuTu: 1,
-          loTrinh: 'Kho Chuyển Tiếp Sơn La -> Bưu Cục 354 Trần Đăng Ninh-Sơn La-Sơn La',
+          // ✅ loTrinh phải match với ma_tuyen trong bảng bang_gia
+          loTrinh: 'SL-001',  // Thay bằng mã tuyến thực tế từ bảng giá của bạn
+          loTrinhChiTiet: 'Kho Chuyển Tiếp Sơn La -> Bưu Cục 354 Trần Đăng Ninh-Sơn La-Sơn La',
           donGia: 0
         },
         {
           thuTu: 2,
-          loTrinh: 'Bưu Cục 354 Trần Đăng Ninh-Sơn La-Sơn La -> Kho Chuyển Tiếp Sơn La',
+          loTrinh: 'SL-002',  // Thay bằng mã tuyến thực tế từ bảng giá của bạn
+          loTrinhChiTiet: 'Bưu Cục 354 Trần Đăng Ninh-Sơn La-Sơn La -> Kho Chuyển Tiếp Sơn La',
           donGia: 0
         }
       ]
     }
   };
   
-  Logger.log('=== BEFORE AUTO PRICING ===');
-  Logger.log(JSON.stringify(mockPayload, null, 2));
+  Logger.log('BEFORE AUTO PRICING:');
+  Logger.log(JSON.stringify(mockPayloadTheoTuyen, null, 2));
   
-  // Load pricing cache
-  const priceMaps = loadPricingCache();
+  const priceMaps1 = loadPricingCache();
+  Logger.log(`\nAvailable routes in pricing table: ${Object.keys(priceMaps1.mapTheoTuyen).join(', ')}`);
   
-  // Calculate trip cost
-  calculateTripCost(mockPayload, priceMaps);
+  calculateTripCost(mockPayloadTheoTuyen, priceMaps1);
   
-  Logger.log('=== AFTER AUTO PRICING ===');
-  Logger.log(JSON.stringify(mockPayload, null, 2));
+  Logger.log('\nAFTER AUTO PRICING:');
+  Logger.log(JSON.stringify(mockPayloadTheoTuyen, null, 2));
+  
+  // === TEST CASE 2: Theo Ca (Package Pricing) ===
+  Logger.log('\n\n=== TEST CASE 2: THEO CA ===');
+  
+  const mockPayloadTheoCa = {
+    maChuyenDi: 'TEST-002',
+    loaiChuyen: 'Theo ca',  // ✅ Tính giá khoán theo tuyến
+    tenTuyen: 'Nội tỉnh Sơn La 03',  // ✅ Phải match với ten_tuyen trong bảng bang_gia
+    tongDoanhThu: 0,
+    data_json: {
+      chiTietLoTrinh: [
+        {
+          thuTu: 1,
+          loTrinh: 'SL-001',
+          donGia: 0
+        }
+      ]
+    }
+  };
+  
+  Logger.log('BEFORE AUTO PRICING:');
+  Logger.log(JSON.stringify(mockPayloadTheoCa, null, 2));
+  
+  const priceMaps2 = loadPricingCache();
+  Logger.log(`\nAvailable shift names in pricing table: ${Object.keys(priceMaps2.mapTheoCa).join(', ')}`);
+  
+  calculateTripCost(mockPayloadTheoCa, priceMaps2);
+  
+  Logger.log('\nAFTER AUTO PRICING:');
+  Logger.log(JSON.stringify(mockPayloadTheoCa, null, 2));
+  
+  Logger.log('\n=== TEST COMPLETED ===');
 }
 
 
