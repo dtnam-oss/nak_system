@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { addDays, format, startOfMonth, endOfMonth, startOfDay, endOfDay, subDays, subMonths } from "date-fns"
-import { vi } from "date-fns/locale"
 import { Calendar as CalendarIcon } from "lucide-react"
 import { DateRange } from "react-day-picker"
 
@@ -99,13 +98,12 @@ export function DateRangePicker({
     }
 
     if (!range.to) {
-      return format(range.from, "dd/MM/yyyy", { locale: vi })
+      return format(range.from, "dd/MM/yyyy")
     }
 
-    return `${format(range.from, "dd/MM/yyyy", { locale: vi })} - ${format(
+    return `${format(range.from, "dd/MM/yyyy")} - ${format(
       range.to,
-      "dd/MM/yyyy",
-      { locale: vi }
+      "dd/MM/yyyy"
     )}`
   }
 
@@ -154,7 +152,6 @@ export function DateRangePicker({
                 selected={date}
                 onSelect={handleSelect}
                 numberOfMonths={2}
-                locale={vi}
               />
             </div>
           </div>
