@@ -112,16 +112,17 @@ export async function POST(request: Request) {
             order_id, date, customer, 
             trip_type, route_type, route_name, 
             driver_name, provider, 
-            total_distance, cost, status,
+            total_distance, revenue, cost, status,
             license_plate, weight, details
           ) VALUES (
             ${record.maChuyenDi}, ${record.ngayTao}, ${record.tenKhachHang},
             ${tripType}, ${routeType}, ${record.tenTuyen},
             ${record.tenTaiXe}, ${provider},
-            ${cleanNumber(record.tongQuangDuong)}, ${cleanNumber(record.tongDoanhThu)}, ${status},
+            ${cleanNumber(record.tongQuangDuong)}, ${cleanNumber(record.tongDoanhThu)}, 0, ${status},
             ${licensePlate}, ${totalWeight}, ${JSON.stringify(detailsObj)}
           )
           ON CONFLICT (order_id) DO UPDATE SET
+            revenue = EXCLUDED.revenue,
             cost = EXCLUDED.cost,
             status = EXCLUDED.status,
             details = EXCLUDED.details,

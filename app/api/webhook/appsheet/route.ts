@@ -24,7 +24,8 @@ interface NormalizedPayload {
   orderId: string;
   date: string;
   customer: string | null;
-  cost: number;
+  revenue: number;  // Changed from cost - stores tongDoanhThu (revenue)
+  cost: number;     // New - for actual expenses (chi phí)
   totalDistance: number;
   status: 'approved' | 'pending' | 'rejected';
   driverName: string | null;
@@ -248,9 +249,12 @@ function normalizePayload(payload: GASPayload): NormalizedPayload {
   const date = formatDate(payload.ngayTao);
   const customer = payload.tenKhachHang || null;
   
-  // CRITICAL: Map tongDoanhThu -> cost
-  const cost = parseNumber(payload.tongDoanhThu);
-  console.log(`[NORMALIZE] tongDoanhThu: ${payload.tongDoanhThu} -> cost: ${cost}`);
+  // CRITICAL: Map tongDoanhThu -> revenue (doanh thu)
+  const revenue = parseNumber(payload.tongDoanhThu);
+  console.log(`[NORMALIZE] tongDoanhThu: ${payload.tongDoanhThu} -> revenue: ${revenue}`);
+  
+  // Cost defaults to 0 (will be calculated separately for chi phí)
+  const cost = 0;
   
   // CRITICAL: Map tongQuangDuong -> total_distance
   const totalDistance = parseNumber(payload.tongQuangDuong);
@@ -275,6 +279,7 @@ function normalizePayload(payload: GASPayload): NormalizedPayload {
     orderId,
     date,
     customer,
+    revenue,
     cost,
     totalDistance,
     status,
@@ -380,7 +385,8 @@ export async function POST(request: Request) {
     console.log(`   - Order ID: ${normalized.orderId}`);
     console.log(`   - Date: ${normalized.date}`);
     console.log(`   - Customer: ${normalized.customer}`);
-    console.log(`   - Cost: ${normalized.cost} (from tongDoanhThu: ${payload.tongDoanhThu})`);
+    console.log(`   - Revenue: ${normalized.revenue} (from tongDoanhThu: ${payload.tongDoanhThu})`);
+    console.log(`   - Cost: ${normalized.cost} (chi phí)`);
     console.log(`   - Distance: ${normalized.totalDistance} (from tongQuangDuong: ${payload.tongQuangDuong})`);
     console.log(`   - Status: ${normalized.status} (from trangThai: "${payload.trangThai}")`);
     console.log(`   - Provider: ${normalized.provider}`);
@@ -407,6 +413,7 @@ export async function POST(request: Request) {
           driver_name, 
           provider,
           total_distance, 
+          revenue,
           cost, 
           status,
           weight, 
@@ -421,6 +428,7 @@ export async function POST(request: Request) {
           ${normalized.driverName},
           ${normalized.provider},
           ${normalized.totalDistance},
+          ${normalized.revenue},
           ${normalized.cost},
           ${normalized.status},
           ${normalized.weight},
@@ -435,6 +443,7 @@ export async function POST(request: Request) {
           driver_name = EXCLUDED.driver_name,
           provider = EXCLUDED.provider,
           total_distance = EXCLUDED.total_distance,
+          revenue = EXCLUDED.revenue,
           cost = EXCLUDED.cost,
           status = EXCLUDED.status,
           weight = EXCLUDED.weight,

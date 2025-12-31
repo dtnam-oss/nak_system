@@ -153,6 +153,7 @@ export async function GET(request: NextRequest) {
         route_name,
         customer,
         weight,
+        revenue,
         cost,
         status,
         trip_type,
@@ -216,7 +217,7 @@ export async function GET(request: NextRequest) {
         donViVanChuyen: row.provider || '',
         trangThai: mapStatus(row.status),
         tongQuangDuong: parseFloat(String(row.total_distance || 0)),
-        tongDoanhThu: parseFloat(String(row.cost || 0)),
+        tongDoanhThu: parseFloat(String(row.revenue || 0)),  // Changed from cost to revenue
         soXe: '',  // Removed: license_plate column dropped from DB
         chiTietLoTrinh: chiTietLoTrinh,
         data_json: dataJson,
@@ -228,7 +229,7 @@ export async function GET(request: NextRequest) {
     const summaryQuery = `
       SELECT
         COUNT(*) as total_orders,
-        COALESCE(SUM(cost), 0) as total_amount,
+        COALESCE(SUM(revenue), 0) as total_amount,
         COALESCE(SUM(total_distance), 0) as total_distance,
         COUNT(CASE WHEN status = 'approved' THEN 1 END) as approved_orders,
         COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_orders
