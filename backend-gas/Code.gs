@@ -1673,7 +1673,72 @@ function transformFuelExportRow(row, headers, columnMap) {
 // =============================================================================
 // Module này xử lý đồng bộ Real-time từng record khi có sự kiện Add/Edit/Delete
 // Được trigger bởi AppSheet Bot
+// Bao gồm:
+// - Tính giá Bình quân gia quyền (WAC) khi Nhập kho
+// - Tính giá vốn (COGS) khi Xuất kho
 // =============================================================================
+
+/**
+ * Helper: Lấy trạng thái tồn kho và giá bình quân hiện tại từ Database
+ * 
+ * @returns {Object} { currentInventory, currentAvgPrice } hoặc { currentInventory: 0, currentAvgPrice: 0 } nếu chưa có dữ liệu
+ * 
+ * @example
+ * const state = fetchLatestFuelState();
+ * // { currentInventory: 5000, currentAvgPrice: 22500 }
+ */
+function fetchLatestFuelState() {
+  const config = getConfig();
+  
+  try {
+    logInfo('Fetching latest fuel state from database...');
+    
+    const url = config.API.ENDPOINT.replace('/webhook/appsheet', '/fuel/stats');
+    
+    const options = {
+      method: 'get',
+      headers: {
+        'Content-Type': config.API.CONTENT_TYPE,
+        'x-api-key': config.API.KEY
+      },
+      muteHttpExceptions: true
+    };
+    
+    const response = UrlFetchApp.fetch(url, options);
+    const statusCode = response.getResponseCode();
+    const responseBody = response.getContentText();
+    
+    if (statusCode !== 200) {
+      logWarning(`Failed to fetch fuel state. Status: ${statusCode}. Response: ${responseBody}`);
+      // Return default values if API fails
+      return {
+        currentInventory: 0,
+        currentAvgPrice: 0
+      };
+    }
+    
+    const data = JSON.parse(responseBody);
+    
+    // Extract current inventory and avgPrice from stats
+    const currentInventory = parseFloat(data.current_inventory || 0);
+    const currentAvgPrice = parseFloat(data.current_avg_price || 0);
+    
+    logInfo(`Fetched state: Inventory=${currentInventory}L, AvgPrice=${currentAvgPrice} VND/L`);
+    
+    return {
+      currentInventory: currentInventory,
+      currentAvgPrice: currentAvgPrice
+    };
+    
+  } catch (error) {
+    logError(`Error fetching fuel state: ${error.message}`);
+    // Return default values on error
+    return {
+      currentInventory: 0,
+      currentAvgPrice: 0
+    };
+  }
+}
 
 /**
  * Real-time sync cho Fuel Import (nhập nhiên liệu)
@@ -1730,11 +1795,48 @@ function syncFuelImportToBackend(importId, eventType) {
         throw new Error(`Không tìm thấy record với Id: ${importId}`);
       }
       
+      // ========== TÍNH GIÁ BÌNH QUÂN GIA QUYỀN (WAC) ==========
+      logInfo('Calculating Weighted Average Cost (WAC)...');
+      
+      // 1. Lấy trạng thái tồn kho hiện tại
+      const fuelState = fetchLatestFuelState();
+      const currentStock = fuelState.currentInventory;  // Q_tồn
+      const currentAvgPrice = fuelState.currentAvgPrice; // P_cũ
+      
+      // 2. Lấy dữ liệu nhập hiện tại
+      const importQuantity = parseFloat(importData.quantity || 0);  // Q_nhập
+      const importUnitPrice = parseFloat(importData.unitPrice || 0); // P_nhập
+      
+      // 3. Tính giá bình quân mới theo công thức WAC
+      let newAvgPrice = 0;
+      
+      const totalQuantity = currentStock + importQuantity;
+      
+      if (totalQuantity > 0) {
+        // P_mới = (Q_tồn * P_cũ + Q_nhập * P_nhập) / (Q_tồn + Q_nhập)
+        newAvgPrice = ((currentStock * currentAvgPrice) + (importQuantity * importUnitPrice)) / totalQuantity;
+      } else {
+        // Edge case: nếu tổng = 0, giữ nguyên giá cũ
+        newAvgPrice = currentAvgPrice;
+      }
+      
+      // 4. Làm tròn 2 chữ số thập phân
+      newAvgPrice = Math.round(newAvgPrice * 100) / 100;
+      
+      // 5. Gán vào data
+      importData.avgPrice = newAvgPrice;
+      
+      logInfo(`WAC Calculation:`);
+      logInfo(`  Current Stock: ${currentStock}L @ ${currentAvgPrice} VND/L`);
+      logInfo(`  Import: ${importQuantity}L @ ${importUnitPrice} VND/L`);
+      logInfo(`  New Avg Price: ${newAvgPrice} VND/L`);
+      logInfo(`  Total Stock After: ${totalQuantity}L`);
+      
       payload = {
         Action: 'FuelImport_Upsert',
         data: importData
       };
-      logInfo('ADD/EDIT event - Full data payload created');
+      logInfo('ADD/EDIT event - Full data payload created with avgPrice');
     }
     
     // Log payload (verbose mode)
@@ -1824,11 +1926,36 @@ function syncFuelTransactionToBackend(transId, eventType) {
         throw new Error(`Không tìm thấy record với Id: ${transId}`);
       }
       
+      // ========== TÍNH GIÁ VỐN (COGS) ==========
+      logInfo('Calculating Cost of Goods Sold (COGS)...');
+      
+      // 1. Lấy giá bình quân hiện tại
+      const fuelState = fetchLatestFuelState();
+      const currentAvgPrice = fuelState.currentAvgPrice;
+      
+      // 2. Lấy số lượng xuất
+      const exportQuantity = parseFloat(transData.quantity || 0);
+      
+      // 3. Tính thành tiền (COGS)
+      let totalAmount = exportQuantity * currentAvgPrice;
+      
+      // 4. Làm tròn 2 chữ số thập phân
+      totalAmount = Math.round(totalAmount * 100) / 100;
+      
+      // 5. Gán vào data (Override giá trị từ Sheet nếu có)
+      transData.unitPrice = currentAvgPrice;  // Sử dụng giá BQ làm đơn giá
+      transData.totalAmount = totalAmount;
+      
+      logInfo(`COGS Calculation:`);
+      logInfo(`  Avg Price: ${currentAvgPrice} VND/L`);
+      logInfo(`  Export Quantity: ${exportQuantity}L`);
+      logInfo(`  Total Amount (COGS): ${totalAmount} VND`);
+      
       payload = {
         Action: 'FuelTransaction_Upsert',
         data: transData
       };
-      logInfo('ADD/EDIT event - Full data payload created');
+      logInfo('ADD/EDIT event - Full data payload created with COGS');
     }
     
     // Log payload (verbose mode)
