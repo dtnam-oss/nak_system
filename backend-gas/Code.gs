@@ -815,55 +815,73 @@ function testLoadPricingCache() {
  * HƯỚNG DẪN SỬ DỤNG:
  * 1. Kiểm tra bảng bang_gia và lấy các giá trị ma_tuyen thực tế
  * 2. Cập nhật loTrinh trong mock data với ma_tuyen từ bảng giá
- * 3. Chạy hàm để xem kết quả tính giá tự động
+ * 3. Chạy hàm để xem kết quả tính giá tự động (revenue và cost)
  */
 function testAutoPricing() {
-  // === TEST CASE 1: Theo Tuyến (Line Item Pricing) ===
-  Logger.log('=== TEST CASE 1: THEO TUYẾN ===');
+  Logger.log('========================================');
+  Logger.log('🧪 AUTO PRICING TEST SUITE');
+  Logger.log('========================================\n');
   
-  const mockPayloadTheoTuyen = {
+  // Load pricing cache once
+  const priceMaps = loadPricingCache();
+  Logger.log(`📊 Pricing data loaded:`);
+  Logger.log(`   - Routes (Theo tuyến): ${Object.keys(priceMaps.mapTheoTuyen).join(', ')}`);
+  Logger.log(`   - Shifts (Theo ca): ${Object.keys(priceMaps.mapTheoCa).join(', ')}\n`);
+  
+  // === TEST CASE 1: Theo Tuyến + NAK Provider ===
+  Logger.log('=== TEST CASE 1: THEO TUYẾN + NAK ===');
+  Logger.log('Expected: Revenue from don_gia, Cost from chi_phi_luong_tx\n');
+  
+  const mockPayload1 = {
     maChuyenDi: 'TEST-001',
-    loaiChuyen: 'Theo tuyến',  // ✅ Tính giá theo từng chi tiết
+    loaiChuyen: 'Theo tuyến',
+    donViVanChuyen: 'NAK',  // ✅ NAK → chi_phi_luong_tx
     tenTuyen: 'Nội tỉnh Sơn La 03',
     tongDoanhThu: 0,
+    tongChiPhi: 0,
     data_json: {
       chiTietLoTrinh: [
         {
           thuTu: 1,
-          // ✅ loTrinh phải match với ma_tuyen trong bảng bang_gia
-          loTrinh: 'SL-001',  // Thay bằng mã tuyến thực tế từ bảng giá của bạn
-          loTrinhChiTiet: 'Kho Chuyển Tiếp Sơn La -> Bưu Cục 354 Trần Đăng Ninh-Sơn La-Sơn La',
+          loTrinh: 'SL-001',  // Thay bằng mã tuyến thực tế
+          loTrinhChiTiet: 'Kho Chuyển Tiếp Sơn La -> Bưu Cục 354',
           donGia: 0
         },
         {
           thuTu: 2,
-          loTrinh: 'SL-002',  // Thay bằng mã tuyến thực tế từ bảng giá của bạn
-          loTrinhChiTiet: 'Bưu Cục 354 Trần Đăng Ninh-Sơn La-Sơn La -> Kho Chuyển Tiếp Sơn La',
+          loTrinh: 'SL-002',  // Thay bằng mã tuyến thực tế
+          loTrinhChiTiet: 'Bưu Cục 354 -> Kho Chuyển Tiếp Sơn La',
           donGia: 0
         }
       ]
     }
   };
   
-  Logger.log('BEFORE AUTO PRICING:');
-  Logger.log(JSON.stringify(mockPayloadTheoTuyen, null, 2));
+  Logger.log('BEFORE:');
+  Logger.log(`  tongDoanhThu: ${mockPayload1.tongDoanhThu}, tongChiPhi: ${mockPayload1.tongChiPhi}`);
   
-  const priceMaps1 = loadPricingCache();
-  Logger.log(`\nAvailable routes in pricing table: ${Object.keys(priceMaps1.mapTheoTuyen).join(', ')}`);
+  calculateTripCost(mockPayload1, priceMaps);
   
-  calculateTripCost(mockPayloadTheoTuyen, priceMaps1);
+  Logger.log('\nAFTER:');
+  Logger.log(`  tongDoanhThu (revenue): ${mockPayload1.tongDoanhThu}`);
+  Logger.log(`  tongChiPhi (cost): ${mockPayload1.tongChiPhi}`);
+  Logger.log(`  Profit: ${mockPayload1.tongDoanhThu - mockPayload1.tongChiPhi}`);
+  Logger.log('\nDetails:');
+  mockPayload1.data_json.chiTietLoTrinh.forEach((item, i) => {
+    Logger.log(`  ${i + 1}. ${item.loTrinh} → donGia: ${item.donGia}`);
+  });
   
-  Logger.log('\nAFTER AUTO PRICING:');
-  Logger.log(JSON.stringify(mockPayloadTheoTuyen, null, 2));
+  // === TEST CASE 2: Theo Tuyến + Vendor Provider ===
+  Logger.log('\n\n=== TEST CASE 2: THEO TUYẾN + VENDOR ===');
+  Logger.log('Expected: Revenue from don_gia, Cost from chi_phi_khoan_ncc\n');
   
-  // === TEST CASE 2: Theo Ca (Package Pricing) ===
-  Logger.log('\n\n=== TEST CASE 2: THEO CA ===');
-  
-  const mockPayloadTheoCa = {
+  const mockPayload2 = {
     maChuyenDi: 'TEST-002',
-    loaiChuyen: 'Theo ca',  // ✅ Tính giá khoán theo tuyến
-    tenTuyen: 'Nội tỉnh Sơn La 03',  // ✅ Phải match với ten_tuyen trong bảng bang_gia
+    loaiChuyen: 'Theo tuyến',
+    donViVanChuyen: 'Nhà xe Thành Bưởi',  // ✅ Vendor → chi_phi_khoan_ncc
+    tenTuyen: 'Nội tỉnh Sơn La 03',
     tongDoanhThu: 0,
+    tongChiPhi: 0,
     data_json: {
       chiTietLoTrinh: [
         {
@@ -875,18 +893,71 @@ function testAutoPricing() {
     }
   };
   
-  Logger.log('BEFORE AUTO PRICING:');
-  Logger.log(JSON.stringify(mockPayloadTheoCa, null, 2));
+  Logger.log('BEFORE:');
+  Logger.log(`  tongDoanhThu: ${mockPayload2.tongDoanhThu}, tongChiPhi: ${mockPayload2.tongChiPhi}`);
   
-  const priceMaps2 = loadPricingCache();
-  Logger.log(`\nAvailable shift names in pricing table: ${Object.keys(priceMaps2.mapTheoCa).join(', ')}`);
+  calculateTripCost(mockPayload2, priceMaps);
   
-  calculateTripCost(mockPayloadTheoCa, priceMaps2);
+  Logger.log('\nAFTER:');
+  Logger.log(`  tongDoanhThu (revenue): ${mockPayload2.tongDoanhThu}`);
+  Logger.log(`  tongChiPhi (cost): ${mockPayload2.tongChiPhi}`);
+  Logger.log(`  Profit: ${mockPayload2.tongDoanhThu - mockPayload2.tongChiPhi}`);
   
-  Logger.log('\nAFTER AUTO PRICING:');
-  Logger.log(JSON.stringify(mockPayloadTheoCa, null, 2));
+  // === TEST CASE 3: Theo Ca + NAK ===
+  Logger.log('\n\n=== TEST CASE 3: THEO CA + NAK ===');
+  Logger.log('Expected: Package pricing with NAK driver costs\n');
   
-  Logger.log('\n=== TEST COMPLETED ===');
+  const mockPayload3 = {
+    maChuyenDi: 'TEST-003',
+    loaiChuyen: 'Theo ca',
+    donViVanChuyen: 'NAK',
+    tenTuyen: 'Nội tỉnh Sơn La 03',  // ✅ Match với ten_tuyen trong bang_gia
+    tongDoanhThu: 0,
+    tongChiPhi: 0,
+    data_json: {
+      chiTietLoTrinh: []
+    }
+  };
+  
+  Logger.log('BEFORE:');
+  Logger.log(`  tongDoanhThu: ${mockPayload3.tongDoanhThu}, tongChiPhi: ${mockPayload3.tongChiPhi}`);
+  
+  calculateTripCost(mockPayload3, priceMaps);
+  
+  Logger.log('\nAFTER:');
+  Logger.log(`  tongDoanhThu (revenue): ${mockPayload3.tongDoanhThu}`);
+  Logger.log(`  tongChiPhi (cost): ${mockPayload3.tongChiPhi}`);
+  Logger.log(`  Profit: ${mockPayload3.tongDoanhThu - mockPayload3.tongChiPhi}`);
+  
+  // === TEST CASE 4: Theo Ca + Vendor ===
+  Logger.log('\n\n=== TEST CASE 4: THEO CA + VENDOR ===');
+  Logger.log('Expected: Package pricing with vendor contract costs\n');
+  
+  const mockPayload4 = {
+    maChuyenDi: 'TEST-004',
+    loaiChuyen: 'Theo ca',
+    donViVanChuyen: 'Nhà xe ABC',
+    tenTuyen: 'Nội tỉnh Sơn La 03',
+    tongDoanhThu: 0,
+    tongChiPhi: 0,
+    data_json: {
+      chiTietLoTrinh: []
+    }
+  };
+  
+  Logger.log('BEFORE:');
+  Logger.log(`  tongDoanhThu: ${mockPayload4.tongDoanhThu}, tongChiPhi: ${mockPayload4.tongChiPhi}`);
+  
+  calculateTripCost(mockPayload4, priceMaps);
+  
+  Logger.log('\nAFTER:');
+  Logger.log(`  tongDoanhThu (revenue): ${mockPayload4.tongDoanhThu}`);
+  Logger.log(`  tongChiPhi (cost): ${mockPayload4.tongChiPhi}`);
+  Logger.log(`  Profit: ${mockPayload4.tongDoanhThu - mockPayload4.tongChiPhi}`);
+  
+  Logger.log('\n========================================');
+  Logger.log('✅ TEST SUITE COMPLETED');
+  Logger.log('========================================');
 }
 
 
