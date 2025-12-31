@@ -143,7 +143,7 @@ export function DateRangePicker({
               ))}
             </div>
 
-            {/* Dual Calendar */}
+            {/* Single Calendar */}
             <div className="p-3">
               <Calendar
                 initialFocus
@@ -151,7 +151,8 @@ export function DateRangePicker({
                 defaultMonth={date?.from}
                 selected={date}
                 onSelect={handleSelect}
-                numberOfMonths={2}
+                numberOfMonths={1}
+                showOutsideDays={false}
               />
             </div>
           </div>
