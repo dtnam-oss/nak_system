@@ -105,6 +105,7 @@ export interface ReconciliationDatabaseRow {
   date: Date | string
   customer: string | null
   weight: number | null
+  revenue: number | null
   cost: number | null
   status: string
   trip_type: string | null
