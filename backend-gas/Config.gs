@@ -14,7 +14,8 @@ const CONFIG = {
   
   SHEET_NAMES: {
     MASTER: 'chuyen_di',           // Sheet chứa thông tin chuyến đi
-    DETAIL: 'chi_tiet_chuyen_di'   // Sheet chứa lộ trình chi tiết
+    DETAIL: 'chi_tiet_chuyen_di',  // Sheet chứa lộ trình chi tiết
+    PRICING: 'bang_gia'            // Sheet chứa bảng giá cước
   },
 
   // =============================================================================
@@ -67,6 +68,25 @@ const CONFIG = {
     'tai_trong_tinh_phi': 'taiTrongTinhPhi',
     'hinh_thuc_tinh_gia': 'hinhThucTinhGia',
     'ten_khach_hang_cap_1': 'tenKhachHangCap1'
+  },
+
+  // =============================================================================
+  // COLUMN MAPPINGS - Pricing Sheet (bang_gia)
+  // =============================================================================
+  PRICING_COLUMNS: {
+    // Tên cột trong Sheet -> Key trong JSON
+    'ma_tuyen': 'maTuyen',        // Mã tuyến (dùng cho "Theo tuyến")
+    'ten_tuyen': 'tenTuyen',      // Tên tuyến (dùng cho "Theo ca")
+    'don_gia': 'donGia'           // Đơn giá
+  },
+
+  // =============================================================================
+  // PRICING CONFIGURATION
+  // =============================================================================
+  PRICING: {
+    ENABLED: true,                   // Bật/tắt tính cước tự động
+    TRIP_TYPE_THEO_TUYEN: 'theo tuyến',  // Loại chuyến tính theo chi tiết
+    TRIP_TYPE_THEO_CA: 'theo ca'         // Loại chuyến tính khoán
   },
 
   // =============================================================================

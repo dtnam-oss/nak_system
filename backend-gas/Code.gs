@@ -140,7 +140,7 @@ function buildFullPayload(tripId, eventType) {
   const detailData = getDetailData(tripId);
   logInfo(`Found ${detailData.length} detail records`);
   
-  // 3. Build JSON payload
+  // 3. Build JSON payload thô
   const payload = {
     Action: eventType,
     ...masterData,
@@ -148,6 +148,14 @@ function buildFullPayload(tripId, eventType) {
       chiTietLoTrinh: detailData
     }
   };
+  
+  // 4. Tính cước tự động (Auto Pricing)
+  if (config.PRICING.ENABLED) {
+    logInfo('Starting auto pricing calculation...');
+    const priceMaps = loadPricingCache();
+    calculateTripCost(payload, priceMaps);
+    logInfo('Auto pricing calculation complete');
+  }
   
   return payload;
 }
@@ -460,6 +468,157 @@ function formatDate(value) {
 
 
 // =============================================================================
+// AUTO PRICING FUNCTIONS
+// =============================================================================
+
+/**
+ * Load pricing cache from bang_gia sheet
+ * Creates 2 Maps for O(1) lookup:
+ * - mapTheoTuyen: Key = ma_tuyen (normalized), Value = don_gia
+ * - mapTheoCa: Key = ten_tuyen (normalized), Value = don_gia
+ * 
+ * @returns {Object} Object containing { mapTheoTuyen, mapTheoCa }
+ */
+function loadPricingCache() {
+  const config = getConfig();
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(config.SHEET_NAMES.PRICING);
+  
+  if (!sheet) {
+    logWarning(`Sheet "${config.SHEET_NAMES.PRICING}" not found. Auto pricing disabled.`);
+    return { mapTheoTuyen: {}, mapTheoCa: {} };
+  }
+  
+  // Get all data
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  
+  if (values.length === 0) {
+    logWarning('Pricing sheet is empty. Auto pricing disabled.');
+    return { mapTheoTuyen: {}, mapTheoCa: {} };
+  }
+  
+  // Row đầu tiên là header
+  const headers = values[0];
+  
+  // Get column indexes
+  const maTuyenIndex = getColumnIndex(headers, 'ma_tuyen');
+  const tenTuyenIndex = getColumnIndex(headers, 'ten_tuyen');
+  const donGiaIndex = getColumnIndex(headers, 'don_gia');
+  
+  if (maTuyenIndex === -1 || tenTuyenIndex === -1 || donGiaIndex === -1) {
+    logError('Pricing sheet missing required columns: ma_tuyen, ten_tuyen, or don_gia');
+    return { mapTheoTuyen: {}, mapTheoCa: {} };
+  }
+  
+  // Build pricing maps
+  const mapTheoTuyen = {};
+  const mapTheoCa = {};
+  
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    
+    // Get values
+    const maTuyen = String(row[maTuyenIndex] || '').trim();
+    const tenTuyen = String(row[tenTuyenIndex] || '').trim();
+    const donGia = parseNumber(row[donGiaIndex]);
+    
+    // Populate mapTheoTuyen (normalize key to lowercase for case-insensitive lookup)
+    if (maTuyen) {
+      const normalizedKey = maTuyen.toLowerCase();
+      mapTheoTuyen[normalizedKey] = donGia;
+    }
+    
+    // Populate mapTheoCa (normalize key to lowercase for case-insensitive lookup)
+    if (tenTuyen) {
+      const normalizedKey = tenTuyen.toLowerCase();
+      mapTheoCa[normalizedKey] = donGia;
+    }
+  }
+  
+  logInfo(`Pricing cache loaded: ${Object.keys(mapTheoTuyen).length} routes, ${Object.keys(mapTheoCa).length} shifts`);
+  
+  return { mapTheoTuyen, mapTheoCa };
+}
+
+/**
+ * Calculate trip cost and update payload directly
+ * 
+ * @param {Object} payload - The payload object (will be modified in place)
+ * @param {Object} priceMaps - Object containing { mapTheoTuyen, mapTheoCa }
+ */
+function calculateTripCost(payload, priceMaps) {
+  const config = getConfig();
+  const { mapTheoTuyen, mapTheoCa } = priceMaps;
+  
+  // Get loaiChuyen (trip type) from payload
+  const loaiChuyen = String(payload.loaiChuyen || '').toLowerCase().trim();
+  
+  logInfo(`Calculating cost for trip type: "${loaiChuyen}"`);
+  
+  // CASE 1: "Theo tuyến" - Line Item Pricing
+  if (loaiChuyen === config.PRICING.TRIP_TYPE_THEO_TUYEN) {
+    logInfo('Using Line Item Pricing (Theo tuyến)');
+    
+    let totalCost = 0;
+    const chiTietLoTrinh = payload.data_json?.chiTietLoTrinh || [];
+    
+    // Loop through each detail line
+    for (let i = 0; i < chiTietLoTrinh.length; i++) {
+      const item = chiTietLoTrinh[i];
+      
+      // Get loTrinh value and normalize for lookup
+      const loTrinh = String(item.loTrinh || '').trim();
+      const lookupKey = loTrinh.toLowerCase();
+      
+      // Lookup price in mapTheoTuyen
+      const price = mapTheoTuyen[lookupKey] || 0;
+      
+      // Update don_gia in detail item
+      item.donGia = price;
+      
+      // Add to total
+      totalCost += price;
+      
+      logInfo(`  Detail ${i + 1}: loTrinh="${loTrinh}" -> donGia=${price}`);
+    }
+    
+    // Update master tongDoanhThu
+    payload.tongDoanhThu = totalCost;
+    logInfo(`Total revenue calculated: ${totalCost}`);
+  }
+  
+  // CASE 2: "Theo ca" - Master Pricing (Package)
+  else if (loaiChuyen === config.PRICING.TRIP_TYPE_THEO_CA) {
+    logInfo('Using Package Pricing (Theo ca)');
+    
+    // Get tenTuyen value and normalize for lookup
+    const tenTuyen = String(payload.tenTuyen || '').trim();
+    const lookupKey = tenTuyen.toLowerCase();
+    
+    // Lookup price in mapTheoCa
+    const price = mapTheoCa[lookupKey] || 0;
+    
+    // Update master tongDoanhThu
+    payload.tongDoanhThu = price;
+    
+    logInfo(`  tenTuyen="${tenTuyen}" -> tongDoanhThu=${price}`);
+    
+    // Optional: Set all detail items donGia to 0 (not used in this mode)
+    const chiTietLoTrinh = payload.data_json?.chiTietLoTrinh || [];
+    for (let item of chiTietLoTrinh) {
+      item.donGia = 0;
+    }
+  }
+  
+  // CASE 3: Other trip types - no auto pricing
+  else {
+    logWarning(`Unknown trip type: "${loaiChuyen}". No auto pricing applied.`);
+  }
+}
+
+
+// =============================================================================
 // API COMMUNICATION
 // =============================================================================
 
@@ -611,6 +770,58 @@ function testGetDetailData() {
   Logger.log('Detail Data:');
   Logger.log(JSON.stringify(data, null, 2));
 }
+
+/**
+ * Test load pricing cache
+ */
+function testLoadPricingCache() {
+  const priceMaps = loadPricingCache();
+  Logger.log('Pricing Maps Loaded:');
+  Logger.log('mapTheoTuyen keys:', Object.keys(priceMaps.mapTheoTuyen));
+  Logger.log('mapTheoCa keys:', Object.keys(priceMaps.mapTheoCa));
+  Logger.log('Sample mapTheoTuyen:', JSON.stringify(priceMaps.mapTheoTuyen, null, 2));
+  Logger.log('Sample mapTheoCa:', JSON.stringify(priceMaps.mapTheoCa, null, 2));
+}
+
+/**
+ * Test auto pricing calculation
+ */
+function testAutoPricing() {
+  // Create a mock payload for testing
+  const mockPayload = {
+    maChuyenDi: 'TEST-001',
+    loaiChuyen: 'Theo tuyến', // Change to 'Theo ca' to test package pricing
+    tenTuyen: 'Nội tỉnh Sơn La 03',
+    tongDoanhThu: 0,
+    data_json: {
+      chiTietLoTrinh: [
+        {
+          thuTu: 1,
+          loTrinh: 'Kho Chuyển Tiếp Sơn La -> Bưu Cục 354 Trần Đăng Ninh-Sơn La-Sơn La',
+          donGia: 0
+        },
+        {
+          thuTu: 2,
+          loTrinh: 'Bưu Cục 354 Trần Đăng Ninh-Sơn La-Sơn La -> Kho Chuyển Tiếp Sơn La',
+          donGia: 0
+        }
+      ]
+    }
+  };
+  
+  Logger.log('=== BEFORE AUTO PRICING ===');
+  Logger.log(JSON.stringify(mockPayload, null, 2));
+  
+  // Load pricing cache
+  const priceMaps = loadPricingCache();
+  
+  // Calculate trip cost
+  calculateTripCost(mockPayload, priceMaps);
+  
+  Logger.log('=== AFTER AUTO PRICING ===');
+  Logger.log(JSON.stringify(mockPayload, null, 2));
+}
+
 
 
 // =============================================================================
