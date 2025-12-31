@@ -243,7 +243,7 @@ export function ReconciliationToolbar({
                       <CommandItem
                         key={customer}
                         value={customer}
-                        onSelect={(currentValue) => {
+                        onSelect={(currentValue: string) => {
                           updatePendingFilter("khachHang", currentValue)
                           setCustomerOpen(false)
                         }}
