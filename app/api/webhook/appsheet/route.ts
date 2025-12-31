@@ -294,7 +294,10 @@ function normalizePayload(payload: GASPayload): NormalizedPayload {
     details
   };
   
-  console.log('[NORMALIZE] Normalization complete:', JSON.stringify(normalized, null, 2));
+  console.log('[NORMALIZE] Normalization complete. Final values:');
+  console.log(`  - revenue: ${normalized.revenue}`);
+  console.log(`  - cost: ${normalized.cost}`);
+  console.log('[NORMALIZE] Full normalized object:', JSON.stringify(normalized, null, 2));
   
   return normalized;
 }
@@ -400,6 +403,9 @@ export async function POST(request: Request) {
 
     // 6. Execute UPSERT with normalized data
     console.log('💾 Executing database UPSERT...');
+    console.log('[DB INSERT] Values to insert:');
+    console.log(`  - revenue: ${normalized.revenue}`);
+    console.log(`  - cost: ${normalized.cost}`);
     
     const detailsJson = JSON.stringify(normalized.details);
     
