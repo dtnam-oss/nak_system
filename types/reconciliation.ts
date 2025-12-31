@@ -17,6 +17,7 @@ export interface ReconciliationRecord {
   trangThai: string
   tongQuangDuong: number
   tongDoanhThu: number
+  tongChiPhi: number
   soXe?: string
   chiTietLoTrinh?: ChiTietLoTrinh[]
   data_json?: string // Raw JSON string from Google Sheets

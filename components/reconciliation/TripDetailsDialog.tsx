@@ -122,9 +122,21 @@ export function TripDetailsDialog({
                 </p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Tổng doanh thu</p>
-                <p className="text-sm font-semibold text-foreground">
+                <p className="text-xs text-muted-foreground">Doanh thu</p>
+                <p className="text-sm font-semibold text-success">
                   {formatCurrency(record.tongDoanhThu || 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Chi phí</p>
+                <p className="text-sm font-semibold text-destructive">
+                  {formatCurrency(record.tongChiPhi || 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Lợi nhuận</p>
+                <p className="text-sm font-bold text-primary">
+                  {formatCurrency((record.tongDoanhThu || 0) - (record.tongChiPhi || 0))}
                 </p>
               </div>
               <div>

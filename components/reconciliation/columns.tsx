@@ -150,15 +150,6 @@ export const createColumns = ({
       },
     },
     {
-      accessorKey: "tongDoanhThu",
-      header: "Doanh thu",
-      cell: ({ row }) => (
-        <div className="text-right font-medium text-foreground min-w-[120px]">
-          {formatCurrency(row.getValue("tongDoanhThu"))}
-        </div>
-      ),
-    },
-    {
       id: "actions",
       header: "Thao tác",
       cell: ({ row }) => {

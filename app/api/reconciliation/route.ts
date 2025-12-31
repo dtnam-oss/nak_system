@@ -217,7 +217,8 @@ export async function GET(request: NextRequest) {
         donViVanChuyen: row.provider || '',
         trangThai: mapStatus(row.status),
         tongQuangDuong: parseFloat(String(row.total_distance || 0)),
-        tongDoanhThu: parseFloat(String(row.revenue || 0)),  // Changed from cost to revenue
+        tongDoanhThu: parseFloat(String(row.revenue || 0)),
+        tongChiPhi: parseFloat(String(row.cost || 0)),
         soXe: '',  // Removed: license_plate column dropped from DB
         chiTietLoTrinh: chiTietLoTrinh,
         data_json: dataJson,
