@@ -149,13 +149,20 @@ function buildFullPayload(tripId, eventType) {
     }
   };
   
-  // 4. Tính cước tự động (Auto Pricing)
+  // 4. Log giá trị TRƯỚC khi tính auto pricing
+  logInfo(`[BEFORE AUTO PRICING] tongDoanhThu: ${payload.tongDoanhThu}, tongChiPhi: ${payload.tongChiPhi || 0}`);
+  
+  // 5. Tính cước tự động (Auto Pricing)
   if (config.PRICING.ENABLED) {
     logInfo('Starting auto pricing calculation...');
     const priceMaps = loadPricingCache();
     calculateTripCost(payload, priceMaps);
     logInfo('Auto pricing calculation complete');
   }
+  
+  // 6. Log giá trị SAU khi tính auto pricing
+  logInfo(`[AFTER AUTO PRICING] tongDoanhThu: ${payload.tongDoanhThu}, tongChiPhi: ${payload.tongChiPhi || 0}`);
+  logInfo(`[FINAL PAYLOAD] Will send to Backend: tongDoanhThu=${payload.tongDoanhThu}, tongChiPhi=${payload.tongChiPhi || 0}`);
   
   return payload;
 }
@@ -568,8 +575,10 @@ function calculateTripCost(payload, priceMaps) {
   const donViVanChuyen = String(payload.donViVanChuyen || '').trim();
   const isNAK = donViVanChuyen.toUpperCase() === 'NAK';
   
-  logInfo(`Calculating cost for trip type: "${loaiChuyen}"`);
-  logInfo(`Provider: "${donViVanChuyen}" (isNAK: ${isNAK})`);
+  logInfo(`[AUTO PRICING] === START CALCULATION ===`);
+  logInfo(`[AUTO PRICING] Input values - tongDoanhThu: ${payload.tongDoanhThu}, tongChiPhi: ${payload.tongChiPhi || 0}`);
+  logInfo(`[AUTO PRICING] Trip type: "${loaiChuyen}"`);
+  logInfo(`[AUTO PRICING] Provider: "${donViVanChuyen}" (isNAK: ${isNAK})`);
   
   // CASE 1: "Theo tuyến" - Line Item Pricing
   if (loaiChuyen === config.PRICING.TRIP_TYPE_THEO_TUYEN) {
@@ -606,7 +615,8 @@ function calculateTripCost(payload, priceMaps) {
     // Update master values
     payload.tongDoanhThu = totalRevenue;
     payload.tongChiPhi = totalCost;
-    logInfo(`Total revenue: ${totalRevenue}, Total cost: ${totalCost}`);
+    logInfo(`[AUTO PRICING] THEO TUYẾN - Set tongDoanhThu=${totalRevenue}, tongChiPhi=${totalCost}`);
+    logInfo(`[AUTO PRICING] Total revenue: ${totalRevenue}, Total cost: ${totalCost}`);
   }
   
   // CASE 2: "Theo ca" - Master Pricing (Package)
@@ -627,7 +637,8 @@ function calculateTripCost(payload, priceMaps) {
     payload.tongDoanhThu = pricingData.donGia;
     payload.tongChiPhi = cost;
     
-    logInfo(`  tenTuyen="${tenTuyen}" -> revenue=${pricingData.donGia}, cost=${cost}`);
+    logInfo(`[AUTO PRICING] THEO CA - Set tongDoanhThu=${pricingData.donGia}, tongChiPhi=${cost}`);
+    logInfo(`[AUTO PRICING] tenTuyen="${tenTuyen}" -> revenue=${pricingData.donGia}, cost=${cost}`);
     
     // Optional: Set all detail items donGia to 0 (not used in this mode)
     const chiTietLoTrinh = payload.data_json?.chiTietLoTrinh || [];
@@ -638,9 +649,12 @@ function calculateTripCost(payload, priceMaps) {
   
   // CASE 3: Other trip types - no auto pricing
   else {
-    logWarning(`Unknown trip type: "${loaiChuyen}". No auto pricing applied.`);
+    logWarning(`[AUTO PRICING] Unknown trip type: "${loaiChuyen}". No auto pricing applied.`);
     payload.tongChiPhi = 0;
   }
+  
+  logInfo(`[AUTO PRICING] === END CALCULATION ===`);
+  logInfo(`[AUTO PRICING] Final values - tongDoanhThu: ${payload.tongDoanhThu}, tongChiPhi: ${payload.tongChiPhi}`);
 }
 
 
@@ -833,7 +847,7 @@ function testAutoPricing() {
   Logger.log('Expected: Revenue from don_gia, Cost from chi_phi_luong_tx\n');
   
   const mockPayload1 = {
-    maChuyenDi: 'TEST-001',
+    maChuyenDi: 'NAKab10abce-11d8-4c77-baa9-4077c1e07702',
     loaiChuyen: 'Theo tuyến',
     donViVanChuyen: 'NAK',  // ✅ NAK → chi_phi_luong_tx
     tenTuyen: 'Nội tỉnh Sơn La 03',
@@ -843,13 +857,13 @@ function testAutoPricing() {
       chiTietLoTrinh: [
         {
           thuTu: 1,
-          loTrinh: 'SL-001',  // Thay bằng mã tuyến thực tế
+          loTrinh: 'SonLa_T_03',  // Thay bằng mã tuyến thực tế
           loTrinhChiTiet: 'Kho Chuyển Tiếp Sơn La -> Bưu Cục 354',
           donGia: 0
         },
         {
           thuTu: 2,
-          loTrinh: 'SL-002',  // Thay bằng mã tuyến thực tế
+          loTrinh: 'SonLa_S_01',  // Thay bằng mã tuyến thực tế
           loTrinhChiTiet: 'Bưu Cục 354 -> Kho Chuyển Tiếp Sơn La',
           donGia: 0
         }
@@ -876,9 +890,9 @@ function testAutoPricing() {
   Logger.log('Expected: Revenue from don_gia, Cost from chi_phi_khoan_ncc\n');
   
   const mockPayload2 = {
-    maChuyenDi: 'TEST-002',
+    maChuyenDi: 'NAKf0a8a9bb-11db-468b-91d3-de3994e21137',
     loaiChuyen: 'Theo tuyến',
-    donViVanChuyen: 'Nhà xe Thành Bưởi',  // ✅ Vendor → chi_phi_khoan_ncc
+    donViVanChuyen: 'Vendor',  // ✅ Vendor → chi_phi_khoan_ncc
     tenTuyen: 'Nội tỉnh Sơn La 03',
     tongDoanhThu: 0,
     tongChiPhi: 0,
@@ -886,7 +900,7 @@ function testAutoPricing() {
       chiTietLoTrinh: [
         {
           thuTu: 1,
-          loTrinh: 'SL-001',
+          loTrinh: 'SonLa_T_03',
           donGia: 0
         }
       ]
