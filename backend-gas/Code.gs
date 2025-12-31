@@ -473,9 +473,9 @@ function formatDate(value) {
 
 /**
  * Load pricing cache from bang_gia sheet
- * Creates 2 Maps for O(1) lookup:
- * - mapTheoTuyen: Key = ma_tuyen (normalized), Value = don_gia
- * - mapTheoCa: Key = ten_tuyen (normalized), Value = don_gia
+ * Creates Maps for O(1) lookup:
+ * - mapTheoTuyen: Key = ma_tuyen (normalized), Value = { donGia, chiPhiLuongTX, chiPhiKhoanNCC }
+ * - mapTheoCa: Key = ten_tuyen (normalized), Value = { donGia, chiPhiLuongTX, chiPhiKhoanNCC }
  * 
  * @returns {Object} Object containing { mapTheoTuyen, mapTheoCa }
  */
@@ -505,6 +505,8 @@ function loadPricingCache() {
   const maTuyenIndex = getColumnIndex(headers, 'ma_tuyen');
   const tenTuyenIndex = getColumnIndex(headers, 'ten_tuyen');
   const donGiaIndex = getColumnIndex(headers, 'don_gia');
+  const chiPhiLuongTXIndex = getColumnIndex(headers, 'chi_phi_luong_tx');
+  const chiPhiKhoanNCCIndex = getColumnIndex(headers, 'chi_phi_khoan_ncc');
   
   if (maTuyenIndex === -1 || tenTuyenIndex === -1 || donGiaIndex === -1) {
     logError('Pricing sheet missing required columns: ma_tuyen, ten_tuyen, or don_gia');
@@ -522,17 +524,26 @@ function loadPricingCache() {
     const maTuyen = String(row[maTuyenIndex] || '').trim();
     const tenTuyen = String(row[tenTuyenIndex] || '').trim();
     const donGia = parseNumber(row[donGiaIndex]);
+    const chiPhiLuongTX = chiPhiLuongTXIndex !== -1 ? parseNumber(row[chiPhiLuongTXIndex]) : 0;
+    const chiPhiKhoanNCC = chiPhiKhoanNCCIndex !== -1 ? parseNumber(row[chiPhiKhoanNCCIndex]) : 0;
+    
+    // Create pricing object
+    const pricingData = {
+      donGia: donGia,
+      chiPhiLuongTX: chiPhiLuongTX,
+      chiPhiKhoanNCC: chiPhiKhoanNCC
+    };
     
     // Populate mapTheoTuyen (normalize key to lowercase for case-insensitive lookup)
     if (maTuyen) {
       const normalizedKey = maTuyen.toLowerCase();
-      mapTheoTuyen[normalizedKey] = donGia;
+      mapTheoTuyen[normalizedKey] = pricingData;
     }
     
     // Populate mapTheoCa (normalize key to lowercase for case-insensitive lookup)
     if (tenTuyen) {
       const normalizedKey = tenTuyen.toLowerCase();
-      mapTheoCa[normalizedKey] = donGia;
+      mapTheoCa[normalizedKey] = pricingData;
     }
   }
   
@@ -543,6 +554,7 @@ function loadPricingCache() {
 
 /**
  * Calculate trip cost and update payload directly
+ * Now calculates both revenue (tongDoanhThu) and cost (tongChiPhi)
  * 
  * @param {Object} payload - The payload object (will be modified in place)
  * @param {Object} priceMaps - Object containing { mapTheoTuyen, mapTheoCa }
@@ -551,15 +563,19 @@ function calculateTripCost(payload, priceMaps) {
   const config = getConfig();
   const { mapTheoTuyen, mapTheoCa } = priceMaps;
   
-  // Get loaiChuyen (trip type) from payload
+  // Get loaiChuyen (trip type) and donViVanChuyen from payload
   const loaiChuyen = String(payload.loaiChuyen || '').toLowerCase().trim();
+  const donViVanChuyen = String(payload.donViVanChuyen || '').trim();
+  const isNAK = donViVanChuyen.toUpperCase() === 'NAK';
   
   logInfo(`Calculating cost for trip type: "${loaiChuyen}"`);
+  logInfo(`Provider: "${donViVanChuyen}" (isNAK: ${isNAK})`);
   
   // CASE 1: "Theo tuyến" - Line Item Pricing
   if (loaiChuyen === config.PRICING.TRIP_TYPE_THEO_TUYEN) {
     logInfo('Using Line Item Pricing (Theo tuyến)');
     
+    let totalRevenue = 0;
     let totalCost = 0;
     const chiTietLoTrinh = payload.data_json?.chiTietLoTrinh || [];
     
@@ -571,21 +587,26 @@ function calculateTripCost(payload, priceMaps) {
       const loTrinh = String(item.loTrinh || '').trim();
       const lookupKey = loTrinh.toLowerCase();
       
-      // Lookup price in mapTheoTuyen (ma_tuyen from bang_gia)
-      const price = mapTheoTuyen[lookupKey] || 0;
+      // Lookup pricing data in mapTheoTuyen
+      const pricingData = mapTheoTuyen[lookupKey] || { donGia: 0, chiPhiLuongTX: 0, chiPhiKhoanNCC: 0 };
       
-      // Update don_gia in detail item
-      item.donGia = price;
+      // Update don_gia (revenue) in detail item
+      item.donGia = pricingData.donGia;
       
-      // Add to total
-      totalCost += price;
+      // Calculate cost based on provider
+      const itemCost = isNAK ? pricingData.chiPhiLuongTX : pricingData.chiPhiKhoanNCC;
       
-      logInfo(`  Detail ${i + 1}: loTrinh="${loTrinh}" -> donGia=${price}`);
+      // Add to totals
+      totalRevenue += pricingData.donGia;
+      totalCost += itemCost;
+      
+      logInfo(`  Detail ${i + 1}: loTrinh="${loTrinh}" -> donGia=${pricingData.donGia}, cost=${itemCost}`);
     }
     
-    // Update master tongDoanhThu
-    payload.tongDoanhThu = totalCost;
-    logInfo(`Total revenue calculated: ${totalCost}`);
+    // Update master values
+    payload.tongDoanhThu = totalRevenue;
+    payload.tongChiPhi = totalCost;
+    logInfo(`Total revenue: ${totalRevenue}, Total cost: ${totalCost}`);
   }
   
   // CASE 2: "Theo ca" - Master Pricing (Package)
@@ -596,13 +617,17 @@ function calculateTripCost(payload, priceMaps) {
     const tenTuyen = String(payload.tenTuyen || '').trim();
     const lookupKey = tenTuyen.toLowerCase();
     
-    // Lookup price in mapTheoCa
-    const price = mapTheoCa[lookupKey] || 0;
+    // Lookup pricing data in mapTheoCa
+    const pricingData = mapTheoCa[lookupKey] || { donGia: 0, chiPhiLuongTX: 0, chiPhiKhoanNCC: 0 };
     
-    // Update master tongDoanhThu
-    payload.tongDoanhThu = price;
+    // Calculate cost based on provider
+    const cost = isNAK ? pricingData.chiPhiLuongTX : pricingData.chiPhiKhoanNCC;
     
-    logInfo(`  tenTuyen="${tenTuyen}" -> tongDoanhThu=${price}`);
+    // Update master values
+    payload.tongDoanhThu = pricingData.donGia;
+    payload.tongChiPhi = cost;
+    
+    logInfo(`  tenTuyen="${tenTuyen}" -> revenue=${pricingData.donGia}, cost=${cost}`);
     
     // Optional: Set all detail items donGia to 0 (not used in this mode)
     const chiTietLoTrinh = payload.data_json?.chiTietLoTrinh || [];
@@ -614,6 +639,7 @@ function calculateTripCost(payload, priceMaps) {
   // CASE 3: Other trip types - no auto pricing
   else {
     logWarning(`Unknown trip type: "${loaiChuyen}". No auto pricing applied.`);
+    payload.tongChiPhi = 0;
   }
 }
 

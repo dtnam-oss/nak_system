@@ -11,6 +11,7 @@ interface GASPayload {
   ngayTao?: string;
   tenKhachHang?: string;
   tongDoanhThu?: number | string;
+  tongChiPhi?: number | string;  // NEW: Cost from auto pricing
   tongQuangDuong?: number | string;
   trangThai?: string;
   tenTaiXe?: string;
@@ -253,8 +254,9 @@ function normalizePayload(payload: GASPayload): NormalizedPayload {
   const revenue = parseNumber(payload.tongDoanhThu);
   console.log(`[NORMALIZE] tongDoanhThu: ${payload.tongDoanhThu} -> revenue: ${revenue}`);
   
-  // Cost defaults to 0 (will be calculated separately for chi phí)
-  const cost = 0;
+  // CRITICAL: Map tongChiPhi -> cost (chi phí)
+  const cost = parseNumber(payload.tongChiPhi);
+  console.log(`[NORMALIZE] tongChiPhi: ${payload.tongChiPhi} -> cost: ${cost}`);
   
   // CRITICAL: Map tongQuangDuong -> total_distance
   const totalDistance = parseNumber(payload.tongQuangDuong);
