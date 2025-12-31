@@ -119,17 +119,18 @@ Tương tự như Fuel Import nhưng với:
 | Header Name (Sheet)               | JSON Key         | Type   | Transform         |
 |----------------------------------|------------------|--------|-------------------|
 | Id                               | id               | string | -                 |
-| ngay_xuat                        | transactionDate  | date   | YYYY-MM-DD        |
+| ngay_tao                         | transactionDate  | date   | YYYY-MM-DD        |
 | loai_hinh                        | fuelSource       | string | trim              |
+| doi_tuong                        | object           | string | trim              |
 | bien_so_xe                       | licensePlate     | string | trim              |
-| ma_tai_xe                        | driverCode       | string | trim              |
 | ten_tai_xe                       | driverName       | string | trim              |
 | loai_nhien_lieu                  | fuelType         | string | trim              |
 | so_luong                         | quantity         | number | parseVietnamese   |
 | don_gia                          | unitPrice        | number | parseVietnamese   |
 | thanh_tien                       | totalAmount      | number | parseVietnamese   |
-| hinh_anh_tru_da_so_luong_ai      | imageUrl         | string | trim              |
+| so_odo                           | odoNumber        | number | parseVietnamese   |
 | trang_thai                       | status           | string | trim              |
+| hang_muc                         | category         | string | trim              |
 
 ---
 
@@ -234,15 +235,16 @@ CREATE TABLE IF NOT EXISTS fuel_transactions (
   id TEXT PRIMARY KEY,
   transaction_date DATE,
   fuel_source TEXT,
+  object TEXT,
   license_plate TEXT,
-  driver_code TEXT,
   driver_name TEXT,
   fuel_type TEXT,
   quantity DECIMAL(10, 2),
   unit_price DECIMAL(10, 2),
   total_amount DECIMAL(12, 2),
-  image_url TEXT,
+  odo_number DECIMAL(10, 2),
   status TEXT,
+  category TEXT,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```

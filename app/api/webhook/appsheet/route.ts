@@ -54,15 +54,16 @@ interface FuelTransactionPayload {
   id: string;
   transactionDate: string;
   fuelSource: string | null;
+  object: string | null;
   licensePlate: string | null;
-  driverCode: string | null;
   driverName: string | null;
   fuelType: string | null;
   quantity: number;
   unitPrice: number;
   totalAmount: number;
-  imageUrl: string | null;
+  odoNumber: number;
   status: string | null;
+  category: string | null;
 }
 
 interface NormalizedPayload {
@@ -514,43 +515,46 @@ export async function POST(request: Request) {
             id,
             transaction_date,
             fuel_source,
+            object,
             license_plate,
-            driver_code,
             driver_name,
             fuel_type,
             quantity,
             unit_price,
             total_amount,
-            image_url,
+            odo_number,
             status,
+            category,
             updated_at
           ) VALUES (
             ${transData.id},
             ${transData.transactionDate},
             ${transData.fuelSource},
+            ${transData.object},
             ${transData.licensePlate},
-            ${transData.driverCode},
             ${transData.driverName},
             ${transData.fuelType},
             ${transData.quantity || 0},
             ${transData.unitPrice || 0},
             ${transData.totalAmount || 0},
-            ${transData.imageUrl},
+            ${transData.odoNumber || 0},
             ${transData.status},
+            ${transData.category},
             NOW()
           )
           ON CONFLICT (id) DO UPDATE SET
             transaction_date = EXCLUDED.transaction_date,
             fuel_source = EXCLUDED.fuel_source,
+            object = EXCLUDED.object,
             license_plate = EXCLUDED.license_plate,
-            driver_code = EXCLUDED.driver_code,
             driver_name = EXCLUDED.driver_name,
             fuel_type = EXCLUDED.fuel_type,
             quantity = EXCLUDED.quantity,
             unit_price = EXCLUDED.unit_price,
             total_amount = EXCLUDED.total_amount,
-            image_url = EXCLUDED.image_url,
+            odo_number = EXCLUDED.odo_number,
             status = EXCLUDED.status,
+            category = EXCLUDED.category,
             updated_at = NOW()
         `;
 

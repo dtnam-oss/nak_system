@@ -1650,13 +1650,13 @@ function transformFuelExportRow(row, headers, columnMap) {
         value = formatDate(value);
       }
       
-      // Convert number fields (quantity, unitPrice, totalAmount)
-      if (['quantity', 'unitPrice', 'totalAmount'].includes(jsonKey)) {
+      // Convert number fields (quantity, unitPrice, totalAmount, odoNumber)
+      if (['quantity', 'unitPrice', 'totalAmount', 'odoNumber'].includes(jsonKey)) {
         value = parseVietnameseNumber(value);
       }
       
-      // Trim whitespace for fuelSource (loai_hinh)
-      if (jsonKey === 'fuelSource' && value !== null) {
+      // Trim whitespace for critical string fields
+      if (['fuelSource', 'object', 'category'].includes(jsonKey) && value !== null) {
         value = String(value).trim();
       }
     }

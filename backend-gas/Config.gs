@@ -122,17 +122,18 @@ const CONFIG = {
   FUEL_EXPORT_COLUMNS: {
     // Tên cột trong Sheet -> Key trong JSON
     'Id': 'id',
-    'ngay_xuat': 'transactionDate',
+    'ngay_tao': 'transactionDate',
     'loai_hinh': 'fuelSource',
+    'doi_tuong': 'object',
     'bien_so_xe': 'licensePlate',
-    'ma_tai_xe': 'driverCode',
     'ten_tai_xe': 'driverName',
     'loai_nhien_lieu': 'fuelType',
     'so_luong': 'quantity',
     'don_gia': 'unitPrice',
     'thanh_tien': 'totalAmount',
-    'hinh_anh_tru_da_so_luong_ai': 'imageUrl',
-    'trang_thai': 'status'
+    'so_odo': 'odoNumber',
+    'trang_thai': 'status',
+    'hang_muc': 'category'  // Chốt đầu | Đổ dặm | Chốt cuối
   },
 
   // =============================================================================
@@ -185,8 +186,7 @@ const CONFIG = {
   // =============================================================================
   DATE_COLUMNS: [
     'ngay_tao',
-    'ngay_nhap',
-    'ngay_xuat'
+    'ngay_nhap'
   ],
 
   // =============================================================================

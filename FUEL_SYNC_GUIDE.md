@@ -293,7 +293,7 @@ ORDER BY updated_at DESC
 LIMIT 10;
 
 -- Check latest fuel transactions
-SELECT id, transaction_date, license_plate, quantity, updated_at
+SELECT id, transaction_date, license_plate, quantity, odo_number, category, updated_at
 FROM fuel_transactions
 ORDER BY updated_at DESC
 LIMIT 10;

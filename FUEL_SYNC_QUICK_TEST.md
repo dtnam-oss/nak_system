@@ -186,8 +186,8 @@ SELECT
   license_plate,
   driver_name,
   fuel_type,
-  quantity,
-  status,
+  quantity,  odo_number,
+  category,  status,
   updated_at
 FROM fuel_transactions
 ORDER BY updated_at DESC
