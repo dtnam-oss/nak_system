@@ -1381,3 +1381,579 @@ function parseVietnameseNumber(value) {
   
   return 0;
 }
+
+
+// =============================================================================
+// FUEL SYNC MODULE
+// =============================================================================
+// Module này đồng bộ dữ liệu Nhiên liệu (Import + Export) sang Backend
+// - Import: Nhập kho nhiên liệu
+// - Export: Xuất kho nhiên liệu (giao dịch tiêu thụ)
+// =============================================================================
+
+/**
+ * Main function: Đồng bộ toàn bộ dữ liệu Nhiên liệu sang Backend
+ * 
+ * Thực hiện 2 bước:
+ * 1. Đồng bộ Fuel Import (nhap_nhien_lieu)
+ * 2. Đồng bộ Fuel Export (xuat_nhien_lieu)
+ * 
+ * @returns {Object} Kết quả đồng bộ
+ */
+function syncFuelToBackend() {
+  const config = getConfig();
+  
+  try {
+    logInfo('========== START FUEL SYNC ==========');
+    
+    // STEP 1: Đồng bộ Fuel Imports
+    logInfo('Step 1: Syncing Fuel Imports...');
+    const importResult = syncFuelImports();
+    logInfo(`✓ Fuel Imports synced: ${importResult.count} records`);
+    
+    // STEP 2: Đồng bộ Fuel Transactions (Exports)
+    logInfo('Step 2: Syncing Fuel Transactions...');
+    const exportResult = syncFuelTransactions();
+    logInfo(`✓ Fuel Transactions synced: ${exportResult.count} records`);
+    
+    logInfo('========== FUEL SYNC SUCCESS ==========');
+    
+    return {
+      success: true,
+      message: 'Fuel data synchronized successfully',
+      imports: importResult,
+      transactions: exportResult
+    };
+    
+  } catch (error) {
+    logError('========== FUEL SYNC FAILED ==========');
+    logError(`Error: ${error.message}`);
+    logError(`Stack: ${error.stack}`);
+    
+    return {
+      success: false,
+      message: error.message,
+      error: error.toString()
+    };
+  }
+}
+
+/**
+ * Đồng bộ Fuel Imports (nhập nhiên liệu)
+ */
+function syncFuelImports() {
+  const config = getConfig();
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(config.SHEET_NAMES.FUEL_IMPORT);
+  
+  if (!sheet) {
+    throw new Error(`Sheet not found: ${config.SHEET_NAMES.FUEL_IMPORT}`);
+  }
+  
+  // 1. Đọc dữ liệu
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  
+  if (values.length <= 1) {
+    logInfo('No fuel import data to sync (sheet empty or only headers)');
+    return { count: 0, records: [] };
+  }
+  
+  // 2. Extract headers
+  const headers = values[0];
+  
+  // 3. Build column index map
+  const columnMap = buildColumnMapForImport(headers);
+  
+  // 4. Transform data rows
+  const imports = [];
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    
+    // Skip empty rows (check if Id column is empty)
+    const idIndex = columnMap['id'];
+    if (idIndex === undefined || !row[idIndex]) {
+      continue;
+    }
+    
+    const importRecord = transformFuelImportRow(row, headers, columnMap);
+    imports.push(importRecord);
+  }
+  
+  logInfo(`Transformed ${imports.length} fuel import records`);
+  
+  // 5. Gửi lên Backend
+  const payload = {
+    Action: 'UpsertFuelImports',
+    imports: imports
+  };
+  
+  const response = sendToBackendAPI(payload);
+  
+  return {
+    count: imports.length,
+    records: imports,
+    response: response
+  };
+}
+
+/**
+ * Đồng bộ Fuel Transactions (xuất nhiên liệu)
+ */
+function syncFuelTransactions() {
+  const config = getConfig();
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(config.SHEET_NAMES.FUEL_EXPORT);
+  
+  if (!sheet) {
+    throw new Error(`Sheet not found: ${config.SHEET_NAMES.FUEL_EXPORT}`);
+  }
+  
+  // 1. Đọc dữ liệu
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  
+  if (values.length <= 1) {
+    logInfo('No fuel transaction data to sync (sheet empty or only headers)');
+    return { count: 0, records: [] };
+  }
+  
+  // 2. Extract headers
+  const headers = values[0];
+  
+  // 3. Build column index map
+  const columnMap = buildColumnMapForExport(headers);
+  
+  // 4. Transform data rows
+  const transactions = [];
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    
+    // Skip empty rows (check if Id column is empty)
+    const idIndex = columnMap['id'];
+    if (idIndex === undefined || !row[idIndex]) {
+      continue;
+    }
+    
+    const transaction = transformFuelExportRow(row, headers, columnMap);
+    transactions.push(transaction);
+  }
+  
+  logInfo(`Transformed ${transactions.length} fuel transaction records`);
+  
+  // 5. Gửi lên Backend
+  const payload = {
+    Action: 'UpsertFuelTransactions',
+    transactions: transactions
+  };
+  
+  const response = sendToBackendAPI(payload);
+  
+  return {
+    count: transactions.length,
+    records: transactions,
+    response: response
+  };
+}
+
+/**
+ * Build column index map cho Fuel Import
+ */
+function buildColumnMapForImport(headers) {
+  const config = getConfig();
+  const columnMap = {};
+  
+  for (const [sheetColumn, jsonKey] of Object.entries(config.FUEL_IMPORT_COLUMNS)) {
+    const colIndex = getColumnIndex(headers, sheetColumn);
+    if (colIndex !== -1) {
+      columnMap[jsonKey] = colIndex;
+    }
+  }
+  
+  return columnMap;
+}
+
+/**
+ * Build column index map cho Fuel Export
+ */
+function buildColumnMapForExport(headers) {
+  const config = getConfig();
+  const columnMap = {};
+  
+  for (const [sheetColumn, jsonKey] of Object.entries(config.FUEL_EXPORT_COLUMNS)) {
+    const colIndex = getColumnIndex(headers, sheetColumn);
+    if (colIndex !== -1) {
+      columnMap[jsonKey] = colIndex;
+    }
+  }
+  
+  return columnMap;
+}
+
+/**
+ * Transform một row thành Fuel Import record
+ */
+function transformFuelImportRow(row, headers, columnMap) {
+  const record = {};
+  
+  // Map tất cả các fields
+  for (const [jsonKey, colIndex] of Object.entries(columnMap)) {
+    let value = row[colIndex];
+    
+    // Handle null/undefined
+    if (value === null || value === undefined || value === '') {
+      value = null;
+    } else {
+      // Trim strings
+      if (typeof value === 'string') {
+        value = value.trim();
+      }
+      
+      // Convert date fields
+      if (jsonKey === 'importDate') {
+        value = formatDate(value);
+      }
+      
+      // Convert number fields (quantity, unitPrice, totalAmount, avgPrice)
+      if (['quantity', 'unitPrice', 'totalAmount', 'avgPrice'].includes(jsonKey)) {
+        value = parseVietnameseNumber(value);
+      }
+    }
+    
+    record[jsonKey] = value;
+  }
+  
+  return record;
+}
+
+/**
+ * Transform một row thành Fuel Export record (Transaction)
+ */
+function transformFuelExportRow(row, headers, columnMap) {
+  const record = {};
+  
+  // Map tất cả các fields
+  for (const [jsonKey, colIndex] of Object.entries(columnMap)) {
+    let value = row[colIndex];
+    
+    // Handle null/undefined
+    if (value === null || value === undefined || value === '') {
+      value = null;
+    } else {
+      // Trim strings
+      if (typeof value === 'string') {
+        value = value.trim();
+      }
+      
+      // Convert date fields
+      if (jsonKey === 'transactionDate') {
+        value = formatDate(value);
+      }
+      
+      // Convert number fields (quantity, unitPrice, totalAmount)
+      if (['quantity', 'unitPrice', 'totalAmount'].includes(jsonKey)) {
+        value = parseVietnameseNumber(value);
+      }
+      
+      // Trim whitespace for fuelSource (loai_hinh)
+      if (jsonKey === 'fuelSource' && value !== null) {
+        value = String(value).trim();
+      }
+    }
+    
+    record[jsonKey] = value;
+  }
+  
+  return record;
+}
+
+
+// =============================================================================
+// FUEL REAL-TIME SYNC MODULE
+// =============================================================================
+// Module này xử lý đồng bộ Real-time từng record khi có sự kiện Add/Edit/Delete
+// Được trigger bởi AppSheet Bot
+// =============================================================================
+
+/**
+ * Real-time sync cho Fuel Import (nhập nhiên liệu)
+ * Được gọi từ AppSheet Bot khi có sự kiện trên bảng nhap_nhien_lieu
+ * 
+ * @param {string} importId - ID của record (từ cột Id)
+ * @param {string} eventType - Loại sự kiện: 'Add', 'Edit', hoặc 'Delete'
+ * @returns {Object} Response từ API hoặc error message
+ * 
+ * @example
+ * // Gọi từ AppSheet Bot:
+ * syncFuelImportToBackend([Id], "Add")
+ * syncFuelImportToBackend([Id], "Edit")
+ * syncFuelImportToBackend([_THISROW_BEFORE].[Id], "Delete")
+ */
+function syncFuelImportToBackend(importId, eventType) {
+  const config = getConfig();
+  
+  try {
+    logInfo(`========== START FUEL IMPORT SYNC ==========`);
+    logInfo(`Import ID: ${importId}`);
+    logInfo(`Event Type: ${eventType}`);
+    
+    // Validate inputs
+    if (!importId) {
+      throw new Error('importId is required');
+    }
+    
+    if (!eventType) {
+      throw new Error('eventType is required');
+    }
+    
+    // Validate event type
+    const validEvents = Object.values(config.EVENTS);
+    if (!validEvents.includes(eventType)) {
+      throw new Error(`Invalid eventType: ${eventType}. Must be one of: ${validEvents.join(', ')}`);
+    }
+    
+    let payload;
+    
+    if (eventType === config.EVENTS.DELETE) {
+      // DELETE: Chỉ gửi ID
+      payload = {
+        Action: 'FuelImport_Delete',
+        id: importId
+      };
+      logInfo('DELETE event - Sending ID only');
+      
+    } else {
+      // ADD/EDIT: Đọc dữ liệu từ Sheet
+      const importData = getFuelImportData(importId);
+      
+      if (!importData) {
+        throw new Error(`Không tìm thấy record với Id: ${importId}`);
+      }
+      
+      payload = {
+        Action: 'FuelImport_Upsert',
+        data: importData
+      };
+      logInfo('ADD/EDIT event - Full data payload created');
+    }
+    
+    // Log payload (verbose mode)
+    if (config.LOGGING.VERBOSE) {
+      logInfo('Payload JSON:');
+      logInfo(JSON.stringify(payload, null, 2));
+    }
+    
+    // Send to Backend API
+    const response = sendToBackendAPI(payload);
+    
+    logInfo(`========== FUEL IMPORT SYNC SUCCESS ==========`);
+    return {
+      success: true,
+      message: 'Fuel import synchronized successfully',
+      importId: importId,
+      eventType: eventType,
+      response: response
+    };
+    
+  } catch (error) {
+    logError(`========== FUEL IMPORT SYNC FAILED ==========`);
+    logError(`Error: ${error.message}`);
+    logError(`Stack: ${error.stack}`);
+    
+    return {
+      success: false,
+      message: error.message,
+      importId: importId,
+      eventType: eventType
+    };
+  }
+}
+
+/**
+ * Real-time sync cho Fuel Transaction (xuất nhiên liệu)
+ * Được gọi từ AppSheet Bot khi có sự kiện trên bảng xuat_nhien_lieu
+ * 
+ * @param {string} transId - ID của record (từ cột Id)
+ * @param {string} eventType - Loại sự kiện: 'Add', 'Edit', hoặc 'Delete'
+ * @returns {Object} Response từ API hoặc error message
+ * 
+ * @example
+ * // Gọi từ AppSheet Bot:
+ * syncFuelTransactionToBackend([Id], "Add")
+ * syncFuelTransactionToBackend([Id], "Edit")
+ * syncFuelTransactionToBackend([_THISROW_BEFORE].[Id], "Delete")
+ */
+function syncFuelTransactionToBackend(transId, eventType) {
+  const config = getConfig();
+  
+  try {
+    logInfo(`========== START FUEL TRANSACTION SYNC ==========`);
+    logInfo(`Transaction ID: ${transId}`);
+    logInfo(`Event Type: ${eventType}`);
+    
+    // Validate inputs
+    if (!transId) {
+      throw new Error('transId is required');
+    }
+    
+    if (!eventType) {
+      throw new Error('eventType is required');
+    }
+    
+    // Validate event type
+    const validEvents = Object.values(config.EVENTS);
+    if (!validEvents.includes(eventType)) {
+      throw new Error(`Invalid eventType: ${eventType}. Must be one of: ${validEvents.join(', ')}`);
+    }
+    
+    let payload;
+    
+    if (eventType === config.EVENTS.DELETE) {
+      // DELETE: Chỉ gửi ID
+      payload = {
+        Action: 'FuelTransaction_Delete',
+        id: transId
+      };
+      logInfo('DELETE event - Sending ID only');
+      
+    } else {
+      // ADD/EDIT: Đọc dữ liệu từ Sheet
+      const transData = getFuelTransactionData(transId);
+      
+      if (!transData) {
+        throw new Error(`Không tìm thấy record với Id: ${transId}`);
+      }
+      
+      payload = {
+        Action: 'FuelTransaction_Upsert',
+        data: transData
+      };
+      logInfo('ADD/EDIT event - Full data payload created');
+    }
+    
+    // Log payload (verbose mode)
+    if (config.LOGGING.VERBOSE) {
+      logInfo('Payload JSON:');
+      logInfo(JSON.stringify(payload, null, 2));
+    }
+    
+    // Send to Backend API
+    const response = sendToBackendAPI(payload);
+    
+    logInfo(`========== FUEL TRANSACTION SYNC SUCCESS ==========`);
+    return {
+      success: true,
+      message: 'Fuel transaction synchronized successfully',
+      transId: transId,
+      eventType: eventType,
+      response: response
+    };
+    
+  } catch (error) {
+    logError(`========== FUEL TRANSACTION SYNC FAILED ==========`);
+    logError(`Error: ${error.message}`);
+    logError(`Stack: ${error.stack}`);
+    
+    return {
+      success: false,
+      message: error.message,
+      transId: transId,
+      eventType: eventType
+    };
+  }
+}
+
+/**
+ * Helper: Đọc 1 record từ sheet Fuel Import theo ID
+ */
+function getFuelImportData(importId) {
+  const config = getConfig();
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(config.SHEET_NAMES.FUEL_IMPORT);
+  
+  if (!sheet) {
+    throw new Error(`Sheet not found: ${config.SHEET_NAMES.FUEL_IMPORT}`);
+  }
+  
+  // Đọc toàn bộ dữ liệu
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  
+  if (values.length <= 1) {
+    throw new Error('Sheet is empty or has no data rows');
+  }
+  
+  // Extract headers
+  const headers = values[0];
+  
+  // Build column map
+  const columnMap = buildColumnMapForImport(headers);
+  
+  // Find Id column
+  const idColIndex = columnMap['id'];
+  if (idColIndex === undefined) {
+    throw new Error('Id column not found in sheet');
+  }
+  
+  // Tìm row theo ID
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const rowId = String(row[idColIndex]).trim();
+    
+    if (rowId === String(importId).trim()) {
+      // Found the row - transform and return
+      return transformFuelImportRow(row, headers, columnMap);
+    }
+  }
+  
+  // Not found
+  return null;
+}
+
+/**
+ * Helper: Đọc 1 record từ sheet Fuel Transaction theo ID
+ */
+function getFuelTransactionData(transId) {
+  const config = getConfig();
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(config.SHEET_NAMES.FUEL_EXPORT);
+  
+  if (!sheet) {
+    throw new Error(`Sheet not found: ${config.SHEET_NAMES.FUEL_EXPORT}`);
+  }
+  
+  // Đọc toàn bộ dữ liệu
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  
+  if (values.length <= 1) {
+    throw new Error('Sheet is empty or has no data rows');
+  }
+  
+  // Extract headers
+  const headers = values[0];
+  
+  // Build column map
+  const columnMap = buildColumnMapForExport(headers);
+  
+  // Find Id column
+  const idColIndex = columnMap['id'];
+  if (idColIndex === undefined) {
+    throw new Error('Id column not found in sheet');
+  }
+  
+  // Tìm row theo ID
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const rowId = String(row[idColIndex]).trim();
+    
+    if (rowId === String(transId).trim()) {
+      // Found the row - transform and return
+      return transformFuelExportRow(row, headers, columnMap);
+    }
+  }
+  
+  // Not found
+  return null;
+}
+

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 // ==================== TYPE DEFINITIONS ====================
 
 interface GASPayload {
-  Action: 'Add' | 'Edit' | 'Delete' | 'UpsertVehicles';
+  Action: 'Add' | 'Edit' | 'Delete' | 'UpsertVehicles' | 'FuelImport_Upsert' | 'FuelImport_Delete' | 'FuelTransaction_Upsert' | 'FuelTransaction_Delete';
   maChuyenDi?: string;
   ngayTao?: string;
   tenKhachHang?: string;
@@ -20,6 +20,9 @@ interface GASPayload {
   loaiTuyen?: string;
   data_json?: any;
   vehicles?: VehiclePayload[];  // NEW: For vehicles sync
+  // Fuel sync fields
+  id?: string;  // For Fuel Import/Transaction Delete
+  data?: FuelImportPayload | FuelTransactionPayload;  // For Fuel Upsert
 }
 
 interface VehiclePayload {
@@ -33,6 +36,33 @@ interface VehiclePayload {
   fuelNorm: number;          // Định mức dầu
   assignedDriverCodes: string | null; // Mã tài xế
   provider: string | null;   // Loại hình
+}
+
+interface FuelImportPayload {
+  id: string;
+  importDate: string;
+  supplier: string | null;
+  fuelType: string | null;
+  quantity: number;
+  unitPrice: number;
+  totalAmount: number;
+  avgPrice: number;
+  createdBy: string | null;
+}
+
+interface FuelTransactionPayload {
+  id: string;
+  transactionDate: string;
+  fuelSource: string | null;
+  licensePlate: string | null;
+  driverCode: string | null;
+  driverName: string | null;
+  fuelType: string | null;
+  quantity: number;
+  unitPrice: number;
+  totalAmount: number;
+  imageUrl: string | null;
+  status: string | null;
 }
 
 interface NormalizedPayload {
@@ -363,7 +393,220 @@ export async function POST(request: Request) {
 
     console.log('🔓 Authentication successful');
 
-    // 3. Handle UpsertVehicles action
+    // 3. Handle Fuel Import Actions
+    if (payload.Action === 'FuelImport_Upsert') {
+      console.log('⛽ Processing FuelImport_Upsert action...');
+      
+      if (!payload.data) {
+        console.error('❌ Missing fuel import data');
+        return NextResponse.json({
+          error: 'Missing fuel import data'
+        }, { status: 400 });
+      }
+
+      const fuelData = payload.data as FuelImportPayload;
+
+      try {
+        await sql`
+          INSERT INTO fuel_imports (
+            id,
+            import_date,
+            supplier,
+            fuel_type,
+            quantity,
+            unit_price,
+            total_amount,
+            avg_price,
+            created_by,
+            updated_at
+          ) VALUES (
+            ${fuelData.id},
+            ${fuelData.importDate},
+            ${fuelData.supplier},
+            ${fuelData.fuelType},
+            ${fuelData.quantity || 0},
+            ${fuelData.unitPrice || 0},
+            ${fuelData.totalAmount || 0},
+            ${fuelData.avgPrice || 0},
+            ${fuelData.createdBy},
+            NOW()
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            import_date = EXCLUDED.import_date,
+            supplier = EXCLUDED.supplier,
+            fuel_type = EXCLUDED.fuel_type,
+            quantity = EXCLUDED.quantity,
+            unit_price = EXCLUDED.unit_price,
+            total_amount = EXCLUDED.total_amount,
+            avg_price = EXCLUDED.avg_price,
+            created_by = EXCLUDED.created_by,
+            updated_at = NOW()
+        `;
+
+        console.log(`✅ Fuel import upserted: ${fuelData.id}`);
+
+        return NextResponse.json({
+          success: true,
+          action: 'fuel_import_upsert',
+          id: fuelData.id,
+          message: 'Fuel import synchronized successfully'
+        });
+
+      } catch (dbError: any) {
+        console.error('❌ Database error:', dbError.message);
+        return NextResponse.json({
+          error: 'Database error',
+          message: dbError.message
+        }, { status: 500 });
+      }
+    }
+
+    if (payload.Action === 'FuelImport_Delete') {
+      console.log('🗑️  Processing FuelImport_Delete action...');
+      
+      if (!payload.id) {
+        console.error('❌ Missing fuel import ID');
+        return NextResponse.json({
+          error: 'Missing fuel import ID'
+        }, { status: 400 });
+      }
+
+      try {
+        await sql`
+          DELETE FROM fuel_imports
+          WHERE id = ${payload.id}
+        `;
+
+        console.log(`✅ Fuel import deleted: ${payload.id}`);
+
+        return NextResponse.json({
+          success: true,
+          action: 'fuel_import_delete',
+          id: payload.id,
+          message: 'Fuel import deleted successfully'
+        });
+
+      } catch (dbError: any) {
+        console.error('❌ Database error:', dbError.message);
+        return NextResponse.json({
+          error: 'Database error',
+          message: dbError.message
+        }, { status: 500 });
+      }
+    }
+
+    // 4. Handle Fuel Transaction Actions
+    if (payload.Action === 'FuelTransaction_Upsert') {
+      console.log('⛽ Processing FuelTransaction_Upsert action...');
+      
+      if (!payload.data) {
+        console.error('❌ Missing fuel transaction data');
+        return NextResponse.json({
+          error: 'Missing fuel transaction data'
+        }, { status: 400 });
+      }
+
+      const transData = payload.data as FuelTransactionPayload;
+
+      try {
+        await sql`
+          INSERT INTO fuel_transactions (
+            id,
+            transaction_date,
+            fuel_source,
+            license_plate,
+            driver_code,
+            driver_name,
+            fuel_type,
+            quantity,
+            unit_price,
+            total_amount,
+            image_url,
+            status,
+            updated_at
+          ) VALUES (
+            ${transData.id},
+            ${transData.transactionDate},
+            ${transData.fuelSource},
+            ${transData.licensePlate},
+            ${transData.driverCode},
+            ${transData.driverName},
+            ${transData.fuelType},
+            ${transData.quantity || 0},
+            ${transData.unitPrice || 0},
+            ${transData.totalAmount || 0},
+            ${transData.imageUrl},
+            ${transData.status},
+            NOW()
+          )
+          ON CONFLICT (id) DO UPDATE SET
+            transaction_date = EXCLUDED.transaction_date,
+            fuel_source = EXCLUDED.fuel_source,
+            license_plate = EXCLUDED.license_plate,
+            driver_code = EXCLUDED.driver_code,
+            driver_name = EXCLUDED.driver_name,
+            fuel_type = EXCLUDED.fuel_type,
+            quantity = EXCLUDED.quantity,
+            unit_price = EXCLUDED.unit_price,
+            total_amount = EXCLUDED.total_amount,
+            image_url = EXCLUDED.image_url,
+            status = EXCLUDED.status,
+            updated_at = NOW()
+        `;
+
+        console.log(`✅ Fuel transaction upserted: ${transData.id}`);
+
+        return NextResponse.json({
+          success: true,
+          action: 'fuel_transaction_upsert',
+          id: transData.id,
+          message: 'Fuel transaction synchronized successfully'
+        });
+
+      } catch (dbError: any) {
+        console.error('❌ Database error:', dbError.message);
+        return NextResponse.json({
+          error: 'Database error',
+          message: dbError.message
+        }, { status: 500 });
+      }
+    }
+
+    if (payload.Action === 'FuelTransaction_Delete') {
+      console.log('🗑️  Processing FuelTransaction_Delete action...');
+      
+      if (!payload.id) {
+        console.error('❌ Missing fuel transaction ID');
+        return NextResponse.json({
+          error: 'Missing fuel transaction ID'
+        }, { status: 400 });
+      }
+
+      try {
+        await sql`
+          DELETE FROM fuel_transactions
+          WHERE id = ${payload.id}
+        `;
+
+        console.log(`✅ Fuel transaction deleted: ${payload.id}`);
+
+        return NextResponse.json({
+          success: true,
+          action: 'fuel_transaction_delete',
+          id: payload.id,
+          message: 'Fuel transaction deleted successfully'
+        });
+
+      } catch (dbError: any) {
+        console.error('❌ Database error:', dbError.message);
+        return NextResponse.json({
+          error: 'Database error',
+          message: dbError.message
+        }, { status: 500 });
+      }
+    }
+
+    // 5. Handle UpsertVehicles action
     if (payload.Action === 'UpsertVehicles') {
       console.log('🚗 Processing UpsertVehicles action...');
       
@@ -455,7 +698,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // 4. Validate required fields for reconciliation actions
+    // 6. Validate required fields for reconciliation actions
     if (!payload.maChuyenDi) {
       console.error('❌ Missing required field: maChuyenDi');
       return NextResponse.json({
@@ -466,7 +709,7 @@ export async function POST(request: Request) {
     console.log('🎬 Action:', payload.Action);
     console.log('🆔 Order ID:', payload.maChuyenDi);
 
-    // 6. Handle DELETE action
+    // 7. Handle DELETE action
     if (payload.Action === 'Delete') {
       console.log('🗑️  Processing DELETE action...');
       
@@ -485,7 +728,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // 7. Handle ADD/EDIT - Normalize payload
+    // 8. Handle ADD/EDIT - Normalize payload
     console.log('🔄 Processing ADD/EDIT action...');
     console.log('📊 Starting payload normalization...');
     
@@ -507,7 +750,7 @@ export async function POST(request: Request) {
     console.log(`   - Route Name: ${normalized.routeName}`);
     console.log(`   - Weight: ${normalized.weight}`);
 
-    // 8. Execute UPSERT with normalized data
+    // 9. Execute UPSERT with normalized data
     console.log('💾 Executing database UPSERT...');
     console.log('[DB INSERT] Values to insert:');
     console.log(`  - revenue: ${normalized.revenue}`);
@@ -584,7 +827,7 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
 
-    // 7. Return success response
+    // 10. Return success response
     return NextResponse.json({
       success: true,
       action: payload.Action.toLowerCase(),

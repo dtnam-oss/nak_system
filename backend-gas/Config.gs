@@ -16,7 +16,9 @@ const CONFIG = {
     MASTER: 'chuyen_di',           // Sheet chứa thông tin chuyến đi
     DETAIL: 'chi_tiet_chuyen_di',  // Sheet chứa lộ trình chi tiết
     PRICING: 'bang_gia',           // Sheet chứa bảng giá cước
-    VEHICLES: 'phuong_tien'        // Sheet chứa danh sách phương tiện
+    VEHICLES: 'phuong_tien',       // Sheet chứa danh sách phương tiện
+    FUEL_IMPORT: 'nhap_nhien_lieu',   // Sheet chứa nhập nhiên liệu
+    FUEL_EXPORT: 'xuat_nhien_lieu'    // Sheet chứa xuất nhiên liệu
   },
 
   // =============================================================================
@@ -99,6 +101,41 @@ const CONFIG = {
   },
 
   // =============================================================================
+  // COLUMN MAPPINGS - Fuel Import Sheet (nhap_nhien_lieu)
+  // =============================================================================
+  FUEL_IMPORT_COLUMNS: {
+    // Tên cột trong Sheet -> Key trong JSON
+    'Id': 'id',
+    'ngay_nhap': 'importDate',
+    'nha_cung_cap': 'supplier',
+    'ten_nhien_lieu': 'fuelType',
+    'so_luong': 'quantity',
+    'don_gia_nhap': 'unitPrice',
+    'thanh_tien': 'totalAmount',
+    'don_gia_xuat_binh_quan': 'avgPrice',
+    'nguoi_tao': 'createdBy'
+  },
+
+  // =============================================================================
+  // COLUMN MAPPINGS - Fuel Export Sheet (xuat_nhien_lieu)
+  // =============================================================================
+  FUEL_EXPORT_COLUMNS: {
+    // Tên cột trong Sheet -> Key trong JSON
+    'Id': 'id',
+    'ngay_xuat': 'transactionDate',
+    'loai_hinh': 'fuelSource',
+    'bien_so_xe': 'licensePlate',
+    'ma_tai_xe': 'driverCode',
+    'ten_tai_xe': 'driverName',
+    'loai_nhien_lieu': 'fuelType',
+    'so_luong': 'quantity',
+    'don_gia': 'unitPrice',
+    'thanh_tien': 'totalAmount',
+    'hinh_anh_tru_da_so_luong_ai': 'imageUrl',
+    'trang_thai': 'status'
+  },
+
+  // =============================================================================
   // PRICING CONFIGURATION
   // =============================================================================
   PRICING: {
@@ -136,14 +173,20 @@ const CONFIG = {
     'don_gia',
     'thanh_tien',
     'tai_trong_tinh_phi',
-    'dinh_muc_d'  // Định mức dầu trong sheet phuong_tien
+    'dinh_muc_d',  // Định mức dầu trong sheet phuong_tien
+    // Fuel columns
+    'so_luong',
+    'don_gia_nhap',
+    'don_gia_xuat_binh_quan'
   ],
 
   // =============================================================================
   // DATE COLUMNS - Các cột cần format thành YYYY-MM-DD
   // =============================================================================
   DATE_COLUMNS: [
-    'ngay_tao'
+    'ngay_tao',
+    'ngay_nhap',
+    'ngay_xuat'
   ],
 
   // =============================================================================
