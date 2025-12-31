@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ReconciliationFilters } from "@/types/reconciliation"
 import { Search, X, Download, Loader2, Filter } from "lucide-react"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { DateRange } from "react-day-picker"
+import { format } from "date-fns"
 import {
   Select,
   SelectContent,
@@ -13,12 +16,26 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from "@/components/ui/command"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useDebounce } from "@/hooks/use-debounce"
+import { Check, ChevronsUpDown } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface ReconciliationToolbarProps {
   filters: ReconciliationFilters
@@ -41,12 +58,47 @@ export function ReconciliationToolbar({
     loaiChuyen: filters.loaiChuyen,
   })
 
-  // Separate state for search query (live with debounce)
+  // Date range state
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (filters.fromDate && filters.toDate) {
+      return {
+        from: new Date(filters.fromDate),
+        to: new Date(filters.toDate),
+      }
+    }
+    return undefined
+  })
+
+  // Separate state for search query (live with debounce) - SEARCH ONLY order_id
   const [searchQuery, setSearchQuery] = useState(filters.searchQuery || "")
   const [isSearching, setIsSearching] = useState(false)
 
+  // Customer list state
+  const [customers, setCustomers] = useState<string[]>([])
+  const [customersLoading, setCustomersLoading] = useState(false)
+  const [customerOpen, setCustomerOpen] = useState(false)
+
   // Debounce search query (500ms delay)
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
+
+  // Fetch unique customers on mount
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      setCustomersLoading(true)
+      try {
+        const response = await fetch('/api/customers')
+        const data = await response.json()
+        if (data.success) {
+          setCustomers(data.data)
+        }
+      } catch (error) {
+        console.error('Failed to fetch customers:', error)
+      } finally {
+        setCustomersLoading(false)
+      }
+    }
+    fetchCustomers()
+  }, [])
 
   // Check if there are pending changes (filters not yet applied)
   const hasPendingChanges =
@@ -73,6 +125,23 @@ export function ReconciliationToolbar({
     }
   }, [searchQuery])
 
+  // Sync date range with pending filters
+  useEffect(() => {
+    if (dateRange?.from && dateRange?.to) {
+      setPendingFilters((prev) => ({
+        ...prev,
+        fromDate: format(dateRange.from!, 'yyyy-MM-dd'),
+        toDate: format(dateRange.to!, 'yyyy-MM-dd'),
+      }))
+    } else {
+      setPendingFilters((prev) => ({
+        ...prev,
+        fromDate: undefined,
+        toDate: undefined,
+      }))
+    }
+  }, [dateRange])
+
   const hasActiveFilters = Object.values(filters).some((value) => value)
 
   const handleApplyFilters = () => {
@@ -85,6 +154,7 @@ export function ReconciliationToolbar({
   const handleResetAll = () => {
     setPendingFilters({})
     setSearchQuery("")
+    setDateRange(undefined)
     onFiltersChange({})
   }
 
@@ -109,7 +179,7 @@ export function ReconciliationToolbar({
         {/* Single Row Compact Toolbar with Horizontal Scroll */}
         <div className="w-full overflow-x-auto">
           <div className="flex flex-row items-center gap-2 w-full flex-nowrap min-w-max">
-            {/* Live Search with Debounce - Priority Flex Grow */}
+            {/* Live Search - ONLY order_id */}
             <div className="relative flex-1 min-w-[200px]">
               {isSearching ? (
                 <Loader2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground animate-spin" />
@@ -117,31 +187,82 @@ export function ReconciliationToolbar({
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               )}
               <Input
-                placeholder="Tìm kiếm mã đơn, biển số..."
+                placeholder="Tìm kiếm mã chuyến..."
                 className="pl-9 h-9 text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
-            {/* Date Range - Fixed Width */}
-            <div className="flex items-center gap-1 shrink-0">
-              <Input
-                type="date"
-                className="w-[130px] h-9 text-sm"
-                value={pendingFilters.fromDate || ""}
-                onChange={(e) => updatePendingFilter("fromDate", e.target.value)}
-                placeholder="Từ ngày"
-              />
-              <span className="text-muted-foreground text-xs">-</span>
-              <Input
-                type="date"
-                className="w-[130px] h-9 text-sm"
-                value={pendingFilters.toDate || ""}
-                onChange={(e) => updatePendingFilter("toDate", e.target.value)}
-                placeholder="Đến ngày"
-              />
-            </div>
+            {/* Date Range Picker with Presets */}
+            <DateRangePicker
+              value={dateRange}
+              onChange={setDateRange}
+              placeholder="Chọn khoảng ngày"
+              className="shrink-0"
+            />
+
+            {/* Customer Filter - Combobox with Search */}
+            <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={customerOpen}
+                  className="w-[200px] h-9 justify-between text-sm shrink-0"
+                >
+                  {pendingFilters.khachHang
+                    ? customers.find((c) => c === pendingFilters.khachHang)
+                    : "Khách hàng"}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[200px] p-0">
+                <Command>
+                  <CommandInput placeholder="Tìm khách hàng..." />
+                  <CommandEmpty>
+                    {customersLoading ? "Đang tải..." : "Không tìm thấy"}
+                  </CommandEmpty>
+                  <CommandGroup className="max-h-[300px] overflow-auto">
+                    <CommandItem
+                      value=""
+                      onSelect={() => {
+                        updatePendingFilter("khachHang", "")
+                        setCustomerOpen(false)
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          !pendingFilters.khachHang ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      Tất cả khách hàng
+                    </CommandItem>
+                    {customers.map((customer) => (
+                      <CommandItem
+                        key={customer}
+                        value={customer}
+                        onSelect={(currentValue) => {
+                          updatePendingFilter("khachHang", currentValue)
+                          setCustomerOpen(false)
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            pendingFilters.khachHang === customer
+                              ? "opacity-100"
+                              : "opacity-0"
+                          )}
+                        />
+                        {customer}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </Command>
+              </PopoverContent>
+            </Popover>
 
             {/* Transport Unit Filter - Fixed Width */}
             <Select
@@ -159,14 +280,6 @@ export function ReconciliationToolbar({
                 <SelectItem value="VENDOR">VENDOR</SelectItem>
               </SelectContent>
             </Select>
-
-            {/* Customer Filter - Wider for Names */}
-            <Input
-              placeholder="Khách hàng"
-              className="w-[160px] h-9 text-sm shrink-0"
-              value={pendingFilters.khachHang || ""}
-              onChange={(e) => updatePendingFilter("khachHang", e.target.value)}
-            />
 
             {/* Trip Type Select - Compact */}
             <Select

@@ -40,8 +40,9 @@ export function useReconciliationData(
         params.append('donViVanChuyen', filters.donViVanChuyen)
       if (filters?.loaiTuyen) params.append('loaiTuyen', filters.loaiTuyen)
       if (filters?.loaiChuyen) params.append('loaiChuyen', filters.loaiChuyen)
+      // Search only by order_id (maChuyenDi)
       if (filters?.searchQuery)
-        params.append('searchQuery', filters.searchQuery)
+        params.append('orderId', filters.searchQuery)
 
       const queryString = params.toString()
       const url = `/api/reconciliation${queryString ? `?${queryString}` : ''}`

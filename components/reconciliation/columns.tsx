@@ -36,7 +36,7 @@ export const createColumns = ({
   return [
     {
       accessorKey: "maChuyenDi",
-      header: "Mã chuyến",
+      header: () => <div className="font-bold">Mã chuyến</div>,
       cell: ({ row }) => (
         <div className="font-medium text-foreground min-w-[120px]">
           {row.getValue("maChuyenDi")}
@@ -45,7 +45,7 @@ export const createColumns = ({
     },
     {
       accessorKey: "ngayTao",
-      header: "Ngày",
+      header: () => <div className="font-bold">Ngày</div>,
       cell: ({ row }) => (
         <div className="text-foreground min-w-[100px]">
           {row.getValue("ngayTao")}
@@ -54,7 +54,7 @@ export const createColumns = ({
     },
     {
       accessorKey: "tenKhachHang",
-      header: "Khách hàng",
+      header: () => <div className="font-bold">Khách hàng</div>,
       cell: ({ row }) => (
         <div className="text-foreground max-w-[200px] truncate">
           {row.getValue("tenKhachHang")}
@@ -63,7 +63,7 @@ export const createColumns = ({
     },
     {
       accessorKey: "loaiChuyen",
-      header: "Loại chuyến",
+      header: () => <div className="font-bold">Loại chuyến</div>,
       cell: ({ row }) => {
         const loaiChuyen = row.getValue("loaiChuyen") as string
 
@@ -84,7 +84,7 @@ export const createColumns = ({
     },
     {
       accessorKey: "tenTuyen",
-      header: "Tên tuyến",
+      header: () => <div className="font-bold">Tên tuyến</div>,
       cell: ({ row }) => (
         <div className="text-foreground max-w-[180px] truncate">
           {row.getValue("tenTuyen") || "-"}
@@ -93,7 +93,7 @@ export const createColumns = ({
     },
     {
       accessorKey: "tenTaiXe",
-      header: "Tài xế",
+      header: () => <div className="font-bold">Tài xế</div>,
       cell: ({ row }) => (
         <div className="text-foreground max-w-[150px] truncate">
           {row.getValue("tenTaiXe") || "-"}
@@ -102,7 +102,7 @@ export const createColumns = ({
     },
     {
       accessorKey: "donViVanChuyen",
-      header: "Đơn vị",
+      header: () => <div className="font-bold">Đơn vị</div>,
       cell: ({ row }) => {
         const donVi = row.getValue("donViVanChuyen") as string
         return (
@@ -117,7 +117,7 @@ export const createColumns = ({
     },
     {
       accessorKey: "trangThai",
-      header: "Trạng thái",
+      header: () => <div className="font-bold">Trạng thái</div>,
       cell: ({ row }) => {
         const trangThai = row.getValue("trangThai") as string
 
@@ -151,7 +151,7 @@ export const createColumns = ({
     },
     {
       id: "actions",
-      header: "Thao tác",
+      header: () => <div className="font-bold text-center">Thao tác</div>,
       cell: ({ row }) => {
         const record = row.original
 

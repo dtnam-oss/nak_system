@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     const fromDate = searchParams.get('fromDate')
     const toDate = searchParams.get('toDate')
     const khachHang = searchParams.get('khachHang')
-    const searchQuery = searchParams.get('searchQuery')
+    const orderId = searchParams.get('orderId') // New: search by order_id only
     const status = searchParams.get('status')
     const donViVanChuyen = searchParams.get('donViVanChuyen')
     const loaiChuyen = searchParams.get('loaiChuyen')
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       fromDate,
       toDate,
       khachHang,
-      searchQuery,
+      orderId,
       status,
       donViVanChuyen,
       loaiChuyen,
@@ -123,16 +123,10 @@ export async function GET(request: NextRequest) {
       paramIndex++
     }
 
-    if (searchQuery) {
-      // Search across multiple fields including new columns
-      conditions.push(`(
-        order_id ILIKE $${paramIndex} OR
-        customer ILIKE $${paramIndex} OR
-        license_plate ILIKE $${paramIndex} OR
-        route_name ILIKE $${paramIndex} OR
-        driver_name ILIKE $${paramIndex}
-      )`)
-      params.push(`%${searchQuery}%`)
+    // Search by order_id only (exact match or contains)
+    if (orderId) {
+      conditions.push(`order_id ILIKE $${paramIndex}`)
+      params.push(`%${orderId}%`)
       paramIndex++
     }
 
