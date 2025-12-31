@@ -15,7 +15,8 @@ const CONFIG = {
   SHEET_NAMES: {
     MASTER: 'chuyen_di',           // Sheet chứa thông tin chuyến đi
     DETAIL: 'chi_tiet_chuyen_di',  // Sheet chứa lộ trình chi tiết
-    PRICING: 'bang_gia'            // Sheet chứa bảng giá cước
+    PRICING: 'bang_gia',           // Sheet chứa bảng giá cước
+    VEHICLES: 'phuong_tien'        // Sheet chứa danh sách phương tiện
   },
 
   // =============================================================================
@@ -81,6 +82,23 @@ const CONFIG = {
   },
 
   // =============================================================================
+  // COLUMN MAPPINGS - Vehicles Sheet (phuong_tien)
+  // =============================================================================
+  VEHICLES_COLUMNS: {
+    // Tên cột trong Sheet -> Key trong JSON
+    'bien_kiem_soat': 'licensePlate',       // Biển kiểm soát (Key duy nhất)
+    'tai_trong': 'weightCapacity',          // Tải trọng (số)
+    'don_vi': 'weightUnit',                 // Đơn vị tải trọng (kg, tấn...)
+    'tai_trong_chu': 'weightText',          // Tải trọng bằng chữ
+    'hieu_xe': 'brand',                     // Hiệu xe (Hino, Isuzu...)
+    'loai_xe': 'bodyType',                  // Loại xe (Thùng kín, Mui bạt...)
+    'tinh_trang': 'currentStatus',          // Tình trạng (Đang hoạt động, Bảo dưỡng...)
+    'dinh_muc_d': 'fuelNorm',              // Định mức dầu (lít/100km)
+    'tai_xe_theo_': 'assignedDriverCodes', // Mã tài xế phân công
+    'loai_hinh': 'provider'                 // Loại hình (Xe thuê, Xe tự có...)
+  },
+
+  // =============================================================================
   // PRICING CONFIGURATION
   // =============================================================================
   PRICING: {
@@ -117,7 +135,8 @@ const CONFIG = {
     'so_chieu',
     'don_gia',
     'thanh_tien',
-    'tai_trong_tinh_phi'
+    'tai_trong_tinh_phi',
+    'dinh_muc_d'  // Định mức dầu trong sheet phuong_tien
   ],
 
   // =============================================================================

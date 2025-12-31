@@ -1154,3 +1154,230 @@ function manualRunMigrationBatch() {
   }
 }
 
+
+// =============================================================================
+// VEHICLES SYNC MODULE
+// =============================================================================
+
+/**
+ * Đồng bộ toàn bộ danh sách xe từ Sheet phuong_tien sang Backend
+ * 
+ * Hàm này:
+ * - Đọc toàn bộ sheet phuong_tien
+ * - Transform dữ liệu (convert số, trim text, handle null)
+ * - Gửi batch upsert sang API
+ * 
+ * @returns {Object} Kết quả sync (success, count, errors)
+ * 
+ * @example
+ * // Chạy manual từ GAS Editor:
+ * syncVehiclesToDB()
+ * 
+ * // Hoặc schedule với trigger:
+ * // Triggers -> Add Trigger -> syncVehiclesToDB -> Time-driven -> Daily 2AM
+ */
+function syncVehiclesToDB() {
+  const config = getConfig();
+  
+  try {
+    logInfo(`========== START VEHICLES SYNC ==========`);
+    logInfo(`Sheet: ${config.SHEET_NAMES.VEHICLES}`);
+    logInfo(`Target API: ${config.API.ENDPOINT}`);
+    
+    // 1. Đọc toàn bộ sheet phuong_tien
+    const vehicles = readVehiclesFromSheet();
+    
+    if (!vehicles || vehicles.length === 0) {
+      logInfo('⚠️  Sheet phuong_tien is empty or has no data');
+      return {
+        success: true,
+        message: 'No vehicles to sync',
+        count: 0
+      };
+    }
+    
+    logInfo(`✅ Read ${vehicles.length} vehicles from sheet`);
+    
+    // 2. Build payload
+    const payload = {
+      Action: 'UpsertVehicles',
+      vehicles: vehicles
+    };
+    
+    // 3. Log payload (if verbose)
+    if (config.LOGGING.VERBOSE) {
+      logInfo('📦 Payload Preview (first 3 vehicles):');
+      logInfo(JSON.stringify(vehicles.slice(0, 3), null, 2));
+    }
+    
+    logInfo(`📤 Sending ${vehicles.length} vehicles to Backend...`);
+    
+    // 4. Send to Backend API
+    const response = sendToBackendAPI(payload);
+    
+    logInfo(`========== VEHICLES SYNC SUCCESS ==========`);
+    logInfo(`✅ ${vehicles.length} vehicles synchronized successfully`);
+    
+    return {
+      success: true,
+      message: 'Vehicles synchronized successfully',
+      count: vehicles.length,
+      response: response
+    };
+    
+  } catch (error) {
+    logError(`========== VEHICLES SYNC FAILED ==========`);
+    logError(`Error: ${error.message}`);
+    logError(`Stack: ${error.stack}`);
+    
+    return {
+      success: false,
+      error: error.message,
+      stack: error.stack
+    };
+  }
+}
+
+/**
+ * Đọc và transform dữ liệu từ sheet phuong_tien
+ * 
+ * @returns {Array<Object>} Mảng các vehicle objects đã được transform
+ */
+function readVehiclesFromSheet() {
+  const config = getConfig();
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(config.SHEET_NAMES.VEHICLES);
+  
+  if (!sheet) {
+    throw new Error(`Sheet "${config.SHEET_NAMES.VEHICLES}" not found in spreadsheet`);
+  }
+  
+  // Lấy tất cả data
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  
+  if (values.length <= 1) {
+    // Chỉ có header hoặc empty
+    return [];
+  }
+  
+  // Row đầu tiên là header
+  const headers = values[0];
+  logInfo(`📋 Headers: ${headers.join(', ')}`);
+  
+  // Build column mapping
+  const columnMap = buildVehicleColumnMap(headers);
+  
+  // Transform từng row thành vehicle object
+  const vehicles = [];
+  
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    
+    try {
+      const vehicle = transformVehicleRow(row, headers, columnMap);
+      
+      // Skip nếu không có biển kiểm soát (required field)
+      if (!vehicle.licensePlate || vehicle.licensePlate.trim() === '') {
+        logInfo(`⚠️  Row ${i + 1}: Skipped - No license plate`);
+        continue;
+      }
+      
+      vehicles.push(vehicle);
+      
+    } catch (rowError) {
+      logError(`❌ Row ${i + 1}: Error - ${rowError.message}`);
+      // Continue với row tiếp theo
+    }
+  }
+  
+  return vehicles;
+}
+
+/**
+ * Build column index map cho sheet vehicles
+ * 
+ * @param {Array<string>} headers - Array of header names
+ * @returns {Object} Map từ camelCase key -> column index
+ */
+function buildVehicleColumnMap(headers) {
+  const config = getConfig();
+  const columnMap = {};
+  const mapping = config.VEHICLES_COLUMNS;
+  
+  // Iterate qua mapping config
+  for (const [sheetColumn, jsonKey] of Object.entries(mapping)) {
+    const index = getColumnIndex(headers, sheetColumn);
+    
+    if (index !== -1) {
+      columnMap[jsonKey] = index;
+    } else {
+      logInfo(`⚠️  Column "${sheetColumn}" not found in sheet`);
+    }
+  }
+  
+  return columnMap;
+}
+
+/**
+ * Transform 1 row thành vehicle object
+ * 
+ * @param {Array} row - Array of cell values
+ * @param {Array<string>} headers - Array of header names
+ * @param {Object} columnMap - Map từ jsonKey -> column index
+ * @returns {Object} Vehicle object
+ */
+function transformVehicleRow(row, headers, columnMap) {
+  const vehicle = {};
+  
+  // Map tất cả các fields
+  for (const [jsonKey, colIndex] of Object.entries(columnMap)) {
+    let value = row[colIndex];
+    
+    // Handle null/undefined
+    if (value === null || value === undefined || value === '') {
+      // Set default values for critical fields
+      if (jsonKey === 'weightCapacity' || jsonKey === 'fuelNorm') {
+        value = 0;
+      } else {
+        value = null;
+      }
+    } else {
+      // Trim strings
+      if (typeof value === 'string') {
+        value = value.trim();
+      }
+      
+      // Convert numbers for specific fields
+      if (jsonKey === 'weightCapacity' || jsonKey === 'fuelNorm') {
+        value = parseVietnameseNumber(value);
+      }
+    }
+    
+    vehicle[jsonKey] = value;
+  }
+  
+  return vehicle;
+}
+
+/**
+ * Parse số từ format Việt Nam sang number
+ * Handles: "1,9" -> 1.9, "2.5" -> 2.5, "15" -> 15
+ * 
+ * @param {*} value - Giá trị cần parse
+ * @returns {number} Số đã parse, hoặc 0 nếu invalid
+ */
+function parseVietnameseNumber(value) {
+  if (typeof value === 'number') {
+    return value;
+  }
+  
+  if (typeof value === 'string') {
+    // Replace dấu phẩy thành dấu chấm
+    value = value.replace(',', '.');
+    const parsed = parseFloat(value);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  
+  return 0;
+}

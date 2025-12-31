@@ -6,8 +6,8 @@ export const dynamic = 'force-dynamic';
 // ==================== TYPE DEFINITIONS ====================
 
 interface GASPayload {
-  Action: 'Add' | 'Edit' | 'Delete';
-  maChuyenDi: string;
+  Action: 'Add' | 'Edit' | 'Delete' | 'UpsertVehicles';
+  maChuyenDi?: string;
   ngayTao?: string;
   tenKhachHang?: string;
   tongDoanhThu?: number | string;
@@ -19,6 +19,20 @@ interface GASPayload {
   loaiChuyen?: string;
   loaiTuyen?: string;
   data_json?: any;
+  vehicles?: VehiclePayload[];  // NEW: For vehicles sync
+}
+
+interface VehiclePayload {
+  licensePlate: string;      // Biển kiểm soát (Primary Key)
+  weightCapacity: number;    // Tải trọng
+  weightUnit: string | null; // Đơn vị
+  weightText: string | null; // Tải trọng bằng chữ
+  brand: string | null;      // Hiệu xe
+  bodyType: string | null;   // Loại xe
+  currentStatus: string | null; // Tình trạng
+  fuelNorm: number;          // Định mức dầu
+  assignedDriverCodes: string | null; // Mã tài xế
+  provider: string | null;   // Loại hình
 }
 
 interface NormalizedPayload {
@@ -246,7 +260,7 @@ function normalizePayload(payload: GASPayload): NormalizedPayload {
   const details = parseDataJson(payload.data_json);
   
   // Extract and normalize each field
-  const orderId = payload.maChuyenDi;
+  const orderId = payload.maChuyenDi || '';  // Add fallback for TypeScript
   const date = formatDate(payload.ngayTao);
   const customer = payload.tenKhachHang || null;
   
@@ -349,7 +363,99 @@ export async function POST(request: Request) {
 
     console.log('🔓 Authentication successful');
 
-    // 3. Validate required fields
+    // 3. Handle UpsertVehicles action
+    if (payload.Action === 'UpsertVehicles') {
+      console.log('🚗 Processing UpsertVehicles action...');
+      
+      if (!payload.vehicles || !Array.isArray(payload.vehicles)) {
+        console.error('❌ Missing or invalid vehicles array');
+        return NextResponse.json({
+          error: 'Missing or invalid vehicles array'
+        }, { status: 400 });
+      }
+
+      console.log(`📦 Received ${payload.vehicles.length} vehicles`);
+
+      let successCount = 0;
+      let errorCount = 0;
+      const errors: string[] = [];
+
+      // Process each vehicle
+      for (const vehicle of payload.vehicles) {
+        try {
+          // Validate required field
+          if (!vehicle.licensePlate || vehicle.licensePlate.trim() === '') {
+            throw new Error('licensePlate is required');
+          }
+
+          // Upsert vehicle
+          await sql`
+            INSERT INTO vehicles (
+              license_plate,
+              weight_capacity,
+              weight_unit,
+              weight_text,
+              brand,
+              body_type,
+              current_status,
+              fuel_norm,
+              assigned_driver_codes,
+              provider,
+              updated_at
+            ) VALUES (
+              ${vehicle.licensePlate.trim()},
+              ${vehicle.weightCapacity || 0},
+              ${vehicle.weightUnit},
+              ${vehicle.weightText},
+              ${vehicle.brand},
+              ${vehicle.bodyType},
+              ${vehicle.currentStatus},
+              ${vehicle.fuelNorm || 0},
+              ${vehicle.assignedDriverCodes},
+              ${vehicle.provider},
+              NOW()
+            )
+            ON CONFLICT (license_plate) DO UPDATE SET
+              weight_capacity = EXCLUDED.weight_capacity,
+              weight_unit = EXCLUDED.weight_unit,
+              weight_text = EXCLUDED.weight_text,
+              brand = EXCLUDED.brand,
+              body_type = EXCLUDED.body_type,
+              current_status = EXCLUDED.current_status,
+              fuel_norm = EXCLUDED.fuel_norm,
+              assigned_driver_codes = EXCLUDED.assigned_driver_codes,
+              provider = EXCLUDED.provider,
+              updated_at = NOW()
+          `;
+
+          successCount++;
+          console.log(`✅ Vehicle upserted: ${vehicle.licensePlate}`);
+
+        } catch (vehicleError: any) {
+          errorCount++;
+          const errorMsg = `${vehicle.licensePlate || 'UNKNOWN'}: ${vehicleError.message}`;
+          errors.push(errorMsg);
+          console.error(`❌ Vehicle error: ${errorMsg}`);
+        }
+      }
+
+      console.log(`========================================`);
+      console.log(`✅ UpsertVehicles completed`);
+      console.log(`   Success: ${successCount}`);
+      console.log(`   Errors: ${errorCount}`);
+      console.log(`========================================`);
+
+      return NextResponse.json({
+        success: true,
+        action: 'upsert_vehicles',
+        total: payload.vehicles.length,
+        successCount,
+        errorCount,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    }
+
+    // 4. Validate required fields for reconciliation actions
     if (!payload.maChuyenDi) {
       console.error('❌ Missing required field: maChuyenDi');
       return NextResponse.json({
@@ -360,7 +466,7 @@ export async function POST(request: Request) {
     console.log('🎬 Action:', payload.Action);
     console.log('🆔 Order ID:', payload.maChuyenDi);
 
-    // 4. Handle DELETE action
+    // 6. Handle DELETE action
     if (payload.Action === 'Delete') {
       console.log('🗑️  Processing DELETE action...');
       
@@ -379,7 +485,7 @@ export async function POST(request: Request) {
       });
     }
 
-    // 5. Handle ADD/EDIT - Normalize payload
+    // 7. Handle ADD/EDIT - Normalize payload
     console.log('🔄 Processing ADD/EDIT action...');
     console.log('📊 Starting payload normalization...');
     
@@ -401,7 +507,7 @@ export async function POST(request: Request) {
     console.log(`   - Route Name: ${normalized.routeName}`);
     console.log(`   - Weight: ${normalized.weight}`);
 
-    // 6. Execute UPSERT with normalized data
+    // 8. Execute UPSERT with normalized data
     console.log('💾 Executing database UPSERT...');
     console.log('[DB INSERT] Values to insert:');
     console.log(`  - revenue: ${normalized.revenue}`);
