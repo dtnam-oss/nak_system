@@ -59,6 +59,7 @@ export interface ChiTietLoTrinh {
   maTuyen: string
   bienKiemSoat: string
   loTrinh: string
+  loTrinhChiTiet?: string  // Detailed route information from lo_trinh_chi_tiet_theo_diem
   quangDuong: number
   taiTrong: number
   taiTrongTinhPhi: number

@@ -56,7 +56,7 @@ const CONFIG = {
     'ma_chuyen_di': 'maChuyenDi',
     'loai_tuyen_khach_hang': 'loaiTuyenKH',
     'lo_trinh': 'loTrinh',
-    'lo_trinh_chi_tiet_theo_diem': 'loTrinh',  // Use primary loTrinh field
+    'lo_trinh_chi_tiet_theo_diem': 'loTrinhChiTiet',  // Detailed route field
     'ma_chuyen_di_kh': 'maTuyen',
     'bien_kiem_soat': 'bienKiemSoat',
     'tai_trong': 'taiTrong',
