@@ -1,7 +1,9 @@
-import { sql } from '@vercel/postgres';
+import { neon } from '@neondatabase/serverless';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+
+const sql = neon(process.env.DATABASE_URL!);
 
 interface DashboardStats {
   revenue: {
@@ -170,40 +172,40 @@ export async function GET() {
       `,
     ]);
 
-    // Process revenue data
-    const currentRevenue = parseFloat(revenueCurrentMonth.rows[0]?.total || '0');
-    const previousRevenue = parseFloat(revenuePreviousMonth.rows[0]?.total || '0');
+    // Process revenue data (Neon returns array directly, not .rows)
+    const currentRevenue = parseFloat(revenueCurrentMonth[0]?.total || '0');
+    const previousRevenue = parseFloat(revenuePreviousMonth[0]?.total || '0');
     const percentageChange = previousRevenue > 0 
       ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
       : 0;
 
     // Process pending orders
-    const pendingOrders = parseInt(pendingOrdersResult.rows[0]?.count || '0', 10);
+    const pendingOrders = parseInt(pendingOrdersResult[0]?.count || '0', 10);
 
     // Process vehicles
-    const totalVehicles = parseInt(vehiclesTotal.rows[0]?.count || '0', 10);
-    const activeVehicles = parseInt(vehiclesActive.rows[0]?.count || '0', 10);
+    const totalVehicles = parseInt(vehiclesTotal[0]?.count || '0', 10);
+    const activeVehicles = parseInt(vehiclesActive[0]?.count || '0', 10);
 
     // Process fuel tank
-    const fuelImports = parseFloat(fuelImportsTotal.rows[0]?.total || '0');
-    const fuelExports = parseFloat(fuelExportsInternal.rows[0]?.total || '0');
+    const fuelImports = parseFloat(fuelImportsTotal[0]?.total || '0');
+    const fuelExports = parseFloat(fuelExportsInternal[0]?.total || '0');
     const currentFuelLevel = fuelImports - fuelExports;
     const fuelCapacity = 40590;
     const fuelPercentage = fuelCapacity > 0 ? (currentFuelLevel / fuelCapacity) * 100 : 0;
 
     // Process revenue chart
-    const revenueChart = revenueChartData.rows.map(row => ({
+    const revenueChart = revenueChartData.map(row => ({
       date: new Date(row.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
       revenue: parseFloat(row.revenue || '0'),
       fuelCost: parseFloat(row.fuel_cost || '0'),
     }));
 
     // Process provider breakdown
-    const nakCount = parseInt(providerNAK.rows[0]?.count || '0', 10);
-    const vendorCount = parseInt(providerVendor.rows[0]?.count || '0', 10);
+    const nakCount = parseInt(providerNAK[0]?.count || '0', 10);
+    const vendorCount = parseInt(providerVendor[0]?.count || '0', 10);
 
     // Process recent activities
-    const recentActivities = recentActivitiesData.rows.map(row => ({
+    const recentActivities = recentActivitiesData.map(row => ({
       id: row.id,
       orderCode: row.order_code,
       customer: row.customer,
