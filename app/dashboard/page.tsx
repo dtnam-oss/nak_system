@@ -1,229 +1,165 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { GitCompare, Truck, DollarSign, FileText, TrendingUp, Package } from "lucide-react"
-import Link from "next/link"
-import { useDashboardData } from "@/hooks/use-dashboard-data"
+import { DashboardKpiCards } from "@/components/dashboard/dashboard-kpi-cards"
+import { RevenueChart } from "@/components/dashboard/revenue-chart"
+import { ProviderChart } from "@/components/dashboard/provider-chart"
+import { RecentActivities } from "@/components/dashboard/recent-activities"
+import { Card, CardContent } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+
+interface DashboardStats {
+  revenue: {
+    current: number;
+    previousMonth: number;
+    percentageChange: number;
+  };
+  pendingOrders: number;
+  vehicles: {
+    total: number;
+    active: number;
+  };
+  fuelTank: {
+    currentLevel: number;
+    capacity: number;
+    percentage: number;
+  };
+  revenueChart: Array<{
+    date: string;
+    revenue: number;
+    fuelCost: number;
+  }>;
+  providerBreakdown: {
+    nak: number;
+    vendor: number;
+  };
+  recentActivities: Array<{
+    id: string;
+    orderCode: string;
+    customer: string;
+    status: string;
+    createdAt: string;
+  }>;
+}
 
 export default function DashboardPage() {
-  const { data, isLoading, error } = useDashboardData()
+  const [data, setData] = useState<DashboardStats | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
 
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount)
-  }
+  useEffect(() => {
+    async function fetchDashboardData() {
+      try {
+        setIsLoading(true)
+        const response = await fetch('/api/dashboard/stats')
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch dashboard data')
+        }
+        
+        const stats = await response.json()
+        setData(stats)
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Unknown error'))
+      } finally {
+        setIsLoading(false)
+      }
+    }
 
-  // Format number
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat('vi-VN').format(num)
-  }
+    fetchDashboardData()
+    
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchDashboardData, 5 * 60 * 1000)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <DashboardLayout breadcrumbs={[{ label: "Dashboard" }]}>
-      <h1 className="mb-6 text-2xl font-bold text-foreground">
-        Tổng quan hệ thống
-      </h1>
-
-      {/* Loading State */}
-      {isLoading && (
-        <div className="grid grid-cols-4 gap-6 mb-8">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardHeader className="pb-2">
-                <div className="h-4 bg-muted rounded w-24"></div>
-              </CardHeader>
-              <CardContent>
-                <div className="h-8 bg-muted rounded w-32"></div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-
-      {/* Error State */}
-      {error && (
-        <Card className="mb-8 border-destructive">
-          <CardContent className="pt-6">
-            <p className="text-destructive">
-              Lỗi khi tải dữ liệu: {error.message}
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Vui lòng kiểm tra kết nối với Google Apps Script
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Real Data Stats */}
-      {data && (
-        <div className="grid grid-cols-4 gap-6 mb-8">
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Tổng doanh thu
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">
-                {formatCurrency(data.cards.tongDoanhThu)}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Tổng chuyến đi
-              </CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {formatNumber(data.cards.soChuyen)}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Xe NAK
-              </CardTitle>
-              <Truck className="h-4 w-4 text-emerald-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-600">
-                {formatNumber(data.cards.soXeNAK)}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Xe Vendor
-              </CardTitle>
-              <Truck className="h-4 w-4 text-amber-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600">
-                {formatNumber(data.cards.soXeVendor)}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Charts Section */}
-      {data && (
-        <div className="grid grid-cols-2 gap-6 mb-8">
-          {/* Doanh thu theo tuyến */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Doanh thu theo tuyến
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {data.charts.doanhThuTheoTuyen.slice(0, 5).map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground truncate max-w-[200px]">
-                      {item.label}
-                    </span>
-                    <span className="text-sm font-medium text-foreground">
-                      {formatCurrency(item.value)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Doanh thu theo khách hàng */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" />
-                Top khách hàng
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {data.charts.doanhThuTheoKhachHang.slice(0, 5).map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground truncate max-w-[200px]">
-                      {item.label}
-                    </span>
-                    <span className="text-sm font-medium text-foreground">
-                      {formatCurrency(item.value)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Quick Access */}
-      <div>
-        <h2 className="mb-4 text-xl font-semibold text-foreground">
-          Truy cập nhanh
-        </h2>
-        <div className="grid grid-cols-2 gap-4">
-          <Link href="/reconciliation">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-lg bg-primary/10 p-3">
-                    <GitCompare className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">Đối soát vận chuyển</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Quản lý và duyệt đối soát
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
-          <Link href="/reports">
-            <Card className="hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="rounded-lg bg-primary/10 p-3">
-                    <FileText className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">Báo cáo</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Xem báo cáo chi tiết
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        </div>
-      </div>
-
-      {/* Last Updated */}
-      {data && (
-        <div className="mt-6 text-center">
-          <p className="text-xs text-muted-foreground">
-            Cập nhật lần cuối: {new Date(data.lastUpdated).toLocaleString('vi-VN')}
+      <div className="space-y-6">
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Trung tâm chỉ huy</h1>
+          <p className="text-muted-foreground">
+            Tổng quan hoạt động và số liệu Real-time
           </p>
         </div>
-      )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="space-y-6">
+            {/* KPI Skeletons */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              {[1, 2, 3, 4].map((i) => (
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <Skeleton className="h-4 w-24 mb-4" />
+                    <Skeleton className="h-8 w-32 mb-2" />
+                    <Skeleton className="h-3 w-40" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Chart Skeletons */}
+            <div className="grid gap-6 md:grid-cols-3">
+              <Card className="col-span-2">
+                <CardContent className="p-6">
+                  <Skeleton className="h-[300px] w-full" />
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <Skeleton className="h-[300px] w-full" />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Activities Skeleton */}
+            <Card>
+              <CardContent className="p-6">
+                <Skeleton className="h-[200px] w-full" />
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Error State */}
+        {error && (
+          <Card className="border-destructive">
+            <CardContent className="p-6">
+              <p className="text-destructive font-semibold">
+                Lỗi khi tải dữ liệu Dashboard
+              </p>
+              <p className="text-sm text-muted-foreground mt-2">
+                {error.message}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Data Display */}
+        {data && !isLoading && (
+          <>
+            {/* Tier 1: KPI Cards */}
+            <DashboardKpiCards
+              revenue={data.revenue}
+              pendingOrders={data.pendingOrders}
+              vehicles={data.vehicles}
+              fuelTank={data.fuelTank}
+            />
+
+            {/* Tier 2: Charts */}
+            <div className="grid gap-6 md:grid-cols-3">
+              <RevenueChart data={data.revenueChart} />
+              <ProviderChart data={data.providerBreakdown} />
+            </div>
+
+            {/* Tier 3: Recent Activities */}
+            <RecentActivities activities={data.recentActivities} />
+          </>
+        )}
+      </div>
     </DashboardLayout>
   )
 }
