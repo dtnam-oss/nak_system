@@ -162,7 +162,7 @@ export async function GET() {
       sql`
         SELECT 
           id,
-          order_code,
+          order_id,
           customer,
           status,
           created_at
@@ -207,7 +207,7 @@ export async function GET() {
     // Process recent activities
     const recentActivities = recentActivitiesData.map(row => ({
       id: row.id,
-      orderCode: row.order_code,
+      orderCode: row.order_id,
       customer: row.customer,
       status: row.status,
       createdAt: row.created_at,
