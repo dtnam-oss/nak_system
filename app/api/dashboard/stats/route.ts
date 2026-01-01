@@ -118,7 +118,7 @@ export async function GET() {
         ),
         revenue_data AS (
           SELECT 
-            date::date,
+            date::date as date,
             COALESCE(SUM(cost), 0) as revenue
           FROM reconciliation_orders
           WHERE date >= CURRENT_DATE - INTERVAL '6 days'
@@ -126,7 +126,7 @@ export async function GET() {
         ),
         fuel_data AS (
           SELECT 
-            transaction_date::date,
+            transaction_date::date as date,
             COALESCE(SUM(total_amount), 0) as fuel_cost
           FROM fuel_transactions
           WHERE transaction_date >= CURRENT_DATE - INTERVAL '6 days'
