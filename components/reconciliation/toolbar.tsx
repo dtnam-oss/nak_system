@@ -513,6 +513,11 @@ export function ReconciliationToolbar({
                   <Download className="h-4 w-4 mr-2" />
                   Mẫu J&T - Theo Ca/Thuê bao
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleExport('ghn')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Mẫu GHN
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
