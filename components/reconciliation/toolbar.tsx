@@ -379,7 +379,16 @@ export function ReconciliationToolbar({
                         return (
                           <CommandItem
                             key={customer}
-                            onSelect={() => toggleCustomer(customer)}
+                            value={customer}
+                            onSelect={(value) => {
+                              // Find the original customer name (case-insensitive)
+                              const originalCustomer = customers.find(
+                                c => c.toLowerCase() === value.toLowerCase()
+                              )
+                              if (originalCustomer) {
+                                toggleCustomer(originalCustomer)
+                              }
+                            }}
                           >
                             <div
                               className={cn(
