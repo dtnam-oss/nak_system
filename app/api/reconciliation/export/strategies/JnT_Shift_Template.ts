@@ -2,9 +2,9 @@ import ExcelJS from 'exceljs';
 import { format } from 'date-fns';
 
 /**
- * J&T Route Template - Mẫu Báo Cáo Theo Tuyến
+ * J&T Shift Template - Mẫu Báo Cáo Theo Ca
  * 
- * Xuất báo cáo đối soát cho khách hàng J&T với format:
+ * Xuất báo cáo đối soát cho khách hàng J&T theo CA làm việc với format:
  * - 1 order = 1 row
  * - Multi-line cells: Gộp tất cả chiTietLoTrinh bằng ký tự xuống dòng (\n)
  * - wrapText enabled để hiển thị nội dung xuống dòng trong cell
@@ -29,9 +29,9 @@ interface ReconciliationDatabaseRow {
   created_at: Date;
 }
 
-export async function generateJnTRouteExcel(data: ReconciliationDatabaseRow[]): Promise<ExcelJS.Buffer> {
+export async function generateJnTShiftExcel(data: ReconciliationDatabaseRow[]): Promise<ExcelJS.Buffer> {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Bang Ke J&T');
+  const worksheet = workbook.addWorksheet('J&T - Theo Ca');
 
   // =====================
   // STEP 1: Define Columns & Width
@@ -175,7 +175,7 @@ export async function generateJnTRouteExcel(data: ReconciliationDatabaseRow[]): 
     row.height = Math.max(20, maxLines * 15); // 15px per line
   });
 
-  console.log('✓ Generated J&T Route Excel with', data.length, 'orders');
+  console.log('✓ Generated J&T Shift Excel with', data.length, 'orders');
   
   return await workbook.xlsx.writeBuffer();
 }

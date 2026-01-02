@@ -2,7 +2,7 @@ import { sql } from '@vercel/postgres';
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { format } from 'date-fns';
-import { generateJnTRouteExcel as generateJnTRouteStrategy } from './strategies/JnT_Route_Template';
+import { generateJnTShiftExcel as generateJnTShiftStrategy } from './strategies/JnT_Shift_Template';
 
 export const dynamic = 'force-dynamic';
 
@@ -151,24 +151,27 @@ export async function GET(request: NextRequest) {
         break;
 
       case 'jnt_route':
-        // Use new strategy with STT column and separate stamp columns
-        const bufferJnT = await generateJnTRouteStrategy(results);
-        fileName = `Doisoat_JnT_TheoTuyen_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
+        // TODO: Will implement Route-based template (Theo Tuyến)
+        // Temporarily return error
+        return NextResponse.json(
+          { error: 'J&T Route template chưa được implement. Vui lòng sử dụng jnt_shift.' },
+          { status: 501 }
+        );
+
+      case 'jnt_shift':
+        // Use strategy for Shift-based report (Theo Ca)
+        const bufferJnTShift = await generateJnTShiftStrategy(results);
+        fileName = `Doisoat_JnT_TheoCa_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
         console.log(`✓ Excel generated successfully: ${fileName}`);
         
-        return new NextResponse(bufferJnT, {
+        return new NextResponse(bufferJnTShift, {
           status: 200,
           headers: {
             'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
-            'Content-Length': bufferJnT.byteLength.toString(),
+            'Content-Length': bufferJnTShift.byteLength.toString(),
           },
         });
-
-      case 'jnt_shift':
-        workbook = await generateJnTShiftExcel(results);
-        fileName = `Doisoat_JnT_TheoCa_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
-        break;
 
       default:
         console.log(`❌ Invalid templateType: ${templateType}`);
@@ -357,47 +360,5 @@ async function generateGeneralExcel(data: ReconciliationDatabaseRow[]): Promise<
   });
 
   console.log('✓ Generated General Excel with', data.length, 'rows');
-  return workbook;
-}
-
-/**
- * Generate J&T Shift-based Report Excel
- * 
- * TODO: Implement J&T specific columns and styles here
- * - Group by shift/driver
- * - Add shift timing, driver performance metrics
- * - Include fuel consumption, delivery counts
- */
-async function generateJnTShiftExcel(data: ReconciliationDatabaseRow[]): Promise<ExcelJS.Workbook> {
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('J&T - Theo Ca');
-
-  // TODO: Implement J&T Shift template
-  // Placeholder: Copy general structure for now
-  worksheet.columns = [
-    { header: 'Ca làm việc', key: 'shift', width: 15 },
-    { header: 'Tài xế', key: 'driver_name', width: 20 },
-    { header: 'Biển số xe', key: 'license_plate', width: 12 },
-    { header: 'Giờ bắt đầu', key: 'start_time', width: 12 },
-    { header: 'Giờ kết thúc', key: 'end_time', width: 12 },
-    { header: 'Số chuyến', key: 'trip_count', width: 12 },
-    { header: 'Tổng chi phí', key: 'total_cost', width: 15 },
-    { header: 'Ghi chú', key: 'notes', width: 30 },
-  ];
-
-  const headerRow = worksheet.getRow(1);
-  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-  headerRow.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFE74C3C' }, // J&T Red color
-  };
-  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
-
-  // Add placeholder note
-  worksheet.addRow(['TODO: Implement J&T Shift-specific logic here']);
-  worksheet.addRow(['Current data count:', data.length]);
-
-  console.log('⚠️ Generated J&T Shift Excel (Placeholder)');
   return workbook;
 }

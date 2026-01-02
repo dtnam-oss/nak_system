@@ -6,15 +6,15 @@ Thư mục này chứa các strategy (mẫu) xuất Excel khác nhau cho module 
 
 ```
 strategies/
-├── JnT_Route_Template.ts    # Mẫu J&T theo tuyến (có STT, tách Tem đi/về)
+├── JnT_Shift_Template.ts    # Mẫu J&T theo ca (multi-line cells)
 └── README.md                 # File này
 ```
 
 ---
 
-## 📊 JnT_Route_Template.ts
+## 📊 JnT_Shift_Template.ts
 
-**Mục đích**: Mẫu báo cáo J&T theo TUYẾN (Route-based) với Multi-line Cells
+**Mục đích**: Mẫu báo cáo J&T theo CA (Shift-based) với Multi-line Cells
 
 ### Cột dữ liệu (6 cột):
 
@@ -43,17 +43,17 @@ strategies/
 ### Usage:
 
 ```typescript
-import { generateJnTRouteExcel } from './strategies/JnT_Route_Template';
+import { generateJnTShiftExcel } from './strategies/JnT_Shift_Template';
 
-const buffer = await generateJnTRouteExcel(orders);
+const buffer = await generateJnTShiftExcel(orders);
 // Returns ExcelJS.Buffer ready for download
 ```
 
 ---
 
-## 🔧 Cách thêm Strategy mới
+## 🔧 Cách thêm Strategy mới (Ví dụ: JnT_Route_Template.ts)
 
-1. Tạo file mới trong `strategies/` (VD: `GHN_Template.ts`)
+1. Tạo file mới trong `strategies/` (VD: `JnT_Route_Template.ts`)
 2. Export function có signature: `async function generateXXX(data: ReconciliationDatabaseRow[]): Promise<ExcelJS.Buffer>`
 3. Import vào `route.ts` và thêm case mới trong switch
 4. Update README này
