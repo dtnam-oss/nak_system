@@ -4,22 +4,14 @@ import { useState, useEffect } from "react"
 import { format } from "date-fns"
 import { vi } from "date-fns/locale"
 import { DateRange } from "react-day-picker"
-import { Calendar, RefreshCw, AlertTriangle, CheckCircle2, TrendingUp, Activity } from "lucide-react"
+import { RefreshCw, TrendingUp, Activity } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { CustomerFilter } from "@/components/reconciliation/customer-filter"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { DataIntegrityTab } from "@/components/reports/data-integrity-tab"
 import {
   BarChart,
   Bar,
@@ -290,106 +282,10 @@ export default function ReportsPage() {
 
         {/* Tab 2: Data Integrity */}
         <TabsContent value="integrity" className="space-y-4">
-          {/* Status Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Trạng thái Dữ liệu</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex items-center gap-2">
-                  <RefreshCw className="h-5 w-5 animate-spin" />
-                  <span>Đang kiểm tra...</span>
-                </div>
-              ) : data && data.data_integrity.total_errors === 0 ? (
-                <div className="flex items-center gap-2 text-green-600">
-                  <CheckCircle2 className="h-5 w-5" />
-                  <span className="font-medium">Tốt - Không phát hiện lỗi dữ liệu</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 text-destructive">
-                  <AlertTriangle className="h-5 w-5" />
-                  <span className="font-medium">
-                    ⚠️ Phát hiện {data?.data_integrity.total_errors} chuyến thiếu thông tin
-                  </span>
-                  <Badge variant="destructive" className="ml-2">
-                    {data?.data_integrity.error_rate}% tổng số
-                  </Badge>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Error Table */}
-          {data && data.data_integrity.errors.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Danh sách Lỗi Dữ liệu</CardTitle>
-                <CardDescription>
-                  Các chuyến bị thiếu thông tin bắt buộc trong chi tiết lộ trình
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Mã chuyến</TableHead>
-                      <TableHead>Ngày</TableHead>
-                      <TableHead>Khách hàng</TableHead>
-                      <TableHead>Lỗi phát hiện</TableHead>
-                      <TableHead>Vị trí</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {data.data_integrity.errors.map((error, index) => (
-                      <TableRow key={index}>
-                        <TableCell className="font-mono text-sm">
-                          {error.order_id}
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(error.date), 'dd/MM/yyyy', { locale: vi })}
-                        </TableCell>
-                        <TableCell>{error.customer}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {error.missing_fields.map((field, idx) => (
-                              <Badge key={idx} variant="destructive" className="text-xs">
-                                Thiếu {field}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {error.detail_index >= 0 ? (
-                            <span className="text-xs text-muted-foreground">
-                              Item #{error.detail_index + 1}
-                            </span>
-                          ) : (
-                            <Badge variant="outline">Toàn bộ</Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* No errors message */}
-          {data && data.data_integrity.errors.length === 0 && !loading && (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <CheckCircle2 className="h-12 w-12 text-green-600 mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">Dữ liệu hoàn hảo!</h3>
-                  <p className="text-muted-foreground">
-                    Tất cả các chuyến đều có đầy đủ thông tin bắt buộc.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          <DataIntegrityTab 
+            errors={data?.data_integrity.errors || []} 
+            loading={loading}
+          />
         </TabsContent>
       </Tabs>
     </div>
