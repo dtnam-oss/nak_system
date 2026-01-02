@@ -13,16 +13,7 @@ import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { CustomerFilter } from "@/components/reconciliation/customer-filter"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { DataIntegrityTab } from "@/components/reports/data-integrity-tab"
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend
-} from "recharts"
+import { OperationSummaryTab } from "@/components/reports/operation-summary-tab"
 
 interface AnalyticsData {
   statistics: {
@@ -52,7 +43,9 @@ export default function ReportsPage() {
 
   // Data state
   const [data, setData] = useState<AnalyticsData | null>(null)
+  const [trips, setTrips] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
+  const [tripsLoading, setTripsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Fetch customers on mount
@@ -105,9 +98,40 @@ export default function ReportsPage() {
     }
   }
 
+  // Fetch trip details for operation summary
+  const fetchTrips = async () => {
+    setTripsLoading(true)
+
+    try {
+      const params = new URLSearchParams()
+      
+      if (dateRange?.from) {
+        params.append('fromDate', format(dateRange.from, 'yyyy-MM-dd'))
+      }
+      if (dateRange?.to) {
+        params.append('toDate', format(dateRange.to, 'yyyy-MM-dd'))
+      }
+      if (selectedCustomer) {
+        params.append('customer', selectedCustomer)
+      }
+
+      const response = await fetch(`/api/reports/trips?${params.toString()}`)
+      const result = await response.json()
+
+      if (result.success) {
+        setTrips(result.data)
+      }
+    } catch (err) {
+      console.error('Trips fetch error:', err)
+    } finally {
+      setTripsLoading(false)
+    }
+  }
+
   // Auto-fetch on mount and when filters change
   useEffect(() => {
     fetchAnalytics()
+    fetchTrips()
   }, [dateRange, selectedCustomer])
 
   // Calculate data for charts
@@ -145,11 +169,14 @@ export default function ReportsPage() {
 
             <Button
               variant="outline"
-              onClick={fetchAnalytics}
-              disabled={loading}
+              onClick={() => {
+                fetchAnalytics()
+                fetchTrips()
+              }}
+              disabled={loading || tripsLoading}
               className="ml-auto"
             >
-              {loading ? (
+              {(loading || tripsLoading) ? (
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <RefreshCw className="h-4 w-4 mr-2" />
@@ -192,93 +219,10 @@ export default function ReportsPage() {
 
         {/* Tab 1: Overview */}
         <TabsContent value="overview" className="space-y-4">
-          {/* KPI Cards */}
-          <div className="grid gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Tổng số chuyến</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {loading ? '...' : data?.statistics.total_trips || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Trong khoảng thời gian đã chọn
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Chuyến Theo Tuyến</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {loading ? '...' : data?.statistics.by_trip_type['Theo tuyến'] || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {data && data.statistics.total_trips > 0
-                    ? `${((((data.statistics.by_trip_type['Theo tuyến'] || 0) / data.statistics.total_trips) * 100).toFixed(1))}% tổng số`
-                    : 'Không có dữ liệu'}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Chuyến Theo Ca</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {loading ? '...' : data?.statistics.by_trip_type['Theo ca'] || 0}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {data && data.statistics.total_trips > 0
-                    ? `${((((data.statistics.by_trip_type['Theo ca'] || 0) / data.statistics.total_trips) * 100).toFixed(1))}% tổng số`
-                    : 'Không có dữ liệu'}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Phân bố theo Khách hàng</CardTitle>
-              <CardDescription>Top 10 khách hàng có nhiều chuyến nhất</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="h-[300px] flex items-center justify-center">
-                  <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : chartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="customer"
-                      angle={-45}
-                      textAnchor="end"
-                      height={100}
-                      fontSize={12}
-                    />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="count" fill="hsl(var(--primary))" name="Số chuyến" />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                  Không có dữ liệu để hiển thị
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <OperationSummaryTab 
+            trips={trips} 
+            loading={tripsLoading}
+          />
         </TabsContent>
 
         {/* Tab 2: Data Integrity */}
