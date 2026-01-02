@@ -200,12 +200,16 @@ export function ReconciliationToolbar({
   
   // Handle customer multi-select toggle
   const toggleCustomer = (customer: string) => {
+    console.log('🔄 Toggle customer:', customer)
     const newSelected = new Set(selectedCustomers)
     if (newSelected.has(customer)) {
+      console.log('❌ Removing:', customer)
       newSelected.delete(customer)
     } else {
+      console.log('✅ Adding:', customer)
       newSelected.add(customer)
     }
+    console.log('📦 New selection:', Array.from(newSelected))
     setSelectedCustomers(newSelected)
     
     // Update pending filters with comma-separated string
@@ -381,24 +385,27 @@ export function ReconciliationToolbar({
                             key={customer}
                             value={customer}
                             onSelect={(value) => {
+                              console.log('🎯 CommandItem onSelect:', value)
                               // Find the original customer name (case-insensitive)
                               const originalCustomer = customers.find(
                                 c => c.toLowerCase() === value.toLowerCase()
                               )
+                              console.log('🔍 Found original:', originalCustomer)
                               if (originalCustomer) {
                                 toggleCustomer(originalCustomer)
                               }
                             }}
+                            className="cursor-pointer"
                           >
                             <div
                               className={cn(
-                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
                                 isSelected
-                                  ? "bg-primary text-primary-foreground"
-                                  : "opacity-50 [&_svg]:invisible"
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "border-input"
                               )}
                             >
-                              <Check className={cn("h-4 w-4")} />
+                              {isSelected && <Check className="h-4 w-4" />}
                             </div>
                             <span>{customer}</span>
                           </CommandItem>
