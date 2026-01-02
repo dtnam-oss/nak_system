@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { CustomerFilter } from "@/components/reconciliation/customer-filter"
+import { DashboardLayout } from "@/components/dashboard-layout"
 import {
   Table,
   TableBody,
@@ -120,16 +121,17 @@ export default function ReportsPage() {
   const chartData = data?.statistics.by_customer || []
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Báo cáo & Kiểm soát</h1>
-          <p className="text-muted-foreground">
-            Thống kê vận hành và kiểm tra chất lượng dữ liệu
-          </p>
+    <DashboardLayout>
+      <div className="flex flex-col gap-6">
+        {/* Page Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Báo cáo & Kiểm soát</h1>
+            <p className="text-muted-foreground">
+              Thống kê vận hành và kiểm tra chất lượng dữ liệu
+            </p>
+          </div>
         </div>
-      </div>
 
       {/* Filters Toolbar */}
       <Card>
@@ -391,5 +393,6 @@ export default function ReportsPage() {
         </TabsContent>
       </Tabs>
     </div>
+    </DashboardLayout>
   )
 }
