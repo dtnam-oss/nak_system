@@ -139,7 +139,7 @@ const TripDetailCard = ({ trip }: { trip: TripOrder }) => {
           <span className="text-xs font-medium text-muted-foreground">Doanh thu:</span>
           <span className="text-sm font-bold text-green-600 flex items-center gap-1">
             <Wallet className="w-3.5 h-3.5" />
-            {formatCurrency(trip.revenue || trip.cost || 0)}
+            {formatCurrency(Number(trip.revenue) || Number(trip.cost) || 0)}
           </span>
         </div>
       </CardContent>
@@ -189,7 +189,8 @@ export function OperationSummaryTab({ trips, loading }: OperationSummaryTabProps
     let total = 0
     Object.values(groupedData[customer]).forEach((trips) => {
       trips.forEach((trip) => {
-        total += trip.revenue || trip.cost || 0
+        const amount = Number(trip.revenue) || Number(trip.cost) || 0
+        total += amount
       })
     })
     return total
@@ -238,7 +239,7 @@ export function OperationSummaryTab({ trips, loading }: OperationSummaryTabProps
         <Card>
           <CardContent className="pt-6">
             <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(trips.reduce((sum, t) => sum + (t.revenue || t.cost || 0), 0))}
+              {formatCurrency(trips.reduce((sum, t) => sum + (Number(t.revenue) || Number(t.cost) || 0), 0))}
             </div>
             <p className="text-xs text-muted-foreground">Tổng doanh thu</p>
           </CardContent>
@@ -277,7 +278,7 @@ export function OperationSummaryTab({ trips, loading }: OperationSummaryTabProps
                 <Accordion type="multiple" className="w-full pl-4 border-l-2 border-muted ml-2 space-y-2">
                   {tripTypes.map((tripType) => {
                     const trips = groupedData[customer][tripType]
-                    const typeRevenue = trips.reduce((sum, t) => sum + (t.revenue || t.cost || 0), 0)
+                    const typeRevenue = trips.reduce((sum, t) => sum + (Number(t.revenue) || Number(t.cost) || 0), 0)
 
                     return (
                       <AccordionItem 
