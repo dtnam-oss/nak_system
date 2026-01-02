@@ -1,13 +1,15 @@
 "use client"
 
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { format } from "date-fns"
 import { vi } from "date-fns/locale"
-import { MapPin, Truck, Calendar, Wallet, Package, User } from "lucide-react"
+import { MapPin, Truck, Calendar, Wallet, Package, User, AlertTriangle } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
+import { validateTrip, getUniqueErrorMessages } from "@/lib/validation"
+import { TripDetailsDialog } from "./trip-details-dialog"
 
 interface TripOrder {
   id: number
@@ -67,7 +69,13 @@ const getStatusBadge = (status: string) => {
 
 // Component: Trip Detail Card
 const TripDetailCard = ({ trip }: { trip: TripOrder }) => {
+  const [dialogOpen, setDialogOpen] = useState(false)
   const statusInfo = getStatusBadge(trip.status)
+  
+  // Validate trip data
+  const errors = validateTrip(trip)
+  const hasErrors = errors.length > 0
+  const uniqueErrorMessages = getUniqueErrorMessages(errors)
   
   // Extract license plate from details if available
   const getLicensePlate = () => {
@@ -82,68 +90,110 @@ const TripDetailCard = ({ trip }: { trip: TripOrder }) => {
   }
 
   return (
-    <Card className="hover:shadow-lg transition-all duration-200 border-l-4 border-l-primary/50 hover:border-l-primary group">
-      <CardContent className="p-4 space-y-3">
-        {/* Header: Order ID + Status Badge */}
-        <div className="flex justify-between items-start gap-2">
-          <span className="font-bold text-sm truncate group-hover:text-primary transition-colors" title={trip.order_id}>
-            {trip.order_id}
-          </span>
-          <Badge variant={statusInfo.variant} className="text-[10px] shrink-0">
-            {statusInfo.label}
-          </Badge>
-        </div>
-
-        {/* Info Grid */}
-        <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <Calendar className="w-3 h-3 shrink-0" />
-            <span>{formatDate(trip.date)}</span>
+    <>
+      <Card 
+        className={cn(
+          "hover:shadow-lg transition-all duration-200 border-l-4 group cursor-pointer",
+          hasErrors 
+            ? "border-l-destructive/80 hover:border-l-destructive" 
+            : "border-l-primary/50 hover:border-l-primary"
+        )}
+        onClick={() => setDialogOpen(true)}
+      >
+        <CardContent className="p-4 space-y-3">
+          {/* Header: Order ID + Status Badge + Error Icon */}
+          <div className="flex justify-between items-start gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className={cn(
+                "font-bold text-sm truncate transition-colors",
+                hasErrors ? "text-destructive" : "group-hover:text-primary"
+              )} title={trip.order_id}>
+                {trip.order_id}
+              </span>
+              {hasErrors && (
+                <AlertTriangle className="w-4 h-4 text-destructive shrink-0 animate-pulse" />
+              )}
+            </div>
+            <Badge variant={statusInfo.variant} className="text-[10px] shrink-0">
+              {statusInfo.label}
+            </Badge>
           </div>
-          <div className="flex items-center gap-1.5">
-            <Truck className="w-3 h-3 shrink-0" />
-            <span className="truncate" title={getLicensePlate()}>
-              {getLicensePlate()}
+
+          {/* Info Grid */}
+          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3 h-3 shrink-0" />
+              <span>{formatDate(trip.date)}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Truck className="w-3 h-3 shrink-0" />
+              <span className="truncate" title={getLicensePlate()}>
+                {getLicensePlate()}
+              </span>
+            </div>
+          </div>
+
+          {/* Driver */}
+          {trip.driver_name && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <User className="w-3 h-3 shrink-0" />
+              <span className="truncate" title={trip.driver_name}>
+                {trip.driver_name}
+              </span>
+            </div>
+          )}
+
+          {/* Route Name */}
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <MapPin className="w-3 h-3 shrink-0" />
+            <span className="truncate" title={trip.route_name || "Chưa cập nhật tuyến"}>
+              {trip.route_name || "Chưa cập nhật tuyến"}
             </span>
           </div>
-        </div>
 
-        {/* Driver */}
-        {trip.driver_name && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <User className="w-3 h-3 shrink-0" />
-            <span className="truncate" title={trip.driver_name}>
-              {trip.driver_name}
+          {/* Weight if available */}
+          {trip.weight > 0 && (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Package className="w-3 h-3 shrink-0" />
+              <span>{trip.weight} kg</span>
+            </div>
+          )}
+
+          {/* Revenue/Cost */}
+          <div className="pt-2 border-t mt-2 flex justify-between items-center">
+            <span className="text-xs font-medium text-muted-foreground">Doanh thu:</span>
+            <span className="text-sm font-bold text-green-600 flex items-center gap-1">
+              <Wallet className="w-3.5 h-3.5" />
+              {formatCurrency(Number(trip.revenue) || Number(trip.cost) || 0)}
             </span>
           </div>
-        )}
 
-        {/* Route Name */}
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <MapPin className="w-3 h-3 shrink-0" />
-          <span className="truncate" title={trip.route_name || "Chưa cập nhật tuyến"}>
-            {trip.route_name || "Chưa cập nhật tuyến"}
-          </span>
-        </div>
+          {/* Error Summary */}
+          {hasErrors && (
+            <div className="pt-2 border-t mt-2">
+              <div className="flex items-center gap-1.5 text-xs text-destructive">
+                <AlertTriangle className="w-3 h-3 shrink-0" />
+                <span className="font-medium">
+                  {errors.length} lỗi dữ liệu
+                </span>
+              </div>
+              <div className="mt-1 text-[10px] text-destructive/80">
+                {uniqueErrorMessages.slice(0, 2).join(', ')}
+                {uniqueErrorMessages.length > 2 && '...'}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Weight if available */}
-        {trip.weight > 0 && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Package className="w-3 h-3 shrink-0" />
-            <span>{trip.weight} kg</span>
-          </div>
-        )}
-
-        {/* Revenue/Cost */}
-        <div className="pt-2 border-t mt-2 flex justify-between items-center">
-          <span className="text-xs font-medium text-muted-foreground">Doanh thu:</span>
-          <span className="text-sm font-bold text-green-600 flex items-center gap-1">
-            <Wallet className="w-3.5 h-3.5" />
-            {formatCurrency(Number(trip.revenue) || Number(trip.cost) || 0)}
-          </span>
-        </div>
-      </CardContent>
-    </Card>
+      {/* Dialog for details */}
+      <TripDetailsDialog 
+        trip={trip}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        errors={errors}
+      />
+    </>
   )
 }
 
