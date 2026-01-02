@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { Checkbox } from "@/components/ui/checkbox"
+import { CustomerFilter } from "@/components/reconciliation/customer-filter"
 import { ReconciliationFilters } from "@/types/reconciliation"
-import { Search, X, Download, Loader2, Filter, PlusCircle, Check } from "lucide-react"
+import { Search, X, Download, Loader2, Filter } from "lucide-react"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { format } from "date-fns"
@@ -28,28 +28,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-} from "@/components/ui/command"
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useDebounce } from "@/hooks/use-debounce"
-import { ChevronsUpDown } from "lucide-react"
-import { cn } from "@/lib/utils"
 
 interface ReconciliationToolbarProps {
   filters: ReconciliationFilters
@@ -90,15 +74,6 @@ export function ReconciliationToolbar({
   // Customer list state
   const [customers, setCustomers] = useState<string[]>([])
   const [customersLoading, setCustomersLoading] = useState(false)
-  const [customerOpen, setCustomerOpen] = useState(false)
-  
-  // Derived state: parse selected customers from filters.khachHang
-  const selectedCustomers = React.useMemo(() => {
-    if (filters.khachHang) {
-      return new Set(filters.khachHang.split(',').map(c => c.trim()).filter(Boolean))
-    }
-    return new Set<string>()
-  }, [filters.khachHang])
 
   // Debounce search query (500ms delay)
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
@@ -190,39 +165,11 @@ export function ReconciliationToolbar({
     }))
   }
   
-  // Handle customer multi-select toggle - APPLY IMMEDIATELY
-  const toggleCustomer = (customer: string) => {
-    console.log('🔄 Toggle customer:', customer)
-    
-    // Create new Set from current selection
-    const newSelected = new Set(selectedCustomers)
-    
-    if (newSelected.has(customer)) {
-      console.log('❌ Removing:', customer)
-      newSelected.delete(customer)
-    } else {
-      console.log('✅ Adding:', customer)
-      newSelected.add(customer)
-    }
-    
-    console.log('📦 New selection:', Array.from(newSelected))
-    
-    // Convert to comma-separated string
-    const customersString = Array.from(newSelected).join(',')
-    
-    // Apply filter IMMEDIATELY (no pending state)
+  // Handle customer filter change - APPLY IMMEDIATELY
+  const handleCustomerChange = (value: string | undefined) => {
     onFiltersChange({
       ...filters,
-      khachHang: customersString || undefined,
-    })
-  }
-  
-  // Clear customer filter - APPLY IMMEDIATELY
-  const clearCustomerFilter = () => {
-    console.log('🧹 Clearing customer filter')
-    onFiltersChange({
-      ...filters,
-      khachHang: undefined,
+      khachHang: value,
     })
   }
 
@@ -325,100 +272,13 @@ export function ReconciliationToolbar({
               className="shrink-0"
             />
 
-            {/* Customer Filter - Multi-select Faceted Filter */}
-            <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-9 border-dashed shrink-0"
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Khách hàng
-                  {selectedCustomers.size > 0 && (
-                    <>
-                      <Separator orientation="vertical" className="mx-2 h-4" />
-                      <Badge
-                        variant="secondary"
-                        className="rounded-sm px-1 font-normal lg:hidden"
-                      >
-                        {selectedCustomers.size}
-                      </Badge>
-                      <div className="hidden space-x-1 lg:flex">
-                        {selectedCustomers.size > 2 ? (
-                          <Badge
-                            variant="secondary"
-                            className="rounded-sm px-1 font-normal"
-                          >
-                            {selectedCustomers.size} đã chọn
-                          </Badge>
-                        ) : (
-                          Array.from(selectedCustomers).map((customer) => (
-                            <Badge
-                              variant="secondary"
-                              key={customer}
-                              className="rounded-sm px-1 font-normal"
-                            >
-                              {customer}
-                            </Badge>
-                          ))
-                        )}
-                      </div>
-                    </>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[250px] p-0" align="start">
-                <Command>
-                  <CommandInput placeholder="Tìm khách hàng..." />
-                  <CommandList>
-                    <CommandEmpty>
-                      {customersLoading ? "Đang tải..." : "Không tìm thấy"}
-                    </CommandEmpty>
-                    <CommandGroup className="max-h-[300px] overflow-auto">
-                      {customers.map((customer) => {
-                        const isSelected = selectedCustomers.has(customer)
-                        return (
-                          <CommandItem
-                            key={customer}
-                            value={customer}
-                            onSelect={() => {
-                              // onSelect is fired when user clicks or presses enter
-                              console.log('🎯 onSelect fired for:', customer)
-                              toggleCustomer(customer)
-                            }}
-                            className="cursor-pointer"
-                          >
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => toggleCustomer(customer)}
-                              className="mr-2"
-                            />
-                            <span>{customer}</span>
-                          </CommandItem>
-                        )
-                      })}
-                    </CommandGroup>
-                    {selectedCustomers.size > 0 && (
-                      <>
-                        <CommandSeparator />
-                        <CommandGroup>
-                          <CommandItem
-                            onSelect={() => {
-                              clearCustomerFilter()
-                              setCustomerOpen(false)
-                            }}
-                            className="justify-center text-center"
-                          >
-                            Xóa bộ lọc
-                          </CommandItem>
-                        </CommandGroup>
-                      </>
-                    )}
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            {/* Customer Filter - Faceted Filter */}
+            <CustomerFilter
+              options={customers.map(c => ({ label: c, value: c }))}
+              value={filters.khachHang}
+              onChange={handleCustomerChange}
+              isLoading={customersLoading}
+            />
 
             {/* Transport Unit Filter - Fixed Width */}
             <Select
