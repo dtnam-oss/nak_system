@@ -12,13 +12,26 @@
 
 Hiện tại hệ thống có **2 mẫu export** cho khách hàng J&T:
 
-### 1️⃣ Mẫu Theo Tuyến (Route-based) ⚠️ CHƯA IMPLEMENT
+### 1️⃣ Mẫu Theo Tuyến (Route-based) ✅ ĐÃ HOÀN THIỆN
 
 **templateType**: `jnt_route`
 
-**Trạng thái**: **TODO** - Chưa có file strategy
+**File xử lý**: `app/api/reconciliation/export/strategies/JnT_Route_Template.ts`
 
-**Cấu trúc dự kiến**: Sẽ được cung cấp sau
+**Cấu trúc Excel**:
+| Cột | Header | Nguồn dữ liệu | Logic |
+|-----|--------|---------------|-------|
+| A | STT | Auto-increment | 1, 2, 3... |
+| B | Ngày | `order.date` | Format: dd/MM/yyyy |
+| C | Biển số xe | `chiTietLoTrinh[0].bienKiemSoat` | Phần tử đầu tiên |
+| D | Điểm đi - Điểm đến | `order.route_name` | Trực tiếp từ DB |
+| E | Tem chiều đi | `chiTietLoTrinh[0].maTuyen` | Phần tử đầu tiên |
+| F | Tem chiều về | `chiTietLoTrinh[length-1].maTuyen` | Phần tử cuối cùng |
+| G | Thể tích | `chiTietLoTrinh[].taiTrongTinhPhi` | Nối bằng dấu phẩy |
+
+**Styling**:
+- Header: Background `#C0C0C0` (silver gray), Font bold đen
+- Data: Border thin, Center alignment, wrapText: true
 
 ---
 
@@ -48,7 +61,13 @@ Hiện tại hệ thống có **2 mẫu export** cho khách hàng J&T:
 GET /api/reconciliation/export?templateType=jnt_route&fromDate=2024-01-01&khachHang=J%26T
 ```
 
-**Output**: Tạm thời trả về lỗi 501 - Chưa implement
+**Output**: `Doisoat_JnT_TheoTuyen_YYYYMMDD_HHMMSS.xlsx`
+
+**Đặc điểm quan trọng**:
+- ✅ Có cột STT (7 cột total)
+- ✅ Single-line cells: Mỗi tem đi/về riêng biệt (first/last logic)
+- ✅ Route name từ DB: Lấy order.route_name thay vì JSON
+- ✅ Standard row height 20px
 
 ---
 
@@ -71,9 +90,9 @@ GET /api/reconciliation/export?templateType=jnt_shift&fromDate=2024-01-01&khachH
 
 ### ❌ Lỗi thường gặp
 
-**1. File Excel trả về lỗi "J&T Route template chưa được implement"**
-- **Nguyên nhân**: Đang gọi `templateType=jnt_route` - template này chưa có
-- **Giải pháp**: Đổi sang `templateType=jnt_shift` để dùng mẫu Theo Ca
+**1. File Excel không có cột STT khi dùng jnt_route**
+- **Nguyên nhân**: Đang gọi nhầm `templateType=jnt_shift` thay vì `jnt_route`
+- **Giải pháp**: Verify đang gọi đúng `templateType=jnt_route`
 
 **2. File Excel không có cột STT**
 - **Nguyên nhân**: Mẫu Theo Ca không có cột STT (design intentional)

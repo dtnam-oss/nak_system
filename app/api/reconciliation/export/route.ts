@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { format } from 'date-fns';
 import { generateJnTShiftExcel as generateJnTShiftStrategy } from './strategies/JnT_Shift_Template';
+import { generateJnTRouteExcel as generateJnTRouteStrategy } from './strategies/JnT_Route_Template';
 
 export const dynamic = 'force-dynamic';
 
@@ -151,12 +152,19 @@ export async function GET(request: NextRequest) {
         break;
 
       case 'jnt_route':
-        // TODO: Will implement Route-based template (Theo Tuyến)
-        // Temporarily return error
-        return NextResponse.json(
-          { error: 'J&T Route template chưa được implement. Vui lòng sử dụng jnt_shift.' },
-          { status: 501 }
-        );
+        // Use strategy for Route-based report (Theo Tuyến)
+        const bufferJnTRoute = await generateJnTRouteStrategy(results);
+        fileName = `Doisoat_JnT_TheoTuyen_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
+        console.log(`✓ Excel generated successfully: ${fileName}`);
+        
+        return new NextResponse(bufferJnTRoute, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
+            'Content-Length': bufferJnTRoute.byteLength.toString(),
+          },
+        });
 
       case 'jnt_shift':
         // Use strategy for Shift-based report (Theo Ca)
