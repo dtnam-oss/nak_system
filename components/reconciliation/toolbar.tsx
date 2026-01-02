@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import { ReconciliationFilters } from "@/types/reconciliation"
-import { Search, X, Download, Loader2, Filter } from "lucide-react"
+import { Search, X, Download, Loader2, Filter, PlusCircle, Check } from "lucide-react"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { DateRange } from "react-day-picker"
 import { format } from "date-fns"
@@ -29,6 +31,8 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
+  CommandSeparator,
 } from "@/components/ui/command"
 import {
   Popover,
@@ -42,7 +46,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useDebounce } from "@/hooks/use-debounce"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ReconciliationToolbarProps {
@@ -85,6 +89,14 @@ export function ReconciliationToolbar({
   const [customers, setCustomers] = useState<string[]>([])
   const [customersLoading, setCustomersLoading] = useState(false)
   const [customerOpen, setCustomerOpen] = useState(false)
+  
+  // Multi-select state for customers
+  const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(() => {
+    if (filters.khachHang) {
+      return new Set(filters.khachHang.split(',').map(c => c.trim()).filter(Boolean))
+    }
+    return new Set()
+  })
 
   // Debounce search query (500ms delay)
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
@@ -116,6 +128,15 @@ export function ReconciliationToolbar({
     pendingFilters.donViVanChuyen !== filters.donViVanChuyen ||
     pendingFilters.loaiTuyen !== filters.loaiTuyen ||
     pendingFilters.loaiChuyen !== filters.loaiChuyen
+  
+  // Sync selectedCustomers with filters.khachHang
+  useEffect(() => {
+    if (filters.khachHang) {
+      setSelectedCustomers(new Set(filters.khachHang.split(',').map(c => c.trim()).filter(Boolean)))
+    } else {
+      setSelectedCustomers(new Set())
+    }
+  }, [filters.khachHang])
 
   // Apply debounced search query automatically (live search)
   useEffect(() => {
@@ -163,6 +184,7 @@ export function ReconciliationToolbar({
     setPendingFilters({})
     setSearchQuery("")
     setDateRange(undefined)
+    setSelectedCustomers(new Set())
     onFiltersChange({})
   }
 
@@ -173,6 +195,32 @@ export function ReconciliationToolbar({
     setPendingFilters((prev) => ({
       ...prev,
       [key]: value || undefined,
+    }))
+  }
+  
+  // Handle customer multi-select toggle
+  const toggleCustomer = (customer: string) => {
+    const newSelected = new Set(selectedCustomers)
+    if (newSelected.has(customer)) {
+      newSelected.delete(customer)
+    } else {
+      newSelected.add(customer)
+    }
+    setSelectedCustomers(newSelected)
+    
+    // Update pending filters with comma-separated string
+    const customersString = Array.from(newSelected).join(',')
+    setPendingFilters((prev) => ({
+      ...prev,
+      khachHang: customersString || undefined,
+    }))
+  }
+  
+  const clearCustomerFilter = () => {
+    setSelectedCustomers(new Set())
+    setPendingFilters((prev) => ({
+      ...prev,
+      khachHang: undefined,
     }))
   }
 
@@ -275,64 +323,96 @@ export function ReconciliationToolbar({
               className="shrink-0"
             />
 
-            {/* Customer Filter - Combobox with Search */}
+            {/* Customer Filter - Multi-select Faceted Filter */}
             <Popover open={customerOpen} onOpenChange={setCustomerOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  role="combobox"
-                  aria-expanded={customerOpen}
-                  className="w-[200px] h-9 justify-between text-sm shrink-0"
+                  size="sm"
+                  className="h-9 border-dashed shrink-0"
                 >
-                  {pendingFilters.khachHang
-                    ? customers.find((c) => c === pendingFilters.khachHang)
-                    : "Khách hàng"}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Khách hàng
+                  {selectedCustomers.size > 0 && (
+                    <>
+                      <Separator orientation="vertical" className="mx-2 h-4" />
+                      <Badge
+                        variant="secondary"
+                        className="rounded-sm px-1 font-normal lg:hidden"
+                      >
+                        {selectedCustomers.size}
+                      </Badge>
+                      <div className="hidden space-x-1 lg:flex">
+                        {selectedCustomers.size > 2 ? (
+                          <Badge
+                            variant="secondary"
+                            className="rounded-sm px-1 font-normal"
+                          >
+                            {selectedCustomers.size} đã chọn
+                          </Badge>
+                        ) : (
+                          Array.from(selectedCustomers).map((customer) => (
+                            <Badge
+                              variant="secondary"
+                              key={customer}
+                              className="rounded-sm px-1 font-normal"
+                            >
+                              {customer}
+                            </Badge>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[200px] p-0">
+              <PopoverContent className="w-[250px] p-0" align="start">
                 <Command>
                   <CommandInput placeholder="Tìm khách hàng..." />
-                  <CommandEmpty>
-                    {customersLoading ? "Đang tải..." : "Không tìm thấy"}
-                  </CommandEmpty>
-                  <CommandGroup className="max-h-[300px] overflow-auto">
-                    <CommandItem
-                      value=""
-                      onSelect={() => {
-                        updatePendingFilter("khachHang", "")
-                        setCustomerOpen(false)
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          !pendingFilters.khachHang ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      Tất cả khách hàng
-                    </CommandItem>
-                    {customers.map((customer) => (
-                      <CommandItem
-                        key={customer}
-                        value={customer}
-                        onSelect={(currentValue: string) => {
-                          updatePendingFilter("khachHang", currentValue)
-                          setCustomerOpen(false)
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            pendingFilters.khachHang === customer
-                              ? "opacity-100"
-                              : "opacity-0"
-                          )}
-                        />
-                        {customer}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
+                  <CommandList>
+                    <CommandEmpty>
+                      {customersLoading ? "Đang tải..." : "Không tìm thấy"}
+                    </CommandEmpty>
+                    <CommandGroup className="max-h-[300px] overflow-auto">
+                      {customers.map((customer) => {
+                        const isSelected = selectedCustomers.has(customer)
+                        return (
+                          <CommandItem
+                            key={customer}
+                            onSelect={() => toggleCustomer(customer)}
+                          >
+                            <div
+                              className={cn(
+                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
+                                isSelected
+                                  ? "bg-primary text-primary-foreground"
+                                  : "opacity-50 [&_svg]:invisible"
+                              )}
+                            >
+                              <Check className={cn("h-4 w-4")} />
+                            </div>
+                            <span>{customer}</span>
+                          </CommandItem>
+                        )
+                      })}
+                    </CommandGroup>
+                    {selectedCustomers.size > 0 && (
+                      <>
+                        <CommandSeparator />
+                        <CommandGroup>
+                          <CommandItem
+                            onSelect={() => {
+                              clearCustomerFilter()
+                              setCustomerOpen(false)
+                            }}
+                            className="justify-center text-center"
+                          >
+                            Xóa bộ lọc
+                          </CommandItem>
+                        </CommandGroup>
+                      </>
+                    )}
+                  </CommandList>
                 </Command>
               </PopoverContent>
             </Popover>

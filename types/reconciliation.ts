@@ -73,7 +73,7 @@ export interface ChiTietLoTrinh {
 export interface ReconciliationFilters {
   fromDate?: string
   toDate?: string
-  khachHang?: string
+  khachHang?: string // Comma-separated list: "J&T,GHN,VIETTEL"
   donViVanChuyen?: string
   loaiTuyen?: string
   loaiChuyen?: string

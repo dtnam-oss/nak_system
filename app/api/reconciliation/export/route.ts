@@ -69,9 +69,20 @@ export async function GET(request: NextRequest) {
       paramIndex++;
     }
     if (khachHang) {
-      conditions.push(`LOWER(customer) LIKE $${paramIndex}`);
-      params.push(`%${khachHang.toLowerCase()}%`);
-      paramIndex++;
+      // Support multi-select: comma-separated values "J&T,GHN,VIETTEL"
+      const customerList = khachHang.split(',').map(c => c.trim()).filter(Boolean);
+      
+      if (customerList.length === 1) {
+        // Single customer: use ILIKE for partial match
+        conditions.push(`LOWER(customer) LIKE $${paramIndex}`);
+        params.push(`%${customerList[0].toLowerCase()}%`);
+        paramIndex++;
+      } else if (customerList.length > 1) {
+        // Multiple customers: use ANY with array
+        conditions.push(`customer = ANY($${paramIndex})`);
+        params.push(customerList);
+        paramIndex++;
+      }
     }
     if (donViVanChuyen) {
       conditions.push(`LOWER(TRIM(provider)) = $${paramIndex}`);
