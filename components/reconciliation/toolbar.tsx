@@ -1,5 +1,6 @@
 "use client"
 
+import * as React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -90,13 +91,13 @@ export function ReconciliationToolbar({
   const [customersLoading, setCustomersLoading] = useState(false)
   const [customerOpen, setCustomerOpen] = useState(false)
   
-  // Multi-select state for customers
-  const [selectedCustomers, setSelectedCustomers] = useState<Set<string>>(() => {
+  // Derived state: parse selected customers from filters.khachHang
+  const selectedCustomers = React.useMemo(() => {
     if (filters.khachHang) {
       return new Set(filters.khachHang.split(',').map(c => c.trim()).filter(Boolean))
     }
-    return new Set()
-  })
+    return new Set<string>()
+  }, [filters.khachHang])
 
   // Debounce search query (500ms delay)
   const debouncedSearchQuery = useDebounce(searchQuery, 500)
@@ -128,15 +129,6 @@ export function ReconciliationToolbar({
     pendingFilters.donViVanChuyen !== filters.donViVanChuyen ||
     pendingFilters.loaiTuyen !== filters.loaiTuyen ||
     pendingFilters.loaiChuyen !== filters.loaiChuyen
-  
-  // Sync selectedCustomers with filters.khachHang
-  useEffect(() => {
-    if (filters.khachHang) {
-      setSelectedCustomers(new Set(filters.khachHang.split(',').map(c => c.trim()).filter(Boolean)))
-    } else {
-      setSelectedCustomers(new Set())
-    }
-  }, [filters.khachHang])
 
   // Apply debounced search query automatically (live search)
   useEffect(() => {
@@ -184,7 +176,6 @@ export function ReconciliationToolbar({
     setPendingFilters({})
     setSearchQuery("")
     setDateRange(undefined)
-    setSelectedCustomers(new Set())
     onFiltersChange({})
   }
 
@@ -198,10 +189,13 @@ export function ReconciliationToolbar({
     }))
   }
   
-  // Handle customer multi-select toggle
+  // Handle customer multi-select toggle - APPLY IMMEDIATELY
   const toggleCustomer = (customer: string) => {
     console.log('🔄 Toggle customer:', customer)
+    
+    // Create new Set from current selection
     const newSelected = new Set(selectedCustomers)
+    
     if (newSelected.has(customer)) {
       console.log('❌ Removing:', customer)
       newSelected.delete(customer)
@@ -209,23 +203,26 @@ export function ReconciliationToolbar({
       console.log('✅ Adding:', customer)
       newSelected.add(customer)
     }
-    console.log('📦 New selection:', Array.from(newSelected))
-    setSelectedCustomers(newSelected)
     
-    // Update pending filters with comma-separated string
+    console.log('📦 New selection:', Array.from(newSelected))
+    
+    // Convert to comma-separated string
     const customersString = Array.from(newSelected).join(',')
-    setPendingFilters((prev) => ({
-      ...prev,
+    
+    // Apply filter IMMEDIATELY (no pending state)
+    onFiltersChange({
+      ...filters,
       khachHang: customersString || undefined,
-    }))
+    })
   }
   
+  // Clear customer filter - APPLY IMMEDIATELY
   const clearCustomerFilter = () => {
-    setSelectedCustomers(new Set())
-    setPendingFilters((prev) => ({
-      ...prev,
+    console.log('🧹 Clearing customer filter')
+    onFiltersChange({
+      ...filters,
       khachHang: undefined,
-    }))
+    })
   }
 
   const handleExport = async (templateType: 'general' | 'jnt_route' | 'jnt_shift') => {
@@ -384,28 +381,22 @@ export function ReconciliationToolbar({
                           <CommandItem
                             key={customer}
                             value={customer}
-                            onSelect={(value) => {
-                              console.log('🎯 CommandItem onSelect:', value)
-                              // Find the original customer name (case-insensitive)
-                              const originalCustomer = customers.find(
-                                c => c.toLowerCase() === value.toLowerCase()
-                              )
-                              console.log('🔍 Found original:', originalCustomer)
-                              if (originalCustomer) {
-                                toggleCustomer(originalCustomer)
-                              }
+                            onSelect={() => {
+                              // onSelect is fired when user clicks or presses enter
+                              console.log('🎯 onSelect fired for:', customer)
+                              toggleCustomer(customer)
                             }}
                             className="cursor-pointer"
                           >
                             <div
                               className={cn(
-                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border",
+                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
                                 isSelected
-                                  ? "bg-primary text-primary-foreground border-primary"
-                                  : "border-input"
+                                  ? "bg-primary text-primary-foreground"
+                                  : "opacity-50 [&_svg]:invisible"
                               )}
                             >
-                              {isSelected && <Check className="h-4 w-4" />}
+                              <Check className="h-4 w-4" />
                             </div>
                             <span>{customer}</span>
                           </CommandItem>
