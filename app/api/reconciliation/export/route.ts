@@ -13,14 +13,15 @@ interface ReconciliationDatabaseRow {
   customer: string;
   route_name: string;
   driver_name: string;
-  license_plate: string;
   provider: string;
   status: string;
   cost: number;
   revenue: number;
   trip_type: string;
   route_type: string;
-  data_json: any;
+  weight: number;
+  total_distance: number;
+  details: any;
   created_at: Date;
 }
 
@@ -99,8 +100,8 @@ export async function GET(request: NextRequest) {
     const queryString = `
       SELECT 
         id, order_id, date, customer, route_name, driver_name,
-        license_plate, provider, status, cost, revenue,
-        trip_type, route_type, data_json, created_at
+        provider, status, cost, revenue,
+        trip_type, route_type, weight, total_distance, details, created_at
       FROM reconciliation_orders
       ${whereClause}
       ORDER BY date DESC, created_at DESC
@@ -248,13 +249,23 @@ async function generateGeneralExcel(data: ReconciliationDatabaseRow[]): Promise<
   // STEP 3: Add Data Rows
   // =====================
   data.forEach((record) => {
+    // Extract license plate from details if available
+    let licensePlate = '';
+    try {
+      const details = typeof record.details === 'string' ? JSON.parse(record.details) : record.details;
+      const chiTietLoTrinh = details?.chiTietLoTrinh || [];
+      licensePlate = chiTietLoTrinh[0]?.bienKiemSoat || '';
+    } catch (error) {
+      console.error('Failed to parse details for order:', record.id, error);
+    }
+
     const row = worksheet.addRow({
       order_id: record.order_id,
       date: record.date ? format(new Date(record.date), 'dd/MM/yyyy') : '',
       customer: record.customer,
       route_name: record.route_name || '',
       driver_name: record.driver_name || '',
-      license_plate: record.license_plate || '',
+      license_plate: licensePlate,
       provider: record.provider,
       trip_type: record.trip_type || '',
       route_type: record.route_type || '',
@@ -378,16 +389,16 @@ async function generateJnTRouteExcel(data: ReconciliationDatabaseRow[]): Promise
   // STEP 3: Process Data Loop
   // =====================
   data.forEach((order, index) => {
-    // Parse data_json safely (can be string or object)
+    // Parse details safely (can be string or object)
     let details: any = null;
     try {
-      if (typeof order.data_json === 'string') {
-        details = JSON.parse(order.data_json);
-      } else if (typeof order.data_json === 'object' && order.data_json !== null) {
-        details = order.data_json;
+      if (typeof order.details === 'string') {
+        details = JSON.parse(order.details);
+      } else if (typeof order.details === 'object' && order.details !== null) {
+        details = order.details;
       }
     } catch (error) {
-      console.error('Failed to parse data_json for order:', order.id, error);
+      console.error('Failed to parse details for order:', order.id, error);
     }
 
     // Extract chiTietLoTrinh array
@@ -403,8 +414,8 @@ async function generateJnTRouteExcel(data: ReconciliationDatabaseRow[]): Promise
     // Cột B: Ngày (format dd/MM/yyyy)
     const dateValue = order.date ? format(new Date(order.date), 'dd/MM/yyyy') : '';
 
-    // Cột C: Biển số xe (lấy phần tử đầu tiên)
-    const licensePlate = chiTietLoTrinh[0]?.bienKiemSoat || order.license_plate || '';
+    // Cột C: Biển số xe (lấy phần tử đầu tiên từ chiTietLoTrinh)
+    const licensePlate = chiTietLoTrinh[0]?.bienKiemSoat || '';
 
     // Cột D: Điểm đi - Điểm đến (lấy trực tiếp từ DB)
     const routeName = order.route_name || '';
