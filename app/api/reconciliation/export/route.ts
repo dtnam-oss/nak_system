@@ -1,11 +1,9 @@
-import { neon } from '@neondatabase/serverless';
+import { sql } from '@vercel/postgres';
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { format } from 'date-fns';
 
 export const dynamic = 'force-dynamic';
-
-const sql = neon(process.env.DATABASE_URL!);
 
 // Types for database row
 interface ReconciliationDatabaseRow {
@@ -55,37 +53,44 @@ export async function GET(request: NextRequest) {
     // =====================
     // STEP 1: Query Database with Dynamic Filters
     // =====================
-    let results: ReconciliationDatabaseRow[];
-
-    // Build WHERE conditions
     const conditions: string[] = [];
-    
+    const params: any[] = [];
+    let paramIndex = 1;
+
     if (fromDate) {
-      conditions.push(`date >= '${fromDate.replace(/'/g, "''")}'`);
+      conditions.push(`date >= $${paramIndex}`);
+      params.push(fromDate);
+      paramIndex++;
     }
     if (toDate) {
-      conditions.push(`date <= '${toDate.replace(/'/g, "''")}'`);
+      conditions.push(`date <= $${paramIndex}`);
+      params.push(toDate);
+      paramIndex++;
     }
     if (khachHang) {
-      const safeCustomer = khachHang.toLowerCase().replace(/'/g, "''");
-      conditions.push(`LOWER(customer) LIKE '%${safeCustomer}%'`);
+      conditions.push(`LOWER(customer) LIKE $${paramIndex}`);
+      params.push(`%${khachHang.toLowerCase()}%`);
+      paramIndex++;
     }
     if (donViVanChuyen) {
-      const safeProvider = donViVanChuyen.toLowerCase().replace(/'/g, "''");
-      conditions.push(`LOWER(TRIM(provider)) = '${safeProvider}'`);
+      conditions.push(`LOWER(TRIM(provider)) = $${paramIndex}`);
+      params.push(donViVanChuyen.toLowerCase());
+      paramIndex++;
     }
     if (loaiChuyen) {
-      const safeTripType = loaiChuyen.toLowerCase().replace(/'/g, "''");
-      conditions.push(`LOWER(TRIM(trip_type)) LIKE '%${safeTripType}%'`);
+      conditions.push(`LOWER(TRIM(trip_type)) LIKE $${paramIndex}`);
+      params.push(`%${loaiChuyen.toLowerCase()}%`);
+      paramIndex++;
     }
     if (searchQuery) {
-      const safeQuery = searchQuery.toLowerCase().replace(/'/g, "''");
       conditions.push(`(
-        LOWER(order_id) LIKE '%${safeQuery}%' OR
-        LOWER(customer) LIKE '%${safeQuery}%' OR
-        LOWER(route_name) LIKE '%${safeQuery}%' OR
-        LOWER(driver_name) LIKE '%${safeQuery}%'
+        LOWER(order_id) LIKE $${paramIndex} OR
+        LOWER(customer) LIKE $${paramIndex} OR
+        LOWER(route_name) LIKE $${paramIndex} OR
+        LOWER(driver_name) LIKE $${paramIndex}
       )`);
+      params.push(`%${searchQuery.toLowerCase()}%`);
+      paramIndex++;
     }
     
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -101,11 +106,11 @@ export async function GET(request: NextRequest) {
       ORDER BY date DESC, created_at DESC
     `;
     
-    console.log('🔍 Executing query with filters:', { whereClause });
+    console.log('🔍 Executing query with filters:', { whereClause, params });
     
-    // Execute using Neon's unsafe query method for dynamic SQL
-    // @ts-ignore - Using unsafe query for dynamic conditions
-    results = await sql.unsafe(queryString) as ReconciliationDatabaseRow[];
+    // Execute using Vercel Postgres with parameterized query
+    const result = await sql.query(queryString, params);
+    const results = result.rows as ReconciliationDatabaseRow[];
 
     console.log(`✓ Fetched ${results.length} records from database`);
 
