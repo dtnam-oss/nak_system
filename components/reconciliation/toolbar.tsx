@@ -16,6 +16,14 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -168,9 +176,52 @@ export function ReconciliationToolbar({
     }))
   }
 
-  const handleExport = () => {
-    // TODO: Implement Excel export logic
-    console.log("Export to Excel")
+  const handleExport = async (templateType: 'general' | 'jnt_route' | 'jnt_shift') => {
+    try {
+      // Build query params from current filters
+      const params = new URLSearchParams()
+      params.append('templateType', templateType)
+      
+      if (filters.fromDate) params.append('fromDate', filters.fromDate)
+      if (filters.toDate) params.append('toDate', filters.toDate)
+      if (filters.khachHang) params.append('khachHang', filters.khachHang)
+      if (filters.donViVanChuyen) params.append('donViVanChuyen', filters.donViVanChuyen)
+      if (filters.loaiTuyen) params.append('loaiTuyen', filters.loaiTuyen)
+      if (filters.loaiChuyen) params.append('loaiChuyen', filters.loaiChuyen)
+      if (filters.searchQuery) params.append('searchQuery', filters.searchQuery)
+
+      // Trigger download
+      const response = await fetch(`/api/reconciliation/export?${params.toString()}`)
+      
+      if (!response.ok) {
+        throw new Error('Export failed')
+      }
+
+      // Get filename from Content-Disposition header or generate default
+      const contentDisposition = response.headers.get('Content-Disposition')
+      let filename = 'Doisoat_export.xlsx'
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1].replace(/['"]/g, '')
+        }
+      }
+
+      // Create blob and download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+    } catch (error) {
+      console.error('Export error:', error)
+      alert('Xuất file thất bại. Vui lòng thử lại.')
+    }
   }
 
   return (
@@ -325,23 +376,36 @@ export function ReconciliationToolbar({
               </Button>
             )}
 
-            {/* Export Button - Auto Width */}
-            <Tooltip>
-              <TooltipTrigger asChild>
+            {/* Export Dropdown Menu - Auto Width */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="default"
                   size="sm"
-                  onClick={handleExport}
                   className="h-9 w-auto whitespace-nowrap shrink-0"
                 >
                   <Download className="h-4 w-4 lg:mr-2" />
-                  <span className="hidden lg:inline">Xuất Excel</span>
+                  <span className="hidden lg:inline">Xuất dữ liệu</span>
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="lg:hidden">
-                <p>Xuất Excel</p>
-              </TooltipContent>
-            </Tooltip>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Chọn mẫu báo cáo</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleExport('general')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Báo cáo Tổng hợp (Nội bộ)
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleExport('jnt_route')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Mẫu J&T - Theo Tuyến
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('jnt_shift')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Mẫu J&T - Theo Ca/Thuê bao
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
