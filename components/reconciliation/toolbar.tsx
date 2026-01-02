@@ -178,6 +178,8 @@ export function ReconciliationToolbar({
 
   const handleExport = async (templateType: 'general' | 'jnt_route' | 'jnt_shift') => {
     try {
+      console.log('🚀 Starting export...', { templateType, filters })
+      
       // Build query params from current filters
       const params = new URLSearchParams()
       params.append('templateType', templateType)
@@ -191,10 +193,25 @@ export function ReconciliationToolbar({
       if (filters.searchQuery) params.append('searchQuery', filters.searchQuery)
 
       // Trigger download
-      const response = await fetch(`/api/reconciliation/export?${params.toString()}`)
+      const url = `/api/reconciliation/export?${params.toString()}`
+      console.log('📤 Fetching:', url)
+      
+      const response = await fetch(url)
+      console.log('📥 Response status:', response.status)
       
       if (!response.ok) {
-        throw new Error('Export failed')
+        // Try to get error details from JSON response
+        let errorMessage = 'Xuất file thất bại. Vui lòng thử lại.'
+        try {
+          const errorData = await response.json()
+          if (errorData.error) {
+            errorMessage = errorData.error
+          }
+          console.error('Server error:', errorData)
+        } catch (e) {
+          console.error('Failed to parse error response:', e)
+        }
+        throw new Error(errorMessage)
       }
 
       // Get filename from Content-Disposition header or generate default
@@ -204,23 +221,28 @@ export function ReconciliationToolbar({
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
         if (filenameMatch && filenameMatch[1]) {
-          filename = filenameMatch[1].replace(/['"]/g, '')
+          filename = decodeURIComponent(filenameMatch[1].replace(/['"]/g, ''))
         }
       }
 
+      console.log('💾 Downloading file:', filename)
+
       // Create blob and download
       const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
+      const downloadUrl = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
-      a.href = url
+      a.href = downloadUrl
       a.download = filename
       document.body.appendChild(a)
       a.click()
-      window.URL.revokeObjectURL(url)
+      window.URL.revokeObjectURL(downloadUrl)
       document.body.removeChild(a)
+      
+      console.log('✅ Export completed successfully')
     } catch (error) {
-      console.error('Export error:', error)
-      alert('Xuất file thất bại. Vui lòng thử lại.')
+      console.error('❌ Export error:', error)
+      const message = error instanceof Error ? error.message : 'Xuất file thất bại. Vui lòng thử lại.'
+      alert(message)
     }
   }
 

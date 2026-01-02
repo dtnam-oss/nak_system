@@ -55,57 +55,76 @@ export async function GET(request: NextRequest) {
     // =====================
     // STEP 1: Query Database with Dynamic Filters
     // =====================
-    // Build WHERE clause dynamically (escape single quotes for SQL injection prevention)
-    const safeClauses: string[] = ['1=1'];
+    let results: ReconciliationDatabaseRow[];
+
+    // Build WHERE conditions
+    const conditions: string[] = [];
     
     if (fromDate) {
-      safeClauses.push(`date >= '${fromDate}'`);
+      conditions.push(`date >= '${fromDate.replace(/'/g, "''")}'`);
     }
     if (toDate) {
-      safeClauses.push(`date <= '${toDate}'`);
+      conditions.push(`date <= '${toDate.replace(/'/g, "''")}'`);
     }
     if (khachHang) {
-      const safeCustomer = khachHang.replace(/'/g, "''");
-      safeClauses.push(`LOWER(customer) LIKE '%${safeCustomer.toLowerCase()}%'`);
+      const safeCustomer = khachHang.toLowerCase().replace(/'/g, "''");
+      conditions.push(`LOWER(customer) LIKE '%${safeCustomer}%'`);
     }
     if (donViVanChuyen) {
-      const safeProvider = donViVanChuyen.replace(/'/g, "''");
-      safeClauses.push(`LOWER(TRIM(provider)) = '${safeProvider.toLowerCase()}'`);
+      const safeProvider = donViVanChuyen.toLowerCase().replace(/'/g, "''");
+      conditions.push(`LOWER(TRIM(provider)) = '${safeProvider}'`);
     }
     if (loaiChuyen) {
-      const safeTripType = loaiChuyen.replace(/'/g, "''");
-      safeClauses.push(`LOWER(TRIM(trip_type)) LIKE '%${safeTripType.toLowerCase()}%'`);
+      const safeTripType = loaiChuyen.toLowerCase().replace(/'/g, "''");
+      conditions.push(`LOWER(TRIM(trip_type)) LIKE '%${safeTripType}%'`);
     }
     if (searchQuery) {
-      const safeQuery = searchQuery.replace(/'/g, "''");
-      safeClauses.push(`(
-        LOWER(order_id) LIKE '%${safeQuery.toLowerCase()}%' OR
-        LOWER(customer) LIKE '%${safeQuery.toLowerCase()}%' OR
-        LOWER(route_name) LIKE '%${safeQuery.toLowerCase()}%' OR
-        LOWER(driver_name) LIKE '%${safeQuery.toLowerCase()}%'
+      const safeQuery = searchQuery.toLowerCase().replace(/'/g, "''");
+      conditions.push(`(
+        LOWER(order_id) LIKE '%${safeQuery}%' OR
+        LOWER(customer) LIKE '%${safeQuery}%' OR
+        LOWER(route_name) LIKE '%${safeQuery}%' OR
+        LOWER(driver_name) LIKE '%${safeQuery}%'
       )`);
     }
-
-    const finalQuery = `
+    
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    
+    // Build the full query string
+    const queryString = `
       SELECT 
         id, order_id, date, customer, route_name, driver_name,
         license_plate, provider, status, cost, revenue,
         trip_type, route_type, data_json, created_at
       FROM reconciliation_orders
-      WHERE ${safeClauses.join(' AND ')}
+      ${whereClause}
       ORDER BY date DESC, created_at DESC
     `;
-
-    // Neon requires template literal syntax, so we use tagged template
-    const results = await sql([finalQuery] as any) as ReconciliationDatabaseRow[];
+    
+    console.log('🔍 Executing query with filters:', { whereClause });
+    
+    // Execute using Neon's unsafe query method for dynamic SQL
+    // @ts-ignore - Using unsafe query for dynamic conditions
+    results = await sql.unsafe(queryString) as ReconciliationDatabaseRow[];
 
     console.log(`✓ Fetched ${results.length} records from database`);
+
+    // Check if we have data
+    if (results.length === 0) {
+      console.log('⚠️ No data found for export with current filters');
+      return NextResponse.json(
+        { error: 'Không có dữ liệu để xuất với bộ lọc hiện tại' },
+        { status: 404 }
+      );
+    }
 
     // =====================
     // STEP 2: Generate Excel based on templateType (Strategy Pattern)
     // =====================
     let workbook: ExcelJS.Workbook;
     let fileName: string;
+
+    console.log(`📝 Generating ${templateType} Excel template...`);
 
     switch (templateType) {
       case 'general':
@@ -124,16 +143,23 @@ export async function GET(request: NextRequest) {
         break;
 
       default:
+        console.log(`❌ Invalid templateType: ${templateType}`);
         return NextResponse.json(
           { error: 'Invalid templateType' },
           { status: 400 }
         );
     }
 
+    console.log(`✓ Excel generated successfully: ${fileName}`);
+
     // =====================
     // STEP 3: Convert to Buffer and Return
     // =====================
+    console.log('📦 Converting workbook to buffer...');
     const buffer = await workbook.xlsx.writeBuffer();
+    console.log(`✓ Buffer created: ${buffer.byteLength} bytes`);
+
+    console.log('✅ Export completed successfully');
 
     return new NextResponse(buffer, {
       status: 200,
@@ -146,8 +172,13 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Export Error:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
-      { error: 'Failed to export data', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to export data', 
+        details: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      },
       { status: 500 }
     );
   }
