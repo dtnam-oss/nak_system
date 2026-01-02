@@ -14,25 +14,31 @@ strategies/
 
 ## 📊 JnT_Route_Template.ts
 
-**Mục đích**: Mẫu báo cáo J&T theo TUYẾN (Route-based) - Mẫu số 2
+**Mục đích**: Mẫu báo cáo J&T theo TUYẾN (Route-based) với Multi-line Cells
 
-### Cột dữ liệu (7 cột):
+### Cột dữ liệu (6 cột):
 
 | Cột | Tên Header | Source | Logic |
 |-----|------------|--------|-------|
-| A | **STT** | Auto-increment | 1, 2, 3, ... |
-| B | **Ngày** | `order.date` | Format: `dd/MM/yyyy` |
-| C | **Biển số xe** | `details.chiTietLoTrinh[0].bienKiemSoat` | Phần tử ĐẦU TIÊN |
-| D | **Điểm đi - Điểm đến** | `order.route_name` | Lấy trực tiếp từ DB (KHÔNG từ JSON) |
-| E | **Tem chiều đi** | `details.chiTietLoTrinh[0].maTuyen` | Phần tử ĐẦU TIÊN |
-| F | **Tem chiều về** | `details.chiTietLoTrinh[length-1].maTuyen` | Phần tử CUỐI CÙNG |
-| G | **Thể tích** | `details.chiTietLoTrinh[].taiTrongTinhPhi` | Nối bằng dấu phẩy |
+| A | **Ngày** | `order.date` | Format: `dd/MM/yyyy` |
+| B | **Biển số xe** | `details.chiTietLoTrinh[].bienKiemSoat` | Unique values, nối bằng dấu phẩy |
+| C | **Mã tem** | `details.chiTietLoTrinh[].maTuyen` | Gộp TẤT CẢ bằng xuống dòng (`\n`) |
+| D | **Điểm đi - Điểm đến** | `details.chiTietLoTrinh[].loTrinhChiTiet` | Gộp TẤT CẢ bằng xuống dòng (`\n`) |
+| E | **Thể tích** | `details.chiTietLoTrinh[].taiTrongTinhPhi` | Gộp TẤT CẢ bằng xuống dòng (`\n`) |
+| F | **Loại ca** | `details.chiTietLoTrinh[].loaiCa` | Gộp TẤT CẢ bằng xuống dòng (`\n`) |
 
 ### Styling:
 
-- **Header Row**: Background `#C0C0C0` (silver), Font bold đen, Border thin
-- **Data Rows**: Border thin bao quanh, Alignment center/middle, wrapText: true
-- **Row Height**: Standard 20px
+- **Header Row**: Background `#D3D3D3` (light gray), Font bold size 12, Border thin
+- **Data Rows**: Border thin bao quanh, Alignment center/middle, **wrapText: true** (CRITICAL)
+- **Row Height**: Auto-calculated - maxLines × 15px (minimum 20px)
+
+### Key Features:
+
+- ✅ Multi-line cells: Cho phép hiển thị nhiều dòng trong 1 ô
+- ✅ wrapText enabled: Bắt buộc để Excel render ký tự `\n` thành xuống dòng
+- ✅ Auto row height: Tự động tăng chiều cao dòng theo nội dung
+- ⚠️ KHÔNG có cột STT trong mẫu này
 
 ### Usage:
 

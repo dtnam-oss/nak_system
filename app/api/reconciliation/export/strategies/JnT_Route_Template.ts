@@ -2,13 +2,12 @@ import ExcelJS from 'exceljs';
 import { format } from 'date-fns';
 
 /**
- * J&T Route Template - Mẫu số 2
+ * J&T Route Template - Mẫu Báo Cáo Theo Tuyến
  * 
- * Xuất báo cáo theo TUYẾN với logic:
+ * Xuất báo cáo đối soát cho khách hàng J&T với format:
  * - 1 order = 1 row
- * - Tem chiều đi: maTuyen đầu tiên
- * - Tem chiều về: maTuyen cuối cùng
- * - Route name: Lấy trực tiếp từ cột order.route_name
+ * - Multi-line cells: Gộp tất cả chiTietLoTrinh bằng ký tự xuống dòng (\n)
+ * - wrapText enabled để hiển thị nội dung xuống dòng trong cell
  */
 
 interface ReconciliationDatabaseRow {
@@ -32,36 +31,36 @@ interface ReconciliationDatabaseRow {
 
 export async function generateJnTRouteExcel(data: ReconciliationDatabaseRow[]): Promise<ExcelJS.Buffer> {
   const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('JnT Theo Tuyen');
+  const worksheet = workbook.addWorksheet('Bang Ke J&T');
 
   // =====================
   // STEP 1: Define Columns & Width
   // =====================
   worksheet.columns = [
-    { header: 'STT', key: 'stt', width: 5 },
     { header: 'Ngày', key: 'date', width: 15 },
     { header: 'Biển số xe', key: 'licensePlate', width: 15 },
-    { header: 'Điểm đi - Điểm đến', key: 'routeName', width: 40 },
-    { header: 'Tem chiều đi', key: 'stampOut', width: 25 },
-    { header: 'Tem chiều về', key: 'stampIn', width: 25 },
+    { header: 'Mã tem', key: 'stampCode', width: 25 },
+    { header: 'Điểm đi - Điểm đến', key: 'route', width: 45 },
     { header: 'Thể tích', key: 'volume', width: 15 },
+    { header: 'Loại ca', key: 'shiftType', width: 20 },
   ];
 
   // =====================
   // STEP 2: Style Header Row
   // =====================
   const headerRow = worksheet.getRow(1);
-  headerRow.height = 25;
+  headerRow.height = 30;
   
   headerRow.eachCell((cell) => {
     cell.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFC0C0C0' }, // Silver gray
+      fgColor: { argb: 'FFD3D3D3' }, // Light gray background
     };
     cell.font = { 
       bold: true, 
-      color: { argb: 'FF000000' } // Black
+      color: { argb: 'FF000000' },
+      size: 12
     };
     cell.border = {
       top: { style: 'thin' },
@@ -71,15 +70,16 @@ export async function generateJnTRouteExcel(data: ReconciliationDatabaseRow[]): 
     };
     cell.alignment = { 
       vertical: 'middle', 
-      horizontal: 'center' 
+      horizontal: 'center',
+      wrapText: true
     };
   });
 
   // =====================
   // STEP 3: Process Data Loop
   // =====================
-  data.forEach((order, index) => {
-    // Parse details JSON safely
+  data.forEach((order) => {
+    // Parse details JSON safely (can be string or object)
     let details: any = null;
     try {
       if (typeof order.details === 'string') {
@@ -97,50 +97,58 @@ export async function generateJnTRouteExcel(data: ReconciliationDatabaseRow[]): 
       : [];
 
     // =====================
-    // Data Mapping Logic
+    // Data Mapping Logic với Gộp Dòng
     // =====================
 
-    // Cột A: STT (1, 2, 3, ...)
-    const stt = index + 1;
-
-    // Cột B: Ngày (dd/MM/yyyy)
+    // Cột A: Ngày (format dd/MM/yyyy)
     const dateValue = order.date ? format(new Date(order.date), 'dd/MM/yyyy') : '';
 
-    // Cột C: Biển số xe (Lấy từ phần tử đầu tiên)
-    const licensePlate = chiTietLoTrinh[0]?.bienKiemSoat || '';
+    // Cột B: Biển số xe (lấy unique values, nối bằng dấu phẩy)
+    const licensePlates = chiTietLoTrinh
+      .map((item: any) => item.bienKiemSoat)
+      .filter((value: any, index: number, self: any[]) => 
+        value && self.indexOf(value) === index // Unique only
+      );
+    const licensePlate = licensePlates.join(', ') || '';
 
-    // Cột D: Điểm đi - Điểm đến (Lấy trực tiếp từ order.route_name)
-    const routeName = order.route_name || '';
+    // Cột C: Mã tem (gộp tất cả bằng xuống dòng)
+    const stampCodes = chiTietLoTrinh
+      .map((item: any) => item.maTuyen)
+      .filter((value: any) => value);
+    const stampCode = stampCodes.join('\n') || '';
 
-    // Cột E: Tem chiều đi (maTuyen đầu tiên - index 0)
-    const stampOut = chiTietLoTrinh[0]?.maTuyen || '';
+    // Cột D: Điểm đi - Điểm đến (gộp tất cả lộ trình bằng xuống dòng)
+    const routes = chiTietLoTrinh
+      .map((item: any) => item.loTrinhChiTiet)
+      .filter((value: any) => value);
+    const route = routes.join('\n') || order.route_name || '';
 
-    // Cột F: Tem chiều về (maTuyen cuối cùng - index length-1)
-    const stampIn = chiTietLoTrinh.length > 0 
-      ? chiTietLoTrinh[chiTietLoTrinh.length - 1]?.maTuyen || ''
-      : '';
-
-    // Cột G: Thể tích (Nối bằng dấu phẩy hoặc lấy giá trị đại diện)
+    // Cột E: Thể tích (gộp bằng xuống dòng)
     const volumes = chiTietLoTrinh
       .map((item: any) => item.taiTrongTinhPhi)
       .filter((value: any) => value !== null && value !== undefined);
-    const volume = volumes.length > 0 ? volumes.join(', ') : '';
+    const volume = volumes.join('\n') || '';
+
+    // Cột F: Loại ca (gộp bằng xuống dòng)
+    const shiftTypes = chiTietLoTrinh
+      .map((item: any) => item.loaiCa)
+      .filter((value: any) => value);
+    const shiftType = shiftTypes.join('\n') || '';
 
     // =====================
     // Add Row to Worksheet
     // =====================
     const row = worksheet.addRow({
-      stt,
       date: dateValue,
       licensePlate,
-      routeName,
-      stampOut,
-      stampIn,
+      stampCode,
+      route,
       volume,
+      shiftType,
     });
 
     // =====================
-    // STEP 4: Style Data Cells
+    // STEP 4: Style Data Cells (CRITICAL: wrapText for multi-line)
     // =====================
     row.eachCell((cell) => {
       cell.border = {
@@ -152,15 +160,22 @@ export async function generateJnTRouteExcel(data: ReconciliationDatabaseRow[]): 
       cell.alignment = {
         vertical: 'middle',
         horizontal: 'center',
-        wrapText: true, // Prevent overflow
+        wrapText: true, // CRITICAL: Enable text wrapping for \n
       };
     });
 
-    // Set row height (standard)
-    row.height = 20;
+    // Auto-adjust row height based on content (estimate)
+    const maxLines = Math.max(
+      stampCodes.length,
+      routes.length,
+      volumes.length,
+      shiftTypes.length,
+      1
+    );
+    row.height = Math.max(20, maxLines * 15); // 15px per line
   });
 
-  console.log('✓ Generated J&T Route Excel (Simplified Format) with', data.length, 'rows');
+  console.log('✓ Generated J&T Route Excel with', data.length, 'orders');
   
   return await workbook.xlsx.writeBuffer();
 }

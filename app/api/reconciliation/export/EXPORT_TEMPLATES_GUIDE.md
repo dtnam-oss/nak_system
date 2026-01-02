@@ -21,17 +21,17 @@ Hiện tại hệ thống có **2 mẫu export** cho khách hàng J&T:
 **Cấu trúc Excel**:
 | Cột | Header | Nguồn dữ liệu | Logic |
 |-----|--------|---------------|-------|
-| A | STT | Auto-increment | 1, 2, 3... |
-| B | Ngày | `order.date` | Format: dd/MM/yyyy |
-| C | Biển số xe | `chiTietLoTrinh[0].bienKiemSoat` | Phần tử đầu tiên |
-| D | Điểm đi - Điểm đến | `order.route_name` | Trực tiếp từ DB |
-| E | Tem chiều đi | `chiTietLoTrinh[0].maTuyen` | Phần tử đầu tiên |
-| F | Tem chiều về | `chiTietLoTrinh[length-1].maTuyen` | Phần tử cuối cùng |
-| G | Thể tích | `chiTietLoTrinh[].taiTrongTinhPhi` | Nối bằng dấu phẩy |
+| A | Ngày | `order.date` | Format: dd/MM/yyyy |
+| B | Biển số xe | `chiTietLoTrinh[].bienKiemSoat` | Unique values, nối bằng dấu phẩy |
+| C | Mã tem | `chiTietLoTrinh[].maTuyen` | Gộp TẤT CẢ bằng xuống dòng (`\n`) |
+| D | Điểm đi - Điểm đến | `chiTietLoTrinh[].loTrinhChiTiet` | Gộp TẤT CẢ bằng xuống dòng (`\n`) |
+| E | Thể tích | `chiTietLoTrinh[].taiTrongTinhPhi` | Gộp TẤT CẢ bằng xuống dòng (`\n`) |
+| F | Loại ca | `chiTietLoTrinh[].loaiCa` | Gộp TẤT CẢ bằng xuống dòng (`\n`) |
 
 **Styling**:
-- Header: Background `#C0C0C0` (silver), Font bold
-- Data: Border thin, Center alignment, wrapText enabled
+- Header: Background `#D3D3D3` (light gray), Font bold size 12
+- Data: Border thin, Center alignment, **wrapText: true** (CRITICAL for multi-line cells)
+- Row height: Auto-calculated based on number of lines (maxLines × 15px)
 
 **API Call**:
 ```
@@ -39,6 +39,12 @@ GET /api/reconciliation/export?templateType=jnt_route&fromDate=2024-01-01&khachH
 ```
 
 **Output**: `Doisoat_JnT_TheoTuyen_YYYYMMDD_HHMMSS.xlsx`
+
+**Đặc điểm quan trọng**:
+- ✅ Multi-line cells: Mỗi mã tem/lộ trình/thể tích/loại ca nằm trên 1 dòng riêng trong cùng 1 ô
+- ✅ wrapText enabled: Cho phép Excel hiển thị nội dung xuống dòng
+- ✅ Auto row height: Chiều cao dòng tự động tăng theo số lượng chi tiết
+- ⚠️ KHÔNG có cột STT trong mẫu này
 
 ---
 
@@ -107,13 +113,15 @@ graph LR
     E --> H[Download Excel tổng hợp]
 ```
 
----
-
-## 📝 Testing Checklist
-
-Khi test mẫu **Theo Tuyến** (`jnt_route`):
-
-- [ ] File Excel có 7 cột (STT, Ngày, Biển số xe, Điểm đi-đến, Tem đi, Tem về, Thể tích)
+---6 cột (Ngày, Biển số xe, Mã tem, Điểm đi-đến, Thể tích, Loại ca)
+- [ ] KHÔNG có cột STT
+- [ ] Mã tem hiển thị multi-line (mỗi tem 1 dòng) trong cùng 1 ô
+- [ ] Điểm đi - Điểm đến hiển thị multi-line (từ chiTietLoTrinh, không phải route_name)
+- [ ] Thể tích hiển thị multi-line (mỗi giá trị 1 dòng)
+- [ ] Loại ca hiển thị multi-line
+- [ ] Header background màu xám nhạt (#D3D3D3)
+- [ ] Tất cả cell có border thin và wrapText enabled
+- [ ] Row height tự động tăng khi có nhiều dòng nội dungNgày, Biển số xe, Điểm đi-đến, Tem đi, Tem về, Thể tích)
 - [ ] Cột STT tăng dần từ 1
 - [ ] Tem chiều đi = maTuyen đầu tiên
 - [ ] Tem chiều về = maTuyen cuối cùng
