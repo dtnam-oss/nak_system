@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
+import { Checkbox } from "@/components/ui/checkbox"
 import { ReconciliationFilters } from "@/types/reconciliation"
 import { Search, X, Download, Loader2, Filter, PlusCircle, Check } from "lucide-react"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
@@ -388,16 +389,11 @@ export function ReconciliationToolbar({
                             }}
                             className="cursor-pointer"
                           >
-                            <div
-                              className={cn(
-                                "mr-2 flex h-4 w-4 items-center justify-center rounded-sm border border-primary",
-                                isSelected
-                                  ? "bg-primary text-primary-foreground"
-                                  : "opacity-50 [&_svg]:invisible"
-                              )}
-                            >
-                              <Check className="h-4 w-4" />
-                            </div>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleCustomer(customer)}
+                              className="mr-2"
+                            />
                             <span>{customer}</span>
                           </CommandItem>
                         )
