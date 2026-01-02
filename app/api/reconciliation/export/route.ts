@@ -4,6 +4,7 @@ import ExcelJS from 'exceljs';
 import { format } from 'date-fns';
 import { generateJnTShiftExcel as generateJnTShiftStrategy } from './strategies/JnT_Shift_Template';
 import { generateJnTRouteExcel as generateJnTRouteStrategy } from './strategies/JnT_Route_Template';
+import { generateGHNExcel as generateGHNStrategy } from './strategies/GHN_Template';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,7 @@ interface ReconciliationDatabaseRow {
  * Xuất dữ liệu đối soát ra file Excel với nhiều mẫu báo cáo khác nhau
  * 
  * Query Parameters:
- * - templateType: 'general' | 'jnt_route' | 'jnt_shift' (required)
+ * - templateType: 'general' | 'jnt_route' | 'jnt_shift' | 'ghn' (required)
  * - fromDate, toDate, khachHang, donViVanChuyen, loaiChuyen, searchQuery (optional filters)
  */
 export async function GET(request: NextRequest) {
@@ -178,6 +179,21 @@ export async function GET(request: NextRequest) {
             'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
             'Content-Length': bufferJnTShift.byteLength.toString(),
+          },
+        });
+
+      case 'ghn':
+        // Use strategy for GHN report (Row Flattening)
+        const bufferGHN = await generateGHNStrategy(results);
+        fileName = `Doisoat_GHN_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
+        console.log(`✓ Excel generated successfully: ${fileName}`);
+        
+        return new NextResponse(bufferGHN, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
+            'Content-Length': bufferGHN.byteLength.toString(),
           },
         });
 
