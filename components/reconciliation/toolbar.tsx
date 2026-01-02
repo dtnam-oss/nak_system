@@ -226,7 +226,7 @@ export function ReconciliationToolbar({
     })
   }
 
-  const handleExport = async (templateType: 'general' | 'jnt_route' | 'jnt_shift') => {
+  const handleExport = async (templateType: 'general' | 'jnt_route' | 'jnt_shift' | 'ghn') => {
     try {
       console.log('🚀 Starting export...', { templateType, filters })
       
