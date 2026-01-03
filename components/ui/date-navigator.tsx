@@ -50,7 +50,7 @@ export function DateNavigator({ date, onDateChange }: DateNavigatorProps) {
               {format(date, "EEEE, d/MM/yyyy", { locale: vi })}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="center">
+          <PopoverContent className="w-auto p-0 min-w-[280px]" align="center">
             <Calendar
               mode="single"
               selected={date}
