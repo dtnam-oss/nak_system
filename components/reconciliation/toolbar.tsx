@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator"
 import { CustomerFilter } from "@/components/reconciliation/customer-filter"
 import { ReconciliationFilters } from "@/types/reconciliation"
 import { Search, X, Download, Loader2, Filter } from "lucide-react"
-import { DateRangeNavigator } from "@/components/ui/date-range-navigator"
+import { DateRangePickerInput } from "@/components/ui/date-range-picker-input"
 import { DateRange } from "react-day-picker"
 import { format } from "date-fns"
 import {
@@ -264,10 +264,11 @@ export function ReconciliationToolbar({
               />
             </div>
 
-            {/* Date Range Navigator - Range Selection */}
-            <DateRangeNavigator
+            {/* Date Range Picker - CoreUI Style */}
+            <DateRangePickerInput
               dateRange={dateRange}
               onDateRangeChange={setDateRange}
+              className="shrink-0"
             />
 
             {/* Customer Filter - Faceted Filter */}
