@@ -8,7 +8,7 @@ import { DateRange } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Calendar } from "@/components/ui/calendar"
+import { SimpleCalendar } from "@/components/ui/simple-calendar"
 import { Input } from "@/components/ui/input"
 import {
   Popover,
@@ -27,17 +27,34 @@ export function DateRangePickerInput({
   onDateRangeChange,
   className
 }: DateRangePickerInputProps) {
-  const [isOpen, setIsOpen] = React.useState(false)
+  const [isFromOpen, setIsFromOpen] = React.useState(false)
+  const [isToOpen, setIsToOpen] = React.useState(false)
 
   const formatDateValue = (date: Date | undefined) => {
     if (!date) return ""
     return format(date, "dd/MM/yyyy", { locale: vi })
   }
 
+  const handleFromDateSelect = (date: Date) => {
+    onDateRangeChange({
+      from: date,
+      to: dateRange?.to,
+    })
+    setIsFromOpen(false)
+  }
+
+  const handleToDateSelect = (date: Date) => {
+    onDateRangeChange({
+      from: dateRange?.from,
+      to: date,
+    })
+    setIsToOpen(false)
+  }
+
   return (
     <div className={cn("grid grid-cols-2 gap-2", className)}>
       {/* Start Date Input */}
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Popover open={isFromOpen} onOpenChange={setIsFromOpen}>
         <PopoverTrigger asChild>
           <div className="relative">
             <Input
@@ -53,18 +70,17 @@ export function DateRangePickerInput({
           </div>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="range"
-            selected={dateRange}
-            onSelect={onDateRangeChange}
-            numberOfMonths={1}
+          <SimpleCalendar
+            mode="single"
+            selected={dateRange?.from}
+            onSelect={handleFromDateSelect}
             locale={vi}
           />
         </PopoverContent>
       </Popover>
 
       {/* End Date Input */}
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Popover open={isToOpen} onOpenChange={setIsToOpen}>
         <PopoverTrigger asChild>
           <div className="relative">
             <Input
@@ -79,6 +95,14 @@ export function DateRangePickerInput({
             </div>
           </div>
         </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <SimpleCalendar
+            mode="single"
+            selected={dateRange?.to}
+            onSelect={handleToDateSelect}
+            locale={vi}
+          />
+        </PopoverContent>
       </Popover>
     </div>
   )
