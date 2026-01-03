@@ -496,7 +496,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Handle Fuel Transaction Actions
+    // 4. Handle Fuel Transaction Actions with Auto-Calculation
     if (payload.Action === 'FuelTransaction_Upsert') {
       console.log('⛽ Processing FuelTransaction_Upsert action...');
       
@@ -510,6 +510,14 @@ export async function POST(request: Request) {
       const transData = payload.data as FuelTransactionPayload;
 
       try {
+        // Step 1: Map category to is_full_tank flag
+        const categoryUpper = (transData.category || '').trim();
+        const isFullTank = ['CHỐT THÁNG', 'BÀN GIAO', 'KHỞI TẠO'].includes(categoryUpper.toUpperCase());
+        const isInitialization = categoryUpper.toUpperCase() === 'KHỞI TẠO';
+
+        console.log(`📊 Category: "${categoryUpper}" → is_full_tank: ${isFullTank}, is_init: ${isInitialization}`);
+
+        // Step 2: Insert/Update the current record
         await sql`
           INSERT INTO fuel_transactions (
             id,
@@ -525,6 +533,7 @@ export async function POST(request: Request) {
             odo_number,
             status,
             category,
+            is_full_tank,
             updated_at
           ) VALUES (
             ${transData.id},
@@ -540,6 +549,7 @@ export async function POST(request: Request) {
             ${transData.odoNumber || 0},
             ${transData.status},
             ${transData.category},
+            ${isFullTank},
             NOW()
           )
           ON CONFLICT (id) DO UPDATE SET
@@ -555,16 +565,97 @@ export async function POST(request: Request) {
             odo_number = EXCLUDED.odo_number,
             status = EXCLUDED.status,
             category = EXCLUDED.category,
+            is_full_tank = EXCLUDED.is_full_tank,
             updated_at = NOW()
         `;
 
         console.log(`✅ Fuel transaction upserted: ${transData.id}`);
 
+        // Step 3: Auto-Calculation Logic (Look-back Algorithm)
+        if (isFullTank && !isInitialization && transData.licensePlate) {
+          console.log(`🔄 Starting auto-calculation for ${transData.id}...`);
+
+          try {
+            // 3.1: Find previous full-tank record (Start Point)
+            const previousResult = await sql`
+              SELECT id, odo_number, transaction_date
+              FROM fuel_transactions
+              WHERE license_plate = ${transData.licensePlate}
+                AND is_full_tank = TRUE
+                AND transaction_date < ${transData.transactionDate}
+              ORDER BY transaction_date DESC, updated_at DESC
+              LIMIT 1
+            `;
+
+            if (previousResult.rows.length === 0) {
+              console.log(`⚠️  No previous full-tank record found. Skipping calculation.`);
+            } else {
+              const previous = previousResult.rows[0];
+              const prevOdo = parseFloat(previous.odo_number) || 0;
+              const currentOdo = parseFloat(String(transData.odoNumber)) || 0;
+
+              console.log(`📍 Previous: ID=${previous.id}, ODO=${prevOdo}, Date=${previous.transaction_date}`);
+              console.log(`📍 Current: ID=${transData.id}, ODO=${currentOdo}`);
+
+              // 3.2: Calculate km_traveled
+              const kmTraveled = currentOdo - prevOdo;
+
+              if (kmTraveled <= 0) {
+                console.log(`⚠️  Invalid km_traveled (${kmTraveled}). Skipping calculation.`);
+              } else {
+                // 3.3: Sum intermediate "Đổ dặm" transactions
+                const intermediateResult = await sql`
+                  SELECT COALESCE(SUM(quantity), 0) as total_intermediate
+                  FROM fuel_transactions
+                  WHERE license_plate = ${transData.licensePlate}
+                    AND is_full_tank = FALSE
+                    AND transaction_date > ${previous.transaction_date}
+                    AND transaction_date < ${transData.transactionDate}
+                `;
+
+                const totalIntermediate = parseFloat(intermediateResult.rows[0]?.total_intermediate) || 0;
+                const currentQuantity = parseFloat(String(transData.quantity)) || 0;
+                const totalFuelPeriod = totalIntermediate + currentQuantity;
+
+                console.log(`⛽ Intermediate fuel: ${totalIntermediate}L, Current: ${currentQuantity}L, Total: ${totalFuelPeriod}L`);
+
+                // 3.4: Calculate efficiency (L/100km)
+                const efficiency = (totalFuelPeriod / kmTraveled) * 100;
+
+                console.log(`📊 Results: km=${kmTraveled}, fuel=${totalFuelPeriod}L, efficiency=${efficiency.toFixed(4)}L/100km`);
+
+                // 3.5: Update current record with calculated values
+                await sql`
+                  UPDATE fuel_transactions
+                  SET 
+                    km_traveled = ${kmTraveled},
+                    total_fuel_period = ${totalFuelPeriod},
+                    efficiency = ${efficiency}
+                  WHERE id = ${transData.id}
+                `;
+
+                console.log(`✅ Auto-calculation completed for ${transData.id}`);
+              }
+            }
+
+          } catch (calcError: any) {
+            console.error(`❌ Calculation error for ${transData.id}:`, calcError.message);
+            // Don't fail the entire request - calculation is non-critical
+          }
+        } else {
+          if (isInitialization) {
+            console.log(`🎯 Initialization record - skipping calculation`);
+          } else if (!isFullTank) {
+            console.log(`⏭️  Not a full-tank record - skipping calculation`);
+          }
+        }
+
         return NextResponse.json({
           success: true,
           action: 'fuel_transaction_upsert',
           id: transData.id,
-          message: 'Fuel transaction synchronized successfully'
+          message: 'Fuel transaction synchronized successfully',
+          calculated: isFullTank && !isInitialization
         });
 
       } catch (dbError: any) {
