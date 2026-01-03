@@ -2084,3 +2084,384 @@ function getFuelTransactionData(transId) {
   return null;
 }
 
+
+// =============================================================================
+// HISTORICAL DATA IMPORT - BATCH PROCESSING
+// =============================================================================
+
+/**
+ * Import Historical Fuel Imports (Nhập nhiên liệu cũ)
+ * ⚠️ CHẠY HÀM NÀY TRƯỚC để có tồn kho cho việc tính toán
+ * 
+ * Features:
+ * - Đọc toàn bộ dữ liệu từ sheet nhap_nhien_lieu
+ * - Gửi từng record lên Backend qua API webhook
+ * - Tính giá bình quân gia quyền (WAC) cho mỗi lần nhập
+ * - Log chi tiết tiến trình và lỗi
+ * 
+ * @returns {Object} Kết quả import (success, total, imported, failed)
+ */
+function importHistoricalFuelImports() {
+  const config = getConfig();
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(config.SHEET_NAMES.FUEL_IMPORT);
+  
+  if (!sheet) {
+    throw new Error(`Sheet not found: ${config.SHEET_NAMES.FUEL_IMPORT}`);
+  }
+  
+  logInfo('========== START HISTORICAL FUEL IMPORTS IMPORT ==========');
+  logInfo(`Sheet: ${config.SHEET_NAMES.FUEL_IMPORT}`);
+  
+  // Đọc toàn bộ dữ liệu
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  
+  if (values.length <= 1) {
+    logWarning('Sheet is empty or has only headers. No data to import.');
+    return {
+      success: true,
+      total: 0,
+      imported: 0,
+      failed: 0,
+      message: 'No data to import'
+    };
+  }
+  
+  // Extract headers
+  const headers = values[0];
+  logInfo(`Headers: ${headers.join(', ')}`);
+  
+  // Build column map
+  const columnMap = buildColumnMapForImport(headers);
+  
+  // Track results
+  let total = values.length - 1; // Exclude header
+  let imported = 0;
+  let failed = 0;
+  const errors = [];
+  
+  logInfo(`Total records to import: ${total}`);
+  logInfo('Starting batch import...');
+  
+  // Process each row (skip header)
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const rowNumber = i + 1; // Sheet row number (1-indexed)
+    
+    try {
+      // Transform row to data object
+      const importData = transformFuelImportRow(row, headers, columnMap);
+      
+      if (!importData || !importData.id) {
+        logWarning(`Row ${rowNumber}: Missing ID, skipping...`);
+        failed++;
+        errors.push({ row: rowNumber, error: 'Missing ID' });
+        continue;
+      }
+      
+      logInfo(`\n--- Processing Row ${rowNumber} ---`);
+      logInfo(`  ID: ${importData.id}`);
+      logInfo(`  Date: ${importData.importDate}`);
+      logInfo(`  Quantity: ${importData.quantity}L`);
+      logInfo(`  Unit Price: ${importData.unitPrice} VND/L`);
+      
+      // ========== TÍNH GIÁ BÌNH QUÂN GIA QUYỀN (WAC) ==========
+      const fuelState = fetchLatestFuelState();
+      const currentStock = fuelState.currentInventory;
+      const currentAvgPrice = fuelState.currentAvgPrice;
+      
+      const importQuantity = parseFloat(importData.quantity || 0);
+      const importUnitPrice = parseFloat(importData.unitPrice || 0);
+      
+      let newAvgPrice = 0;
+      const totalQuantity = currentStock + importQuantity;
+      
+      if (totalQuantity > 0) {
+        newAvgPrice = ((currentStock * currentAvgPrice) + (importQuantity * importUnitPrice)) / totalQuantity;
+      } else {
+        newAvgPrice = currentAvgPrice;
+      }
+      
+      newAvgPrice = Math.round(newAvgPrice * 100) / 100;
+      importData.avgPrice = newAvgPrice;
+      
+      logInfo(`  WAC: Stock(${currentStock}L @ ${currentAvgPrice}) + Import(${importQuantity}L @ ${importUnitPrice}) = ${newAvgPrice} VND/L`);
+      
+      // Build payload
+      const payload = {
+        Action: 'FuelImport_Upsert',
+        data: importData
+      };
+      
+      // Send to API
+      const response = sendToBackendAPI(payload);
+      
+      logInfo(`  ✓ Row ${rowNumber} imported successfully`);
+      logInfo(`  Response: ${JSON.stringify(response)}`);
+      
+      imported++;
+      
+      // Delay to avoid overwhelming API (100ms between requests)
+      Utilities.sleep(100);
+      
+    } catch (error) {
+      logError(`  ✗ Row ${rowNumber} failed: ${error.message}`);
+      failed++;
+      errors.push({ 
+        row: rowNumber, 
+        id: row[columnMap['id']] || 'unknown',
+        error: error.message 
+      });
+    }
+  }
+  
+  // Summary
+  logInfo('\n========== IMPORT SUMMARY ==========');
+  logInfo(`Total: ${total}`);
+  logInfo(`✓ Imported: ${imported}`);
+  logInfo(`✗ Failed: ${failed}`);
+  
+  if (errors.length > 0) {
+    logError('\nFailed rows:');
+    errors.forEach(err => {
+      logError(`  Row ${err.row} (ID: ${err.id}): ${err.error}`);
+    });
+  }
+  
+  logInfo('========== IMPORT COMPLETE ==========\n');
+  
+  return {
+    success: true,
+    total: total,
+    imported: imported,
+    failed: failed,
+    errors: errors
+  };
+}
+
+
+/**
+ * Import Historical Fuel Transactions (Xuất nhiên liệu cũ)
+ * ⚠️ CHẠY HÀM NÀY SAU importHistoricalFuelImports()
+ * 
+ * Features:
+ * - Đọc toàn bộ dữ liệu từ sheet xuat_nhien_lieu
+ * - Gửi từng record lên Backend qua API webhook
+ * - Auto-calculation sẽ tự động tính toán:
+ *   * is_full_tank (từ category: Chốt tháng, Bàn giao, Khởi tạo)
+ *   * km_traveled (quãng đường từ lần đổ dầy trước)
+ *   * total_fuel_period (tổng dầu trong kỳ)
+ *   * efficiency (hiệu suất L/100km)
+ * - Log chi tiết tiến trình và lỗi
+ * 
+ * @returns {Object} Kết quả import (success, total, imported, failed)
+ */
+function importHistoricalFuelTransactions() {
+  const config = getConfig();
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(config.SHEET_NAMES.FUEL_EXPORT);
+  
+  if (!sheet) {
+    throw new Error(`Sheet not found: ${config.SHEET_NAMES.FUEL_EXPORT}`);
+  }
+  
+  logInfo('========== START HISTORICAL FUEL TRANSACTIONS IMPORT ==========');
+  logInfo(`Sheet: ${config.SHEET_NAMES.FUEL_EXPORT}`);
+  
+  // Đọc toàn bộ dữ liệu
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  
+  if (values.length <= 1) {
+    logWarning('Sheet is empty or has only headers. No data to import.');
+    return {
+      success: true,
+      total: 0,
+      imported: 0,
+      failed: 0,
+      message: 'No data to import'
+    };
+  }
+  
+  // Extract headers
+  const headers = values[0];
+  logInfo(`Headers: ${headers.join(', ')}`);
+  
+  // Build column map
+  const columnMap = buildColumnMapForExport(headers);
+  
+  // Track results
+  let total = values.length - 1; // Exclude header
+  let imported = 0;
+  let failed = 0;
+  let calculated = 0; // Track how many had auto-calculation triggered
+  const errors = [];
+  
+  logInfo(`Total records to import: ${total}`);
+  logInfo('Starting batch import with auto-calculation...');
+  
+  // Process each row (skip header)
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const rowNumber = i + 1; // Sheet row number (1-indexed)
+    
+    try {
+      // Transform row to data object
+      const transactionData = transformFuelExportRow(row, headers, columnMap);
+      
+      if (!transactionData || !transactionData.id) {
+        logWarning(`Row ${rowNumber}: Missing ID, skipping...`);
+        failed++;
+        errors.push({ row: rowNumber, error: 'Missing ID' });
+        continue;
+      }
+      
+      logInfo(`\n--- Processing Row ${rowNumber} ---`);
+      logInfo(`  ID: ${transactionData.id}`);
+      logInfo(`  Date: ${transactionData.transactionDate}`);
+      logInfo(`  License Plate: ${transactionData.licensePlate}`);
+      logInfo(`  Category: ${transactionData.category}`);
+      logInfo(`  Quantity: ${transactionData.quantity}L`);
+      logInfo(`  Odo: ${transactionData.odoNumber} km`);
+      
+      // Check if this is a full-tank record (will trigger auto-calculation)
+      const category = String(transactionData.category || '').toUpperCase().trim();
+      const isFullTank = ['CHỐT THÁNG', 'BÀN GIAO', 'KHỞI TẠO'].includes(category);
+      
+      if (isFullTank) {
+        logInfo(`  🔔 Full-tank record detected! Auto-calculation will be triggered.`);
+        calculated++;
+      }
+      
+      // Build payload
+      const payload = {
+        Action: 'FuelTransaction_Upsert',
+        data: transactionData
+      };
+      
+      // Send to API (auto-calculation happens in webhook handler)
+      const response = sendToBackendAPI(payload);
+      
+      logInfo(`  ✓ Row ${rowNumber} imported successfully`);
+      
+      // Log calculation results if available
+      if (response && response.calculation) {
+        logInfo(`  📊 Calculation Results:`);
+        logInfo(`     km_traveled: ${response.calculation.km_traveled} km`);
+        logInfo(`     total_fuel: ${response.calculation.total_fuel_period}L`);
+        logInfo(`     efficiency: ${response.calculation.efficiency} L/100km`);
+      }
+      
+      imported++;
+      
+      // Delay to avoid overwhelming API (150ms for transactions to allow calculation time)
+      Utilities.sleep(150);
+      
+    } catch (error) {
+      logError(`  ✗ Row ${rowNumber} failed: ${error.message}`);
+      failed++;
+      errors.push({ 
+        row: rowNumber, 
+        id: row[columnMap['id']] || 'unknown',
+        error: error.message 
+      });
+    }
+  }
+  
+  // Summary
+  logInfo('\n========== IMPORT SUMMARY ==========');
+  logInfo(`Total: ${total}`);
+  logInfo(`✓ Imported: ${imported}`);
+  logInfo(`📊 Auto-calculated: ${calculated} (full-tank records)`);
+  logInfo(`✗ Failed: ${failed}`);
+  
+  if (errors.length > 0) {
+    logError('\nFailed rows:');
+    errors.forEach(err => {
+      logError(`  Row ${err.row} (ID: ${err.id}): ${err.error}`);
+    });
+  }
+  
+  logInfo('========== IMPORT COMPLETE ==========\n');
+  logInfo('💡 TIP: Check database for calculated values (km_traveled, efficiency)');
+  logInfo('💡 Expected calculations for records with category: Chốt tháng, Bàn giao');
+  
+  return {
+    success: true,
+    total: total,
+    imported: imported,
+    calculated: calculated,
+    failed: failed,
+    errors: errors
+  };
+}
+
+
+/**
+ * Custom menu for easy execution
+ * Automatically called when spreadsheet opens
+ */
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  
+  ui.createMenu('🔄 NAK System Sync')
+    .addSubMenu(ui.createMenu('📥 Import Historical Data')
+      .addItem('1️⃣ Import Fuel Imports (Nhập dầu)', 'importHistoricalFuelImports')
+      .addItem('2️⃣ Import Fuel Transactions (Xuất dầu)', 'importHistoricalFuelTransactions')
+      .addSeparator()
+      .addItem('📊 View Import Guide', 'showImportGuide'))
+    .addSeparator()
+    .addItem('🔄 Sync Single Trip', 'syncSingleTripDialog')
+    .addItem('⚙️ Settings', 'showSettings')
+    .addToUi();
+}
+
+
+/**
+ * Show import guide dialog
+ */
+function showImportGuide() {
+  const html = HtmlService.createHtmlOutput(`
+    <h2>📋 Historical Data Import Guide</h2>
+    <h3>⚠️ IMPORTANT: Import Order</h3>
+    <ol>
+      <li><strong>Step 1:</strong> Import Fuel Imports (Nhập dầu) FIRST
+        <ul>
+          <li>This creates the inventory base</li>
+          <li>Calculates weighted average cost (WAC)</li>
+        </ul>
+      </li>
+      <li><strong>Step 2:</strong> Import Fuel Transactions (Xuất dầu) AFTER
+        <ul>
+          <li>Triggers auto-calculation for efficiency</li>
+          <li>Calculates km_traveled, fuel consumption</li>
+          <li>Only for full-tank records (Chốt tháng, Bàn giao)</li>
+        </ul>
+      </li>
+    </ol>
+    
+    <h3>📊 What Gets Calculated?</h3>
+    <ul>
+      <li><strong>Fuel Imports:</strong> Weighted Average Price</li>
+      <li><strong>Fuel Transactions:</strong> Fuel Efficiency (L/100km)</li>
+    </ul>
+    
+    <h3>⏱️ Processing Time</h3>
+    <ul>
+      <li>~100ms per import record</li>
+      <li>~150ms per transaction record</li>
+      <li>Example: 100 records = ~10-15 seconds</li>
+    </ul>
+    
+    <h3>📝 Logs</h3>
+    <p>Check <strong>View > Logs</strong> (Ctrl+Enter) for detailed progress</p>
+    
+    <button onclick="google.script.host.close()">Close</button>
+  `)
+    .setWidth(500)
+    .setHeight(450);
+  
+  SpreadsheetApp.getUi().showModalDialog(html, 'Import Guide');
+}
+
