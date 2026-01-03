@@ -57,6 +57,7 @@ export default function FuelPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('transactions');
+  const [fuelSourceTab, setFuelSourceTab] = useState<string>('all'); // all, internal, quangminh, vanglai
 
   useEffect(() => {
     fetchData();
@@ -143,10 +144,58 @@ export default function FuelPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <FuelTransactionsTable 
-                  transactions={transactions} 
-                  loading={loading} 
-                />
+                {/* Sub-tabs for Fuel Source */}
+                <Tabs value={fuelSourceTab} onValueChange={setFuelSourceTab} className="mb-4">
+                  <TabsList>
+                    <TabsTrigger value="all">
+                      Tất cả
+                    </TabsTrigger>
+                    <TabsTrigger value="internal">
+                      Trụ nội bộ
+                    </TabsTrigger>
+                    <TabsTrigger value="quangminh">
+                      Trụ Quang Minh
+                    </TabsTrigger>
+                    <TabsTrigger value="vanglai">
+                      Trụ vãng lai
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="all" className="mt-4">
+                    <FuelTransactionsTable 
+                      transactions={transactions} 
+                      loading={loading} 
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="internal" className="mt-4">
+                    <FuelTransactionsTable 
+                      transactions={transactions.filter(t => 
+                        t.fuel_source?.toLowerCase().includes('nội bộ')
+                      )} 
+                      loading={loading} 
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="quangminh" className="mt-4">
+                    <FuelTransactionsTable 
+                      transactions={transactions.filter(t => 
+                        t.fuel_source?.toLowerCase().includes('quang minh')
+                      )} 
+                      loading={loading} 
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="vanglai" className="mt-4">
+                    <FuelTransactionsTable 
+                      transactions={transactions.filter(t => {
+                        const source = t.fuel_source?.toLowerCase() || '';
+                        return !source.includes('nội bộ') && !source.includes('quang minh');
+                      })} 
+                      loading={loading} 
+                    />
+                  </TabsContent>
+                </Tabs>
               </CardContent>
             </Card>
           </TabsContent>

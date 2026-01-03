@@ -47,16 +47,47 @@ export async function GET() {
     const totalExportAll = parseFloat(exportAllResult.rows[0]?.total_export || '0');
     console.log('✓ Total Export (All):', totalExportAll);
 
-    // 4. Giá bình quân từ bản ghi nhập gần nhất
-    const avgPriceResult = await sql`
-      SELECT COALESCE(avg_price, 0) as avg_price
-      FROM fuel_imports
-      WHERE avg_price IS NOT NULL
-      ORDER BY import_date DESC, updated_at DESC
-      LIMIT 1
-    `;
-    const currentAvgPrice = parseFloat(avgPriceResult.rows[0]?.avg_price || '0');
-    console.log('✓ Current Avg Price:', currentAvgPrice);
+    // 4. Tính tồn kho theo FIFO
+    // Call internal FIFO API to get accurate inventory
+    let currentInventory = totalImport - totalExportInternal; // Fallback to simple calculation
+    let currentAvgPrice = 0;
+    let inventoryValue = 0;
+
+    try {
+      // Try to use FIFO calculation
+      const fifoResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/fuel/inventory/fifo`);
+      if (fifoResponse.ok) {
+        const fifoData = await fifoResponse.json();
+        if (fifoData.success && fifoData.data.summary) {
+          currentInventory = fifoData.data.summary.total_remaining;
+          currentAvgPrice = fifoData.data.summary.current_avg_price;
+          inventoryValue = fifoData.data.summary.total_value;
+          console.log('✓ Using FIFO Inventory Calculation');
+          console.log(`  - FIFO Inventory: ${currentInventory}L`);
+          console.log(`  - FIFO Avg Price: ${currentAvgPrice} VND/L`);
+        }
+      }
+    } catch (fifoError) {
+      console.warn('⚠️ FIFO API call failed, using simple calculation');
+      console.warn('Error:', fifoError);
+      
+      // Fallback: Get avg price from latest import
+      const avgPriceResult = await sql`
+        SELECT COALESCE(avg_price, 0) as avg_price
+        FROM fuel_imports
+        WHERE avg_price IS NOT NULL
+        ORDER BY import_date DESC, updated_at DESC
+        LIMIT 1
+      `;
+      currentAvgPrice = parseFloat(avgPriceResult.rows[0]?.avg_price || '0');
+      inventoryValue = currentInventory * currentAvgPrice;
+    }
+
+    console.log('✓ Final Current Inventory:', currentInventory);
+    console.log('✓ Final Current Avg Price:', currentAvgPrice);
+
+    console.log('✓ Final Current Inventory:', currentInventory);
+    console.log('✓ Final Current Avg Price:', currentAvgPrice);
 
     // 5. Tiêu thụ trong tháng hiện tại
     const monthlyResult = await sql`
@@ -68,8 +99,6 @@ export async function GET() {
     console.log('✓ Monthly Consumption:', monthlyConsumption);
 
     // 6. Tính toán các chỉ số
-    const currentInventory = totalImport - totalExportInternal;
-    const inventoryValue = currentInventory * currentAvgPrice;
     const tankCapacity = 40590; // Lít
     const tankPercentage = tankCapacity > 0 ? (currentInventory / tankCapacity) * 100 : 0;
 
