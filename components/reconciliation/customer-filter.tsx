@@ -81,15 +81,18 @@ export function CustomerFilter({ options, value, onChange, isLoading = false }: 
                   <CommandItem
                     key={option.value}
                     onSelect={() => {
+                      // Clone Set to avoid mutating constant
+                      const newSelectedValues = new Set(selectedValues)
+
                       // Toggle logic: thêm/xóa khỏi Set
                       if (isSelected) {
-                        selectedValues.delete(option.value)
+                        newSelectedValues.delete(option.value)
                       } else {
-                        selectedValues.add(option.value)
+                        newSelectedValues.add(option.value)
                       }
-                      
+
                       // Convert Set → string và trigger onChange
-                      const filterValues = Array.from(selectedValues)
+                      const filterValues = Array.from(newSelectedValues)
                       onChange(filterValues.length ? filterValues.join(",") : undefined)
                     }}
                     className="cursor-pointer"
