@@ -106,7 +106,7 @@ export function FuelTransactionsTable({ transactions, loading }: FuelTransaction
     const config = variants[category] || { variant: 'outline' as const, color: '' };
     
     return (
-      <Badge variant={config.variant} className={config.color}>
+      <Badge variant={config.variant} className={`${config.color} text-[10px] px-1.5 py-0`}>
         {category || 'N/A'}
       </Badge>
     );
@@ -116,16 +116,16 @@ export function FuelTransactionsTable({ transactions, loading }: FuelTransaction
     const statusLower = status?.toLowerCase() || '';
     
     if (statusLower.includes('duyệt') || statusLower.includes('approved')) {
-      return <Badge variant="default" className="bg-green-100 text-green-800">Đã duyệt</Badge>;
+      return <Badge variant="default" className="bg-green-100 text-green-800 text-[10px] px-1.5 py-0">Đã duyệt</Badge>;
     }
     if (statusLower.includes('chờ') || statusLower.includes('pending')) {
-      return <Badge variant="default" className="bg-yellow-100 text-yellow-800">Chờ duyệt</Badge>;
+      return <Badge variant="default" className="bg-yellow-100 text-yellow-800 text-[10px] px-1.5 py-0">Chờ duyệt</Badge>;
     }
     if (statusLower.includes('hủy') || statusLower.includes('reject')) {
-      return <Badge variant="default" className="bg-red-100 text-red-800">Đã hủy</Badge>;
+      return <Badge variant="default" className="bg-red-100 text-red-800 text-[10px] px-1.5 py-0">Đã hủy</Badge>;
     }
     
-    return <Badge variant="outline">{status || 'N/A'}</Badge>;
+    return <Badge variant="outline" className="text-[10px] px-1.5 py-0">{status || 'N/A'}</Badge>;
   };
 
   return (
@@ -133,19 +133,19 @@ export function FuelTransactionsTable({ transactions, loading }: FuelTransaction
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Ngày</TableHead>
-            <TableHead>Loại hình</TableHead>
-            <TableHead>Đối tượng</TableHead>
-            <TableHead>Biển số</TableHead>
-            <TableHead>Tài xế</TableHead>
-            <TableHead>Nhiên liệu</TableHead>
-            <TableHead className="text-right">Số lượng (L)</TableHead>
-            <TableHead className="text-right">Đơn giá</TableHead>
-            <TableHead className="text-right">Thành tiền</TableHead>
-            <TableHead className="text-right">ODO</TableHead>
-            <TableHead>Hạng mục</TableHead>
-            <TableHead>Trạng thái</TableHead>
-            <TableHead className="w-[50px]"></TableHead>
+            <TableHead className="py-2 text-xs">Ngày</TableHead>
+            <TableHead className="py-2 text-xs">Loại hình</TableHead>
+            <TableHead className="py-2 text-xs">Đối tượng</TableHead>
+            <TableHead className="py-2 text-xs">Biển số</TableHead>
+            <TableHead className="py-2 text-xs">Tài xế</TableHead>
+            <TableHead className="py-2 text-xs">Nhiên liệu</TableHead>
+            <TableHead className="py-2 text-xs text-right">Số lượng (L)</TableHead>
+            <TableHead className="py-2 text-xs text-right">Đơn giá</TableHead>
+            <TableHead className="py-2 text-xs text-right">Thành tiền</TableHead>
+            <TableHead className="py-2 text-xs text-right">ODO</TableHead>
+            <TableHead className="py-2 text-xs">Hạng mục</TableHead>
+            <TableHead className="py-2 text-xs">Trạng thái</TableHead>
+            <TableHead className="py-2 w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -154,52 +154,52 @@ export function FuelTransactionsTable({ transactions, loading }: FuelTransaction
               key={transaction.id}
               className={selectedRow === transaction.id ? 'bg-muted/50' : ''}
             >
-              <TableCell className="font-medium">
+              <TableCell className="py-1.5 text-xs font-medium">
                 {formatDate(transaction.transaction_date)}
               </TableCell>
-              <TableCell>
-                <span className="text-sm">{transaction.fuel_source || '-'}</span>
+              <TableCell className="py-1.5">
+                <span className="text-xs">{transaction.fuel_source || '-'}</span>
               </TableCell>
-              <TableCell>
-                <span className="text-sm">{transaction.object || '-'}</span>
+              <TableCell className="py-1.5">
+                <span className="text-xs">{transaction.object || '-'}</span>
               </TableCell>
-              <TableCell>
-                <span className="font-mono text-sm">{transaction.license_plate || '-'}</span>
+              <TableCell className="py-1.5">
+                <span className="font-mono text-xs">{transaction.license_plate || '-'}</span>
               </TableCell>
-              <TableCell>
-                <span className="text-sm">{transaction.driver_name || '-'}</span>
+              <TableCell className="py-1.5">
+                <span className="text-xs">{transaction.driver_name || '-'}</span>
               </TableCell>
-              <TableCell>
-                <span className="text-sm">{transaction.fuel_type || '-'}</span>
+              <TableCell className="py-1.5">
+                <span className="text-xs">{transaction.fuel_type || '-'}</span>
               </TableCell>
-              <TableCell className="text-right font-medium">
+              <TableCell className="py-1.5 text-right text-xs font-medium">
                 {formatNumber(transaction.quantity)}
               </TableCell>
-              <TableCell className="text-right text-sm text-muted-foreground">
+              <TableCell className="py-1.5 text-right text-xs text-muted-foreground">
                 {formatCurrency(transaction.unit_price)}
               </TableCell>
-              <TableCell className="text-right font-medium">
+              <TableCell className="py-1.5 text-right text-xs font-medium">
                 {formatCurrency(transaction.total_amount)}
               </TableCell>
-              <TableCell className="text-right text-sm">
+              <TableCell className="py-1.5 text-right text-xs">
                 {formatNumber(transaction.odo_number)}
               </TableCell>
-              <TableCell>
+              <TableCell className="py-1.5">
                 {getCategoryBadge(transaction.category)}
               </TableCell>
-              <TableCell>
+              <TableCell className="py-1.5">
                 {getStatusBadge(transaction.status)}
               </TableCell>
-              <TableCell>
+              <TableCell className="py-1.5">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0"
+                      className="h-6 w-6 p-0"
                       onClick={() => setSelectedRow(transaction.id)}
                     >
-                      <MoreHorizontal className="h-4 w-4" />
+                      <MoreHorizontal className="h-3.5 w-3.5" />
                       <span className="sr-only">Menu</span>
                     </Button>
                   </DropdownMenuTrigger>

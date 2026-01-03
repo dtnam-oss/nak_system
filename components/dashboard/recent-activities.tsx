@@ -34,33 +34,33 @@ export function RecentActivities({ activities }: RecentActivitiesProps) {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Clock className="h-4 w-4" />
           Hoạt động gần đây
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         {activities.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">
             Chưa có hoạt động nào
           </p>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {activities.map((activity) => (
               <div
                 key={activity.id}
-                className="flex items-start justify-between border-b pb-4 last:border-0 last:pb-0"
+                className="flex items-start justify-between border-b pb-2.5 last:border-0 last:pb-0"
               >
-                <div className="space-y-1 flex-1">
+                <div className="space-y-0.5 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">{activity.orderCode}</p>
-                    <Badge variant={getStatusVariant(activity.status)}>
+                    <p className="text-xs font-medium">{activity.orderCode}</p>
+                    <Badge variant={getStatusVariant(activity.status)} className="text-[10px] px-1.5 py-0">
                       {activity.status}
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">{activity.customer}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">{activity.customer}</p>
+                  <p className="text-[10px] text-muted-foreground">
                     {formatDistanceToNow(new Date(activity.createdAt), { 
                       addSuffix: true,
                       locale: vi 

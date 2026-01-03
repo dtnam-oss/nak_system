@@ -143,8 +143,8 @@ export default function ReportsPage() {
         {/* Page Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Báo cáo & Kiểm soát</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl font-bold tracking-tight">Báo cáo & Kiểm soát</h1>
+            <p className="text-xs text-muted-foreground">
               Thống kê vận hành và kiểm tra chất lượng dữ liệu
             </p>
           </div>
@@ -152,8 +152,8 @@ export default function ReportsPage() {
 
       {/* Filters Toolbar */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap items-center gap-4">
+        <CardContent className="pt-4 pb-3">
+          <div className="flex flex-wrap items-center gap-3">
             <DateRangePicker
               value={dateRange}
               onChange={setDateRange}
@@ -169,17 +169,18 @@ export default function ReportsPage() {
 
             <Button
               variant="outline"
+              size="sm"
               onClick={() => {
                 fetchAnalytics()
                 fetchTrips()
               }}
               disabled={loading || tripsLoading}
-              className="ml-auto"
+              className="ml-auto h-8 text-xs"
             >
               {(loading || tripsLoading) ? (
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
               ) : (
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
               )}
               Làm mới
             </Button>
@@ -202,15 +203,15 @@ export default function ReportsPage() {
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">
-            <TrendingUp className="h-4 w-4 mr-2" />
+          <TabsTrigger value="overview" className="text-xs">
+            <TrendingUp className="h-3.5 w-3.5 mr-1.5" />
             Tổng hợp Vận hành
           </TabsTrigger>
-          <TabsTrigger value="integrity">
-            <Activity className="h-4 w-4 mr-2" />
+          <TabsTrigger value="integrity" className="text-xs">
+            <Activity className="h-3.5 w-3.5 mr-1.5" />
             Kiểm soát Dữ liệu
             {data && data.data_integrity.total_errors > 0 && (
-              <Badge variant="destructive" className="ml-2">
+              <Badge variant="destructive" className="ml-2 text-[10px] px-1.5 py-0">
                 {data.data_integrity.total_errors}
               </Badge>
             )}

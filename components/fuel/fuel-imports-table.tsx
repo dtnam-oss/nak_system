@@ -96,15 +96,15 @@ export function FuelImportsTable({ imports, loading }: FuelImportsTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Ngày nhập</TableHead>
-            <TableHead>Nhà cung cấp</TableHead>
-            <TableHead>Loại nhiên liệu</TableHead>
-            <TableHead className="text-right">Số lượng (L)</TableHead>
-            <TableHead className="text-right">Đơn giá nhập</TableHead>
-            <TableHead className="text-right">Thành tiền</TableHead>
-            <TableHead className="text-right">Giá xuất BQ</TableHead>
-            <TableHead>Người tạo</TableHead>
-            <TableHead className="w-[50px]"></TableHead>
+            <TableHead className="py-2 text-xs">Ngày nhập</TableHead>
+            <TableHead className="py-2 text-xs">Nhà cung cấp</TableHead>
+            <TableHead className="py-2 text-xs">Loại nhiên liệu</TableHead>
+            <TableHead className="py-2 text-xs text-right">Số lượng (L)</TableHead>
+            <TableHead className="py-2 text-xs text-right">Đơn giá nhập</TableHead>
+            <TableHead className="py-2 text-xs text-right">Thành tiền</TableHead>
+            <TableHead className="py-2 text-xs text-right">Giá xuất BQ</TableHead>
+            <TableHead className="py-2 text-xs">Người tạo</TableHead>
+            <TableHead className="py-2 w-[50px]"></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -113,40 +113,40 @@ export function FuelImportsTable({ imports, loading }: FuelImportsTableProps) {
               key={importRecord.id}
               className={selectedRow === importRecord.id ? 'bg-muted/50' : ''}
             >
-              <TableCell className="font-medium">
+              <TableCell className="py-1.5 text-xs font-medium">
                 {formatDate(importRecord.import_date)}
               </TableCell>
-              <TableCell>
-                <span className="text-sm">{importRecord.supplier || '-'}</span>
+              <TableCell className="py-1.5">
+                <span className="text-xs">{importRecord.supplier || '-'}</span>
               </TableCell>
-              <TableCell>
-                <span className="text-sm">{importRecord.fuel_type || '-'}</span>
+              <TableCell className="py-1.5">
+                <span className="text-xs">{importRecord.fuel_type || '-'}</span>
               </TableCell>
-              <TableCell className="text-right font-medium text-green-600">
+              <TableCell className="py-1.5 text-right text-xs font-medium text-green-600">
                 +{formatNumber(importRecord.quantity)}
               </TableCell>
-              <TableCell className="text-right text-sm text-muted-foreground">
+              <TableCell className="py-1.5 text-right text-xs text-muted-foreground">
                 {formatCurrency(importRecord.unit_price)}
               </TableCell>
-              <TableCell className="text-right font-medium">
+              <TableCell className="py-1.5 text-right text-xs font-medium">
                 {formatCurrency(importRecord.total_amount)}
               </TableCell>
-              <TableCell className="text-right text-sm font-medium text-blue-600">
+              <TableCell className="py-1.5 text-right text-xs font-medium text-blue-600">
                 {formatCurrency(importRecord.avg_price)}
               </TableCell>
-              <TableCell>
-                <span className="text-sm">{importRecord.created_by || '-'}</span>
+              <TableCell className="py-1.5">
+                <span className="text-xs">{importRecord.created_by || '-'}</span>
               </TableCell>
-              <TableCell>
+              <TableCell className="py-1.5">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0"
+                      className="h-6 w-6 p-0"
                       onClick={() => setSelectedRow(importRecord.id)}
                     >
-                      <MoreHorizontal className="h-4 w-4" />
+                      <MoreHorizontal className="h-3.5 w-3.5" />
                       <span className="sr-only">Menu</span>
                     </Button>
                   </DropdownMenuTrigger>

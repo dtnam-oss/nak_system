@@ -85,25 +85,25 @@ export function FuelKPICards({ stats, loading }: FuelKPICardsProps) {
     <div className="grid gap-4 md:grid-cols-3">
       {/* Card 1: Tồn kho Bồn dầu */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+          <CardTitle className="text-xs font-medium">
             Tồn kho Bồn dầu
           </CardTitle>
-          <Fuel className={`h-4 w-4 ${isLowFuel ? 'text-red-500' : 'text-green-500'}`} />
+          <Fuel className={`h-3.5 w-3.5 ${isLowFuel ? 'text-red-500' : 'text-green-500'}`} />
         </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+        <CardContent className="pt-1">
+          <div className="space-y-2">
             <div>
-              <div className="text-2xl font-bold">
+              <div className="text-lg font-bold">
                 {formatNumber(current_inventory)} L
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[10px] text-muted-foreground">
                 / {formatNumber(tank_capacity)} Lít
               </p>
             </div>
             
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[10px]">
                 <span className={`font-medium ${tankStatusColor}`}>
                   {tankStatusText}
                 </span>
@@ -113,13 +113,13 @@ export function FuelKPICards({ stats, loading }: FuelKPICardsProps) {
               </div>
               <Progress 
                 value={tank_percentage} 
-                className="h-2"
+                className="h-1.5"
                 indicatorClassName={progressColor}
               />
             </div>
 
             {isLowFuel && (
-              <div className="flex items-center gap-1 text-xs text-red-600 bg-red-50 p-2 rounded">
+              <div className="flex items-center gap-1 text-[10px] text-red-600 bg-red-50 p-1.5 rounded">
                 <AlertTriangle className="h-3 w-3" />
                 <span>Cần nhập thêm nhiên liệu</span>
               </div>
@@ -130,26 +130,26 @@ export function FuelKPICards({ stats, loading }: FuelKPICardsProps) {
 
       {/* Card 2: Giá trị Tồn kho */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+          <CardTitle className="text-xs font-medium">
             Giá trị Tồn kho
           </CardTitle>
-          <DollarSign className="h-4 w-4 text-blue-500" />
+          <DollarSign className="h-3.5 w-3.5 text-blue-500" />
         </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="text-2xl font-bold">
+        <CardContent className="pt-1">
+          <div className="space-y-1.5">
+            <div className="text-lg font-bold">
               {formatCurrency(inventory_value)}
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground">
               Tính theo giá bình quân
             </p>
-            <div className="text-xs text-muted-foreground pt-2 border-t">
+            <div className="text-[10px] text-muted-foreground pt-1.5 border-t">
               <div className="flex justify-between">
                 <span>Tồn kho:</span>
                 <span className="font-medium">{formatNumber(current_inventory)} L</span>
               </div>
-              <div className="flex justify-between mt-1">
+              <div className="flex justify-between mt-0.5">
                 <span>Giá TB:</span>
                 <span className="font-medium">{formatNumber(stats.current_avg_price)} đ/L</span>
               </div>
@@ -160,23 +160,23 @@ export function FuelKPICards({ stats, loading }: FuelKPICardsProps) {
 
       {/* Card 3: Tiêu thụ trong tháng */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
+          <CardTitle className="text-xs font-medium">
             Tiêu thụ tháng này
           </CardTitle>
-          <TrendingDown className="h-4 w-4 text-orange-500" />
+          <TrendingDown className="h-3.5 w-3.5 text-orange-500" />
         </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="text-2xl font-bold">
+        <CardContent className="pt-1">
+          <div className="space-y-1.5">
+            <div className="text-lg font-bold">
               {formatNumber(monthly_consumption)} L
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground">
               Tháng {new Date().getMonth() + 1}/{new Date().getFullYear()}
             </p>
             
             {monthly_consumption > 0 && current_inventory > 0 && (
-              <div className="text-xs text-muted-foreground pt-2 border-t">
+              <div className="text-[10px] text-muted-foreground pt-1.5 border-t">
                 <div className="flex justify-between">
                   <span>Dự kiến còn:</span>
                   <span className="font-medium">
