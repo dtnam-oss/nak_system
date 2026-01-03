@@ -87,9 +87,10 @@ Only deducts transactions that occur AFTER first import timestamp.
 Auto-recalculates average price when new imports arrive.';
 
 -- =============================================================================
--- PART 2: VERIFICATION QUERY - Compare Weighted Average vs Simple Method
+-- PART 2: VERIFICATION QUERY TEMPLATES (For manual testing - commented out)
 -- =============================================================================
 
+/*
 -- Query to see Weighted Average calculation results
 SELECT 
     'SUMMARY' as type,
@@ -131,7 +132,7 @@ simple_calc AS (
         (SELECT COALESCE(SUM(quantity), 0) FROM fuel_imports) - 
         (SELECT COALESCE(SUM(quantity), 0) FROM fuel_transactions WHERE LOWER(TRIM(fuel_source)) = 'trụ nội bộ') 
         as simple_inventory,
-        (SELECT COALESCE(avg_price, 0) FROM fuel_imports ORDER BY import_date DESC LIMIT 1) 
+        (SELECT COALESCE(avg_price, 0) FROM fuel_imports ORDER BY fi.import_date DESC LIMIT 1) 
         as simple_avg_price
     FROM (SELECT 1) t
 )
@@ -144,6 +145,7 @@ SELECT
     ROUND(s.simple_avg_price, 2) || ' VND/L' as "Giá nhập gần nhất",
     ROUND(w.weighted_value, 2) || ' VND' as "Giá trị tồn (Weighted Avg)"
 FROM weighted_calc w, simple_calc s;
+*/
 
 -- =============================================================================
 -- PART 3: MATERIALIZED VIEW - Cache Weighted Average Results
@@ -183,9 +185,10 @@ COMMENT ON FUNCTION refresh_fifo_inventory() IS
 Call this after new imports to recalculate average price.';
 
 -- =============================================================================
--- PART 5: QUERY TEMPLATES - Common Use Cases
+-- PART 5: QUERY TEMPLATES - Common Use Cases (commented out for manual use)
 -- =============================================================================
 
+/*
 -- 1. Get current Weighted Average inventory summary
 SELECT 
     'Tồn kho hiện tại (Bình quân gia quyền)' as "Loại báo cáo",
@@ -236,7 +239,7 @@ cumulative_balance AS (
         ft.fuel_source,
         (SELECT COALESCE(SUM(quantity), 0) 
          FROM fuel_imports 
-         WHERE import_date <= ft.transaction_date) as imports_before,
+         WHERE fuel_imports.import_date <= ft.transaction_date) as imports_before,
         (SELECT COALESCE(SUM(quantity), 0) 
          FROM fuel_transactions ft2
          WHERE LOWER(TRIM(ft2.fuel_source)) = 'trụ nội bộ'
@@ -276,6 +279,7 @@ FROM fuel_transactions ft
 WHERE LOWER(TRIM(ft.fuel_source)) = 'trụ nội bộ'
     AND ft.transaction_date < (SELECT import_date FROM first_import)
 ORDER BY ft.transaction_date DESC;
+*/
 
 -- =============================================================================
 -- PART 6: TRIGGER - Auto-notify on data change
