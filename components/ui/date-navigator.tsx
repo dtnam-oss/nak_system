@@ -25,53 +25,59 @@ export function DateNavigator({ date, onDateChange }: DateNavigatorProps) {
   const handleToday = () => onDateChange(new Date())
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="inline-flex items-center gap-2">
+      {/* Button Group: Prev + Date + Next */}
+      <div className="inline-flex items-center rounded-md border border-input bg-background shadow-sm">
+        {/* Prev Button - Icon Only */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handlePrev}
+          className="h-9 w-9 rounded-none rounded-l-md border-r p-0 hover:bg-accent"
+          title="Hôm trước"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        {/* Date Display Button with Popover */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="ghost"
+              className="h-9 min-w-[200px] rounded-none border-r px-3 font-medium hover:bg-accent"
+            >
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {format(date, "EEEE, d/MM/yyyy", { locale: vi })}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="center">
+            <Calendar
+              mode="single"
+              selected={date}
+              onSelect={(d) => d && onDateChange(d)}
+              locale={vi}
+            />
+          </PopoverContent>
+        </Popover>
+
+        {/* Next Button - Icon Only */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleNext}
+          className="h-9 w-9 rounded-none rounded-r-md p-0 hover:bg-accent"
+          title="Hôm sau"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Today Button - Separate */}
       <Button
         variant="outline"
-        size="sm"
-        onClick={handlePrev}
-        className="h-9 px-3"
-      >
-        <ChevronLeft className="mr-1 h-4 w-4" />
-        Hôm trước
-      </Button>
-
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="h-10 min-w-[220px] justify-start text-left font-medium"
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {format(date, "EEEE, d 'tháng' MM yyyy", { locale: vi })}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="center">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={(d) => d && onDateChange(d)}
-            initialFocus
-            locale={vi}
-          />
-        </PopoverContent>
-      </Popover>
-
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleNext}
-        className="h-9 px-3"
-      >
-        Hôm sau
-        <ChevronRight className="ml-1 h-4 w-4" />
-      </Button>
-
-      <Button
-        variant="ghost"
         size="sm"
         onClick={handleToday}
-        className="h-9 px-3 hover:bg-accent"
+        className="h-9 px-3"
       >
         Hôm nay
       </Button>
