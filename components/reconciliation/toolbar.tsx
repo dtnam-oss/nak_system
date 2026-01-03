@@ -165,12 +165,12 @@ export function ReconciliationToolbar({
     }))
   }
   
-  // Handle customer filter change - APPLY IMMEDIATELY
+  // Handle customer filter change - UPDATE PENDING ONLY
   const handleCustomerChange = (values: string[]) => {
-    onFiltersChange({
-      ...filters,
+    setPendingFilters((prev) => ({
+      ...prev,
       khachHang: values.length > 0 ? values.join(",") : undefined,
-    })
+    }))
   }
 
   const handleExport = async (templateType: 'general' | 'jnt_route' | 'jnt_shift' | 'ghn') => {
@@ -274,7 +274,7 @@ export function ReconciliationToolbar({
             {/* Customer Filter - Multi Select */}
             <MultiSelect
               options={customers.map(c => ({ label: c, value: c }))}
-              selected={filters.khachHang ? filters.khachHang.split(",").map(v => v.trim()).filter(Boolean) : []}
+              selected={pendingFilters.khachHang ? pendingFilters.khachHang.split(",").map(v => v.trim()).filter(Boolean) : []}
               onChange={handleCustomerChange}
               placeholder="Khách hàng"
               className="w-[180px]"
