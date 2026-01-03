@@ -9,7 +9,8 @@ import { Separator } from "@/components/ui/separator"
 import { CustomerFilter } from "@/components/reconciliation/customer-filter"
 import { ReconciliationFilters } from "@/types/reconciliation"
 import { Search, X, Download, Loader2, Filter } from "lucide-react"
-import { DateNavigator } from "@/components/ui/date-navigator"
+import { DateRangeNavigator } from "@/components/ui/date-range-navigator"
+import { DateRange } from "react-day-picker"
 import { format } from "date-fns"
 import {
   Select,
@@ -55,13 +56,15 @@ export function ReconciliationToolbar({
     loaiChuyen: filters.loaiChuyen,
   })
 
-  // Single date state for Day Navigator
-  const [selectedDate, setSelectedDate] = useState<Date>(() => {
-    // Initialize with fromDate if available, otherwise today
-    if (filters.fromDate) {
-      return new Date(filters.fromDate)
+  // Date range state for Date Range Navigator
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (filters.fromDate && filters.toDate) {
+      return {
+        from: new Date(filters.fromDate),
+        to: new Date(filters.toDate),
+      }
     }
-    return new Date()
+    return undefined
   })
 
   // Separate state for search query (live with debounce) - SEARCH ONLY order_id
@@ -119,15 +122,22 @@ export function ReconciliationToolbar({
     }
   }, [searchQuery])
 
-  // Sync selected date with pending filters (both fromDate and toDate are the same)
+  // Sync date range with pending filters
   useEffect(() => {
-    const formattedDate = format(selectedDate, 'yyyy-MM-dd')
-    setPendingFilters((prev) => ({
-      ...prev,
-      fromDate: formattedDate,
-      toDate: formattedDate,
-    }))
-  }, [selectedDate])
+    if (dateRange?.from && dateRange?.to) {
+      setPendingFilters((prev) => ({
+        ...prev,
+        fromDate: format(dateRange.from!, 'yyyy-MM-dd'),
+        toDate: format(dateRange.to!, 'yyyy-MM-dd'),
+      }))
+    } else {
+      setPendingFilters((prev) => ({
+        ...prev,
+        fromDate: undefined,
+        toDate: undefined,
+      }))
+    }
+  }, [dateRange])
 
   const hasActiveFilters = Object.values(filters).some((value) => value)
 
@@ -141,7 +151,7 @@ export function ReconciliationToolbar({
   const handleResetAll = () => {
     setPendingFilters({})
     setSearchQuery("")
-    setSelectedDate(new Date()) // Reset to today
+    setDateRange(undefined)
     onFiltersChange({})
   }
 
@@ -254,10 +264,10 @@ export function ReconciliationToolbar({
               />
             </div>
 
-            {/* Date Navigator - Single Day Selection */}
-            <DateNavigator
-              date={selectedDate}
-              onDateChange={setSelectedDate}
+            {/* Date Range Navigator - Range Selection */}
+            <DateRangeNavigator
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
             />
 
             {/* Customer Filter - Faceted Filter */}
