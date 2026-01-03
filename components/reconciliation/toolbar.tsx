@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { CustomerFilter } from "@/components/reconciliation/customer-filter"
+import { MultiSelect } from "@/components/ui/multi-select"
 import { ReconciliationFilters } from "@/types/reconciliation"
 import { Search, X, Download, Loader2, Filter } from "lucide-react"
 import { DateRangePickerInput } from "@/components/ui/date-range-picker-input"
@@ -166,10 +166,10 @@ export function ReconciliationToolbar({
   }
   
   // Handle customer filter change - APPLY IMMEDIATELY
-  const handleCustomerChange = (value: string | undefined) => {
+  const handleCustomerChange = (values: string[]) => {
     onFiltersChange({
       ...filters,
-      khachHang: value,
+      khachHang: values.length > 0 ? values.join(",") : undefined,
     })
   }
 
@@ -271,12 +271,13 @@ export function ReconciliationToolbar({
               className="shrink-0"
             />
 
-            {/* Customer Filter - Faceted Filter */}
-            <CustomerFilter
+            {/* Customer Filter - Multi Select */}
+            <MultiSelect
               options={customers.map(c => ({ label: c, value: c }))}
-              value={filters.khachHang}
+              selected={filters.khachHang ? filters.khachHang.split(",").map(v => v.trim()).filter(Boolean) : []}
               onChange={handleCustomerChange}
-              isLoading={customersLoading}
+              placeholder="Khách hàng"
+              className="w-[180px]"
             />
 
             {/* Transport Unit Filter - Fixed Width */}
