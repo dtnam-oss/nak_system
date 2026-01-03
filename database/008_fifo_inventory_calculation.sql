@@ -388,19 +388,19 @@ WHERE relname = 'mv_fifo_inventory';
 */
 
 -- =============================================================================
--- INITIAL RUN - Execute this to populate the materialized view
+-- INITIAL RUN - Show system status after setup
 -- =============================================================================
 
--- Refresh the materialized view for first time
-REFRESH MATERIALIZED VIEW mv_fifo_inventory;
+-- Note: CREATE MATERIALIZED VIEW already populated the data automatically
+-- No need to REFRESH here - only refresh when data changes later
 
--- Show summary
+-- Show summary (will return empty if no fuel_imports data exists)
 SELECT 
     '✅ Weighted Average Inventory System Initialized' as status,
-    ROUND(remaining_quantity, 2) || ' L' as "Tồn kho",
-    ROUND(avg_price, 2) || ' VND/L' as "Giá bình quân gia quyền",
-    ROUND(remaining_quantity * avg_price, 2) || ' VND' as "Giá trị tồn kho",
-    ROUND((consumed_quantity / NULLIF(original_quantity, 0) * 100), 1) || '%' as "% Đã xuất"
+    COALESCE(ROUND(remaining_quantity, 2) || ' L', 'No data') as "Tồn kho",
+    COALESCE(ROUND(avg_price, 2) || ' VND/L', 'N/A') as "Giá bình quân gia quyền",
+    COALESCE(ROUND(remaining_quantity * avg_price, 2) || ' VND', 'N/A') as "Giá trị tồn kho",
+    COALESCE(ROUND((consumed_quantity / NULLIF(original_quantity, 0) * 100), 1) || '%', '0%') as "% Đã xuất"
 FROM mv_fifo_inventory;
 
 -- Show flow explanation
