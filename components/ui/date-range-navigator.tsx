@@ -112,54 +112,56 @@ export function DateRangeNavigator({ dateRange, onDateRangeChange }: DateRangeNa
               {formatDateRange(dateRange)}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="center">
-            <div className="flex">
-              {/* Quick Presets Sidebar */}
-              <div className="border-r border-border p-3 space-y-1 min-w-[140px]">
+          <PopoverContent className="w-auto p-0 max-w-[520px]" align="center">
+            <div className="flex flex-col sm:flex-row">
+              {/* Quick Presets - Horizontal on mobile, Sidebar on desktop */}
+              <div className="border-b sm:border-b-0 sm:border-r border-border p-3">
                 <div className="text-xs font-semibold text-muted-foreground mb-2 px-2">
                   Chọn nhanh
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleToday}
-                  className="w-full justify-start h-8 px-2 text-sm"
-                >
-                  Hôm nay
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleThisWeek}
-                  className="w-full justify-start h-8 px-2 text-sm"
-                >
-                  Tuần này
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleThisMonth}
-                  className="w-full justify-start h-8 px-2 text-sm"
-                >
-                  Tháng này
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onDateRangeChange(undefined)}
-                  className="w-full justify-start h-8 px-2 text-sm text-destructive"
-                >
-                  Xóa lọc
-                </Button>
+                <div className="flex flex-row sm:flex-col gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleToday}
+                    className="flex-1 sm:w-full justify-start h-8 px-2 text-sm whitespace-nowrap"
+                  >
+                    Hôm nay
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleThisWeek}
+                    className="flex-1 sm:w-full justify-start h-8 px-2 text-sm whitespace-nowrap"
+                  >
+                    Tuần này
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleThisMonth}
+                    className="flex-1 sm:w-full justify-start h-8 px-2 text-sm whitespace-nowrap"
+                  >
+                    Tháng này
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDateRangeChange(undefined)}
+                    className="flex-1 sm:w-full justify-start h-8 px-2 text-sm text-destructive whitespace-nowrap"
+                  >
+                    Xóa
+                  </Button>
+                </div>
               </div>
 
-              {/* Calendar */}
+              {/* Calendar - Single month for compact size */}
               <div className="p-3">
                 <Calendar
                   mode="range"
                   selected={dateRange}
                   onSelect={onDateRangeChange}
-                  numberOfMonths={2}
+                  numberOfMonths={1}
                   locale={vi}
                 />
               </div>
