@@ -38,7 +38,7 @@ export const createColumns = ({
       accessorKey: "maChuyenDi",
       header: () => <div className="font-bold">Mã chuyến</div>,
       cell: ({ row }) => (
-        <div className="font-medium text-foreground min-w-[120px]">
+        <div className="font-medium text-foreground min-w-[100px]">
           {row.getValue("maChuyenDi")}
         </div>
       ),
@@ -47,7 +47,7 @@ export const createColumns = ({
       accessorKey: "ngayTao",
       header: () => <div className="font-bold">Ngày</div>,
       cell: ({ row }) => (
-        <div className="text-foreground min-w-[100px]">
+        <div className="text-foreground min-w-[85px]">
           {row.getValue("ngayTao")}
         </div>
       ),
@@ -56,7 +56,7 @@ export const createColumns = ({
       accessorKey: "tenKhachHang",
       header: () => <div className="font-bold">Khách hàng</div>,
       cell: ({ row }) => (
-        <div className="text-foreground max-w-[200px] truncate">
+        <div className="text-foreground max-w-[160px] truncate">
           {row.getValue("tenKhachHang")}
         </div>
       ),
@@ -76,7 +76,7 @@ export const createColumns = ({
         }
 
         return (
-          <Badge variant={variant} className="whitespace-nowrap">
+          <Badge variant={variant} className="whitespace-nowrap text-[10px] px-1.5 py-0">
             {loaiChuyen || "-"}
           </Badge>
         )
@@ -86,7 +86,7 @@ export const createColumns = ({
       accessorKey: "tenTuyen",
       header: () => <div className="font-bold">Tên tuyến</div>,
       cell: ({ row }) => (
-        <div className="text-foreground max-w-[180px] truncate">
+        <div className="text-foreground max-w-[140px] truncate">
           {row.getValue("tenTuyen") || "-"}
         </div>
       ),
@@ -95,7 +95,7 @@ export const createColumns = ({
       accessorKey: "tenTaiXe",
       header: () => <div className="font-bold">Tài xế</div>,
       cell: ({ row }) => (
-        <div className="text-foreground max-w-[150px] truncate">
+        <div className="text-foreground max-w-[120px] truncate">
           {row.getValue("tenTaiXe") || "-"}
         </div>
       ),
@@ -108,7 +108,7 @@ export const createColumns = ({
         return (
           <Badge
             variant={donVi === "NAK" ? "success" : "secondary"}
-            className="whitespace-nowrap"
+            className="whitespace-nowrap text-[10px] px-1.5 py-0"
           >
             {donVi}
           </Badge>
@@ -143,7 +143,7 @@ export const createColumns = ({
         }
 
         return (
-          <Badge variant={variant} className="whitespace-nowrap">
+          <Badge variant={variant} className="whitespace-nowrap text-[10px] px-1.5 py-0">
             {trangThai}
           </Badge>
         )
@@ -156,7 +156,7 @@ export const createColumns = ({
         const record = row.original
 
         return (
-          <div className="flex justify-center min-w-[100px]">
+          <div className="flex justify-center min-w-[80px]">
             <Button
               variant="outline"
               size="sm"
@@ -171,9 +171,9 @@ export const createColumns = ({
 
                 onViewDetails(record)
               }}
-              className="gap-2"
+              className="gap-1.5 h-7 px-2 text-xs"
             >
-              <Eye className="h-4 w-4" />
+              <Eye className="h-3.5 w-3.5" />
               Chi tiết
             </Button>
           </div>

@@ -258,7 +258,7 @@ export function ReconciliationToolbar({
               )}
               <Input
                 placeholder="Tìm kiếm mã chuyến..."
-                className="pl-9 h-9 text-sm"
+                className="pl-9 h-8 text-xs"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -287,7 +287,7 @@ export function ReconciliationToolbar({
                 updatePendingFilter("donViVanChuyen", value === "all" ? "" : value)
               }
             >
-              <SelectTrigger className="w-[140px] h-9 text-sm shrink-0">
+              <SelectTrigger className="w-[140px] h-8 text-xs shrink-0">
                 <SelectValue placeholder="Đơn vị" />
               </SelectTrigger>
               <SelectContent>
@@ -304,7 +304,7 @@ export function ReconciliationToolbar({
                 updatePendingFilter("loaiChuyen", value === "all" ? "" : value)
               }
             >
-              <SelectTrigger className="w-[130px] h-9 text-sm shrink-0">
+              <SelectTrigger className="w-[130px] h-8 text-xs shrink-0">
                 <SelectValue placeholder="Loại chuyến" />
               </SelectTrigger>
               <SelectContent>
@@ -320,9 +320,9 @@ export function ReconciliationToolbar({
                 variant="default"
                 size="sm"
                 onClick={handleApplyFilters}
-                className="h-9 px-3 whitespace-nowrap shrink-0"
+                className="h-8 px-2 text-xs whitespace-nowrap shrink-0"
               >
-                <Filter className="h-4 w-4 mr-1" />
+                <Filter className="h-3.5 w-3.5 mr-1" />
                 Áp dụng
               </Button>
             )}
@@ -333,9 +333,9 @@ export function ReconciliationToolbar({
                 variant="ghost"
                 size="sm"
                 onClick={handleResetAll}
-                className="h-9 px-2 whitespace-nowrap shrink-0"
+                className="h-8 px-2 text-xs whitespace-nowrap shrink-0"
               >
-                <X className="h-4 w-4 mr-1" />
+                <X className="h-3.5 w-3.5 mr-1" />
                 <span className="hidden md:inline">Xóa tất cả</span>
                 <span className="md:hidden">Xóa</span>
               </Button>
@@ -347,9 +347,9 @@ export function ReconciliationToolbar({
                 <Button
                   variant="default"
                   size="sm"
-                  className="h-9 w-auto whitespace-nowrap shrink-0"
+                  className="h-8 w-auto text-xs whitespace-nowrap shrink-0"
                 >
-                  <Download className="h-4 w-4 lg:mr-2" />
+                  <Download className="h-3.5 w-3.5 lg:mr-2" />
                   <span className="hidden lg:inline">Xuất dữ liệu</span>
                 </Button>
               </DropdownMenuTrigger>

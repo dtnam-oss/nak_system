@@ -48,7 +48,7 @@ export function MultiSelect({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "h-9 justify-between text-sm font-normal",
+            "h-8 justify-between text-xs font-normal",
             !selected.length && "text-muted-foreground",
             className
           )}
@@ -113,7 +113,7 @@ export function MultiSelect({
                   >
                     {isSelected && <Check className="h-3 w-3" />}
                   </div>
-                  <span className="text-sm">{option.label}</span>
+                  <span className="text-xs">{option.label}</span>
                 </div>
               )
             })}

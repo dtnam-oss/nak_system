@@ -62,7 +62,7 @@ export function DataTable({ data }: DataTableProps) {
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className="px-4 py-3 text-left text-sm font-medium text-muted-foreground border-b border-border"
+                      className="px-3 py-2 text-left text-xs font-medium text-muted-foreground border-b border-border"
                     >
                       {header.isPlaceholder
                         ? null
@@ -80,7 +80,7 @@ export function DataTable({ data }: DataTableProps) {
                 <tr>
                   <td
                     colSpan={columns.length}
-                    className="px-4 py-12 text-center text-muted-foreground"
+                    className="px-3 py-8 text-center text-xs text-muted-foreground"
                   >
                     Không có dữ liệu
                   </td>
@@ -94,7 +94,7 @@ export function DataTable({ data }: DataTableProps) {
                     }`}
                   >
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-3 text-sm">
+                      <td key={cell.id} className="px-3 py-1.5 text-xs leading-tight">
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </td>
                     ))}
@@ -106,8 +106,8 @@ export function DataTable({ data }: DataTableProps) {
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-          <div className="text-sm text-muted-foreground">
+        <div className="flex items-center justify-between px-3 py-2 border-t border-border">
+          <div className="text-xs text-muted-foreground">
             Hiển thị {table.getState().pagination.pageIndex * table.getState().pagination.pageSize + 1} đến{" "}
             {Math.min(
               (table.getState().pagination.pageIndex + 1) * table.getState().pagination.pageSize,
@@ -134,7 +134,7 @@ export function DataTable({ data }: DataTableProps) {
               <ChevronLeft className="h-4 w-4" />
             </Button>
 
-            <div className="text-sm text-foreground">
+            <div className="text-xs text-foreground">
               Trang {table.getState().pagination.pageIndex + 1} / {table.getPageCount()}
             </div>
 
