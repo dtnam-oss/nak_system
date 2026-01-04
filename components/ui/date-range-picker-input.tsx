@@ -64,9 +64,6 @@ export function DateRangePickerInput({
               className="h-8 pl-9 pr-3 text-xs cursor-pointer hover:bg-accent/50 transition-colors"
             />
             <CalendarIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <div className="absolute -bottom-5 left-0 text-[0.7rem] text-muted-foreground">
-              Từ ngày
-            </div>
           </div>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
@@ -90,9 +87,6 @@ export function DateRangePickerInput({
               className="h-8 pl-9 pr-3 text-xs cursor-pointer hover:bg-accent/50 transition-colors"
             />
             <CalendarIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-            <div className="absolute -bottom-5 left-0 text-[0.7rem] text-muted-foreground">
-              Đến ngày
-            </div>
           </div>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
