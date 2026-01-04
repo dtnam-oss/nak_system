@@ -272,30 +272,6 @@ export function OperationSummaryTab({ trips, loading }: OperationSummaryTabProps
 
   return (
     <div className="space-y-4">
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{trips.length}</div>
-            <p className="text-xs text-muted-foreground">Tổng số chuyến</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold">{sortedCustomers.length}</div>
-            <p className="text-xs text-muted-foreground">Số khách hàng</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-2xl font-bold text-green-600">
-              {formatCurrency(trips.reduce((sum, t) => sum + (Number(t.revenue) || Number(t.cost) || 0), 0))}
-            </div>
-            <p className="text-xs text-muted-foreground">Tổng doanh thu</p>
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Level 1: Customer Accordion */}
       <Accordion type="multiple" className="w-full space-y-3">
         {sortedCustomers.map((customer) => {

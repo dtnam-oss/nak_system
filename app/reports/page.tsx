@@ -9,8 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DateRangePicker } from "@/components/ui/date-range-picker"
-import { CustomerFilter } from "@/components/reconciliation/customer-filter"
+import { DateRangePickerInput } from "@/components/ui/date-range-picker-input"
+import { MultiSelect } from "@/components/ui/multi-select"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { DataIntegrityTab } from "@/components/reports/data-integrity-tab"
 import { OperationSummaryTab } from "@/components/reports/operation-summary-tab"
@@ -38,7 +38,7 @@ interface AnalyticsData {
 export default function ReportsPage() {
   // Filters state
   const [dateRange, setDateRange] = useState<DateRange | undefined>()
-  const [selectedCustomer, setSelectedCustomer] = useState<string | undefined>()
+  const [selectedCustomers, setSelectedCustomers] = useState<string[]>([])
   const [customers, setCustomers] = useState<string[]>([])
 
   // Data state
@@ -111,8 +111,8 @@ export default function ReportsPage() {
       if (dateRange?.to) {
         params.append('toDate', format(dateRange.to, 'yyyy-MM-dd'))
       }
-      if (selectedCustomer) {
-        params.append('customer', selectedCustomer)
+      if (selectedCustomers.length > 0) {
+        params.append('customer', selectedCustomers.join(','))
       }
 
       const response = await fetch(`/api/reports/trips?${params.toString()}`)
@@ -132,7 +132,7 @@ export default function ReportsPage() {
   useEffect(() => {
     fetchAnalytics()
     fetchTrips()
-  }, [dateRange, selectedCustomer])
+  }, [dateRange, selectedCustomers])
 
   // Calculate data for charts
   const chartData = data?.statistics.by_customer || []
@@ -154,17 +154,18 @@ export default function ReportsPage() {
       <Card>
         <CardContent className="pt-4 pb-3">
           <div className="flex flex-wrap items-center gap-3">
-            <DateRangePicker
-              value={dateRange}
-              onChange={setDateRange}
-              placeholder="Chọn khoảng ngày"
-              className="w-[280px]"
+            <DateRangePickerInput
+              dateRange={dateRange}
+              onDateRangeChange={setDateRange}
+              className="shrink-0"
             />
 
-            <CustomerFilter
+            <MultiSelect
               options={customers.map(c => ({ label: c, value: c }))}
-              value={selectedCustomer}
-              onChange={setSelectedCustomer}
+              selected={selectedCustomers}
+              onChange={setSelectedCustomers}
+              placeholder="Khách hàng"
+              className="w-[180px]"
             />
 
             <Button
