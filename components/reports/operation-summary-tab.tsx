@@ -3,13 +3,13 @@
 import { useMemo, useState } from "react"
 import { format } from "date-fns"
 import { vi } from "date-fns/locale"
-import { MapPin, Truck, Calendar, Wallet, Package, User, AlertTriangle } from "lucide-react"
+import { MapPin, Truck, Wallet, Package, User, AlertTriangle } from "lucide-react"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { validateTrip, getUniqueErrorMessages } from "@/lib/validation"
-import { TripDetailsDialog } from "./trip-details-dialog"
+import { validateTrip } from "@/lib/validation"
+import { TripDetailsSheet } from "./trip-details-sheet"
 
 interface TripOrder {
   id: number
@@ -67,16 +67,15 @@ const getStatusBadge = (status: string) => {
   return statusMap[status] || { variant: 'outline', label: status }
 }
 
-// Component: Trip Detail Card
-const TripDetailCard = ({ trip }: { trip: TripOrder }) => {
-  const [dialogOpen, setDialogOpen] = useState(false)
+// Component: Trip Row Card (New List Layout)
+const TripRowCard = ({ trip }: { trip: TripOrder }) => {
+  const [sheetOpen, setSheetOpen] = useState(false)
   const statusInfo = getStatusBadge(trip.status)
-  
+
   // Validate trip data
   const errors = validateTrip(trip)
   const hasErrors = errors.length > 0
-  const uniqueErrorMessages = getUniqueErrorMessages(errors)
-  
+
   // Extract license plate from details if available
   const getLicensePlate = () => {
     try {
@@ -91,106 +90,83 @@ const TripDetailCard = ({ trip }: { trip: TripOrder }) => {
 
   return (
     <>
-      <Card 
+      <div
         className={cn(
-          "hover:shadow-lg transition-all duration-200 border-l-4 group cursor-pointer",
-          hasErrors 
-            ? "border-l-destructive/80 hover:border-l-destructive" 
-            : "border-l-primary/50 hover:border-l-primary"
+          "group flex items-center justify-between p-4 rounded-lg border bg-card text-card-foreground shadow-sm cursor-pointer transition-all hover:shadow-md",
+          hasErrors
+            ? "border-l-4 border-l-destructive bg-destructive/5"
+            : "border-l-4 border-l-primary/50"
         )}
-        onClick={() => setDialogOpen(true)}
+        onClick={() => setSheetOpen(true)}
       >
-        <CardContent className="p-4 space-y-3">
-          {/* Header: Order ID + Status Badge + Error Icon */}
-          <div className="flex justify-between items-start gap-2">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className={cn(
-                "font-bold text-sm truncate transition-colors",
-                hasErrors ? "text-destructive" : "group-hover:text-primary"
-              )} title={trip.order_id}>
-                {trip.order_id}
-              </span>
-              {hasErrors && (
-                <AlertTriangle className="w-4 h-4 text-destructive shrink-0 animate-pulse" />
-              )}
-            </div>
-            <Badge variant={statusInfo.variant} className="text-[10px] shrink-0">
-              {statusInfo.label}
-            </Badge>
+        {/* Cột 1: ID & Date (15%) */}
+        <div className="w-[15%] min-w-[120px]">
+          <div className="font-bold text-sm truncate" title={trip.order_id}>
+            {trip.order_id}
           </div>
-
-          {/* Info Grid */}
-          <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-3 h-3 shrink-0" />
-              <span>{formatDate(trip.date)}</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Truck className="w-3 h-3 shrink-0" />
-              <span className="truncate" title={getLicensePlate()}>
-                {getLicensePlate()}
-              </span>
-            </div>
+          <div className="text-xs text-muted-foreground mt-1">
+            {formatDate(trip.date)}
           </div>
+        </div>
 
-          {/* Driver */}
+        {/* Cột 2: Xe & Tài xế (25%) */}
+        <div className="w-[25%] min-w-[180px] flex flex-col gap-1 text-sm">
+          <div className="flex items-center gap-2">
+            <Truck className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <span className="truncate font-medium" title={getLicensePlate()}>
+              {getLicensePlate()}
+            </span>
+          </div>
           {trip.driver_name && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <User className="w-3 h-3 shrink-0" />
-              <span className="truncate" title={trip.driver_name}>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <User className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate text-xs" title={trip.driver_name}>
                 {trip.driver_name}
               </span>
             </div>
           )}
+        </div>
 
-          {/* Route Name */}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="w-3 h-3 shrink-0" />
-            <span className="truncate" title={trip.route_name || "Chưa cập nhật tuyến"}>
-              {trip.route_name || "Chưa cập nhật tuyến"}
-            </span>
-          </div>
-
-          {/* Weight if available */}
-          {trip.weight > 0 && (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Package className="w-3 h-3 shrink-0" />
-              <span>{trip.weight} kg</span>
-            </div>
-          )}
-
-          {/* Revenue/Cost */}
-          <div className="pt-2 border-t mt-2 flex justify-between items-center">
-            <span className="text-xs font-medium text-muted-foreground">Doanh thu:</span>
-            <span className="text-sm font-bold text-green-600 flex items-center gap-1">
-              <Wallet className="w-3.5 h-3.5" />
-              {formatCurrency(Number(trip.revenue) || Number(trip.cost) || 0)}
-            </span>
-          </div>
-
-          {/* Error Summary */}
-          {hasErrors && (
-            <div className="pt-2 border-t mt-2">
-              <div className="flex items-center gap-1.5 text-xs text-destructive">
-                <AlertTriangle className="w-3 h-3 shrink-0" />
-                <span className="font-medium">
-                  {errors.length} lỗi dữ liệu
-                </span>
+        {/* Cột 3: Tuyến (35%) */}
+        <div className="w-[35%] min-w-[200px] px-2">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium truncate" title={trip.route_name || "Chưa có tuyến"}>
+                {trip.route_name || "Chưa có tuyến"}
               </div>
-              <div className="mt-1 text-[10px] text-destructive/80">
-                {uniqueErrorMessages.slice(0, 2).join(', ')}
-                {uniqueErrorMessages.length > 2 && '...'}
+              <div className="text-xs text-muted-foreground truncate">
+                {trip.trip_type} • {trip.route_type || 'N/A'}
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </div>
+        </div>
 
-      {/* Dialog for details */}
-      <TripDetailsDialog 
+        {/* Cột 4: Status & Money (25%) */}
+        <div className="w-[25%] min-w-[160px] flex flex-col items-end gap-2">
+          <div className="flex items-center gap-1 text-sm font-bold text-green-600">
+            <Wallet className="w-3.5 h-3.5" />
+            <span>{formatCurrency(Number(trip.revenue) || Number(trip.cost) || 0)}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {hasErrors && (
+              <Badge variant="destructive" className="text-[10px] h-5 px-1.5">
+                <AlertTriangle className="w-3 h-3 mr-1" />
+                {errors.length} lỗi
+              </Badge>
+            )}
+            <Badge variant={statusInfo.variant} className="text-[10px] h-5">
+              {statusInfo.label}
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      {/* Sheet for details */}
+      <TripDetailsSheet
         trip={trip}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        open={sheetOpen}
+        onOpenChange={setSheetOpen}
         errors={errors}
       />
     </>
@@ -327,10 +303,10 @@ export function OperationSummaryTab({ trips, loading }: OperationSummaryTabProps
                         </AccordionTrigger>
 
                         <AccordionContent className="pt-3 pb-2">
-                          {/* Level 3: Trip Detail Grid */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {/* Level 3: Trip Detail List (Row Layout) */}
+                          <div className="flex flex-col gap-3">
                             {trips.map((trip) => (
-                              <TripDetailCard key={trip.id} trip={trip} />
+                              <TripRowCard key={trip.id} trip={trip} />
                             ))}
                           </div>
                         </AccordionContent>
