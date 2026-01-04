@@ -78,8 +78,8 @@ export default function ReportsPage() {
       if (dateRange?.to) {
         params.append('toDate', format(dateRange.to, 'yyyy-MM-dd'))
       }
-      if (selectedCustomer) {
-        params.append('customer', selectedCustomer)
+      if (selectedCustomers.length > 0) {
+        params.append('customer', selectedCustomers.join(','))
       }
 
       const response = await fetch(`/api/reports/analytics?${params.toString()}`)
