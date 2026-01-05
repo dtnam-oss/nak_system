@@ -303,11 +303,13 @@ export function OperationSummaryTab({ trips, loading }: OperationSummaryTabProps
                         </AccordionTrigger>
 
                         <AccordionContent className="pt-3 pb-2">
-                          {/* Level 3: Trip Detail List (Row Layout) */}
-                          <div className="flex flex-col gap-3">
-                            {trips.map((trip) => (
-                              <TripRowCard key={trip.id} trip={trip} />
-                            ))}
+                          {/* Level 3: Trip Detail List (Row Layout with Scroll) */}
+                          <div className="max-h-[600px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+                            <div className="flex flex-col gap-3">
+                              {trips.map((trip) => (
+                                <TripRowCard key={trip.id} trip={trip} />
+                              ))}
+                            </div>
                           </div>
                         </AccordionContent>
                       </AccordionItem>
