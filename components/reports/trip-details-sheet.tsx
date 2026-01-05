@@ -109,6 +109,12 @@ export function TripDetailsSheet({ trip, open, onOpenChange, errors = [] }: Trip
                 {formatCurrency(Number(trip.revenue) || Number(trip.cost) || 0)}
               </p>
             </div>
+            {trip.note && (
+              <div className="col-span-2">
+                <p className="text-xs text-muted-foreground">Ghi chú</p>
+                <p className="font-medium text-sm mt-1 text-slate-700">{trip.note}</p>
+              </div>
+            )}
           </div>
 
           {/* Details Table */}
@@ -133,6 +139,7 @@ export function TripDetailsSheet({ trip, open, onOpenChange, errors = [] }: Trip
                       <TableHead className="text-xs">Lộ trình</TableHead>
                       <TableHead className="text-xs">Chi tiết</TableHead>
                       <TableHead className="text-xs">Biển số</TableHead>
+                      <TableHead className="text-xs">Ngày tem</TableHead>
                       <TableHead className="text-right text-xs">Tải trọng</TableHead>
                       <TableHead className="text-right text-xs">Thành tiền</TableHead>
                     </TableRow>
@@ -176,6 +183,9 @@ export function TripDetailsSheet({ trip, open, onOpenChange, errors = [] }: Trip
                             {detail.bienKiemSoat || (
                               <span className="text-destructive text-xs">⚠️ Thiếu</span>
                             )}
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {detail.ngayTrenTem || '-'}
                           </TableCell>
                           <TableCell className={cn(
                             "text-right",

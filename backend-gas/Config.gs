@@ -47,7 +47,8 @@ const CONFIG = {
     'don_vi_van_chuyen': 'donViVanChuyen',
     'trang_thai_chuyen_di': 'trangThai',
     'so_km_theo_odo': 'tongQuangDuong',  // Lưu ý: mapping đặc biệt
-    'doanh_thu': 'tongDoanhThu'
+    'doanh_thu': 'tongDoanhThu',
+    'ghi_chu': 'ghiChu'                      // NEW: Note field
   },
 
   // =============================================================================
@@ -70,7 +71,8 @@ const CONFIG = {
     'loai_ca': 'loaiCa',
     'tai_trong_tinh_phi': 'taiTrongTinhPhi',
     'hinh_thuc_tinh_gia': 'hinhThucTinhGia',
-    'ten_khach_hang_cap_1': 'tenKhachHangCap1'
+    'ten_khach_hang_cap_1': 'tenKhachHangCap1',
+    'ngay_tren_tem': 'ngayTrenTem'           // NEW: Stamp date field
   },
 
   // =============================================================================

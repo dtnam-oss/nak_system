@@ -18,6 +18,7 @@ interface GASPayload {
   donViVanChuyen?: string;
   loaiChuyen?: string;
   loaiTuyen?: string;
+  ghiChu?: string;  // NEW: Note field from AppSheet
   data_json?: any;
   vehicles?: VehiclePayload[];  // NEW: For vehicles sync
   // Fuel sync fields
@@ -80,6 +81,7 @@ interface NormalizedPayload {
   routeType: string | null;
   routeName: string;
   weight: number;
+  note: string | null;  // NEW: Note field
   details: any;
 }
 
@@ -315,13 +317,17 @@ function normalizePayload(payload: GASPayload): NormalizedPayload {
   const provider = normalizeProvider(payload.donViVanChuyen);
   const tripType = normalizeTripType(payload.loaiChuyen);
   const routeType = normalizeRouteType(payload.loaiTuyen);
-  
+
   // Generate route name if not provided
   const routeName = generateRouteName(routeType, customer, (payload as any).tenTuyen);
   console.log(`[NORMALIZE] Generated routeName: "${routeName}"`);
-  
+
   const weight = calculateTotalWeight(details);
-  
+
+  // NEW: Extract note field
+  const note = payload.ghiChu || null;
+  console.log(`[NORMALIZE] ghiChu: "${payload.ghiChu}" -> note: "${note}"`);
+
   const normalized: NormalizedPayload = {
     orderId,
     date,
@@ -336,6 +342,7 @@ function normalizePayload(payload: GASPayload): NormalizedPayload {
     routeType,
     routeName,
     weight,
+    note,
     details
   };
   
@@ -856,19 +863,20 @@ export async function POST(request: Request) {
     try {
       await sql`
         INSERT INTO reconciliation_orders (
-          order_id, 
-          date, 
+          order_id,
+          date,
           customer,
-          trip_type, 
-          route_type, 
+          trip_type,
+          route_type,
           route_name,
-          driver_name, 
+          driver_name,
           provider,
-          total_distance, 
+          total_distance,
           cost,
-          revenue, 
+          revenue,
           status,
-          weight, 
+          weight,
+          note,
           details
         ) VALUES (
           ${normalized.orderId},
@@ -884,6 +892,7 @@ export async function POST(request: Request) {
           ${normalized.revenue},
           ${normalized.status},
           ${normalized.weight},
+          ${normalized.note},
           ${detailsJson}
         )
         ON CONFLICT (order_id) DO UPDATE SET
@@ -899,6 +908,7 @@ export async function POST(request: Request) {
           revenue = EXCLUDED.revenue,
           status = EXCLUDED.status,
           weight = EXCLUDED.weight,
+          note = EXCLUDED.note,
           details = EXCLUDED.details,
           updated_at = CURRENT_TIMESTAMP
       `;
