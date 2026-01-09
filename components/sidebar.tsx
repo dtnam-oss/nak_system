@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { useState } from "react"
 import {
   LayoutDashboard,
   FileText,
@@ -12,12 +13,26 @@ import {
   User,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Database,
+  Upload,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/components/sidebar-context"
 import { Button } from "@/components/ui/button"
 
-const navigation = [
+interface NavigationItem {
+  name: string
+  href?: string
+  icon: any
+  children?: {
+    name: string
+    href: string
+    icon: any
+  }[]
+}
+
+const navigation: NavigationItem[] = [
   {
     name: "Tổng quan",
     href: "/dashboard",
@@ -30,8 +45,19 @@ const navigation = [
   },
   {
     name: "Đối soát",
-    href: "/reconciliation",
     icon: GitCompare,
+    children: [
+      {
+        name: "Dữ liệu",
+        href: "/reconciliation",
+        icon: Database,
+      },
+      {
+        name: "Import Đối soát",
+        href: "/reconciliation/upload",
+        icon: Upload,
+      },
+    ],
   },
   {
     name: "Nhiên liệu",
@@ -48,6 +74,28 @@ const navigation = [
 export function Sidebar() {
   const pathname = usePathname()
   const { isCollapsed, toggle } = useSidebar()
+
+  // Initialize expanded items with active parent
+  const [expandedItems, setExpandedItems] = useState<string[]>(() => {
+    const initialExpanded: string[] = []
+    navigation.forEach((item) => {
+      if (item.children) {
+        const hasActiveChild = item.children.some(child => pathname === child.href)
+        if (hasActiveChild) {
+          initialExpanded.push(item.name)
+        }
+      }
+    })
+    return initialExpanded
+  })
+
+  const toggleExpand = (itemName: string) => {
+    setExpandedItems(prev =>
+      prev.includes(itemName)
+        ? prev.filter(name => name !== itemName)
+        : [...prev, itemName]
+    )
+  }
 
   return (
     <aside
@@ -83,32 +131,99 @@ export function Sidebar() {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 space-y-1 px-2 py-4">
+        <nav className="flex-1 space-y-1 px-2 py-4 overflow-y-auto">
           {navigation.map((item) => {
-            const isActive = pathname === item.href
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                  isCollapsed && "justify-center"
-                )}
-                title={isCollapsed ? item.name : undefined}
-              >
-                <item.icon className={cn("h-5 w-5 shrink-0")} />
-                <span
+            // Check if item or any child is active
+            const isActive = item.href ? pathname === item.href : false
+            const hasActiveChild = item.children?.some(child => pathname === child.href) || false
+            const isExpanded = expandedItems.includes(item.name)
+
+            // Item without children (regular link)
+            if (!item.children) {
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href!}
                   className={cn(
-                    "whitespace-nowrap transition-all duration-300",
-                    isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+                    "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    isCollapsed && "justify-center"
                   )}
+                  title={isCollapsed ? item.name : undefined}
                 >
-                  {item.name}
-                </span>
-              </Link>
+                  <item.icon className={cn("h-5 w-5 shrink-0")} />
+                  <span
+                    className={cn(
+                      "whitespace-nowrap transition-all duration-300",
+                      isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+                    )}
+                  >
+                    {item.name}
+                  </span>
+                </Link>
+              )
+            }
+
+            // Item with children (expandable)
+            return (
+              <div key={item.name}>
+                {/* Parent Item */}
+                <button
+                  onClick={() => !isCollapsed && toggleExpand(item.name)}
+                  className={cn(
+                    "w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                    hasActiveChild
+                      ? "bg-accent text-foreground"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                    isCollapsed && "justify-center"
+                  )}
+                  title={isCollapsed ? item.name : undefined}
+                >
+                  <item.icon className={cn("h-5 w-5 shrink-0")} />
+                  <span
+                    className={cn(
+                      "flex-1 text-left whitespace-nowrap transition-all duration-300",
+                      isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+                    )}
+                  >
+                    {item.name}
+                  </span>
+                  {!isCollapsed && (
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 shrink-0 transition-transform duration-200",
+                        isExpanded && "rotate-180"
+                      )}
+                    />
+                  )}
+                </button>
+
+                {/* Children (Submenu) */}
+                {!isCollapsed && isExpanded && (
+                  <div className="ml-4 mt-1 space-y-1">
+                    {item.children.map((child) => {
+                      const isChildActive = pathname === child.href
+                      return (
+                        <Link
+                          key={child.name}
+                          href={child.href}
+                          className={cn(
+                            "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200",
+                            isChildActive
+                              ? "bg-primary text-primary-foreground"
+                              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                          )}
+                        >
+                          <child.icon className="h-4 w-4 shrink-0" />
+                          <span className="whitespace-nowrap">{child.name}</span>
+                        </Link>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             )
           })}
         </nav>
