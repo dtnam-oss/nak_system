@@ -10,7 +10,7 @@ import { MultiSelect } from "@/components/ui/multi-select"
 import { ReconciliationFilters } from "@/types/reconciliation"
 import { Search, X, Download, Loader2, Filter, Upload } from "lucide-react"
 import { DateRangePickerInput } from "@/components/ui/date-range-picker-input"
-import { useRouter } from "next/navigation"
+import { ImportDialog } from "@/components/reconciliation/import-dialog"
 import { DateRange } from "react-day-picker"
 import { format } from "date-fns"
 import {
@@ -47,7 +47,8 @@ export function ReconciliationToolbar({
   onFiltersChange,
   totalRecords = 0,
 }: ReconciliationToolbarProps) {
-  const router = useRouter()
+  // Import dialog state
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
 
   // Local state for pending filters (not yet applied)
   const [pendingFilters, setPendingFilters] = useState<ReconciliationFilters>({
@@ -351,7 +352,7 @@ export function ReconciliationToolbar({
                   variant="outline"
                   size="sm"
                   className="h-8 w-auto text-xs whitespace-nowrap shrink-0"
-                  onClick={() => router.push('/reconciliation/upload')}
+                  onClick={() => setImportDialogOpen(true)}
                 >
                   <Upload className="h-3.5 w-3.5 lg:mr-2" />
                   <span className="hidden lg:inline">Import Đối Soát</span>
@@ -408,6 +409,12 @@ export function ReconciliationToolbar({
           </div>
         )}
       </div>
+
+      {/* Import Dialog */}
+      <ImportDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+      />
     </TooltipProvider>
   )
 }

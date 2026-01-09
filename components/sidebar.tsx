@@ -53,8 +53,8 @@ const navigation: NavigationItem[] = [
         icon: Database,
       },
       {
-        name: "Import Đối soát",
-        href: "/reconciliation/upload",
+        name: "So sánh",
+        href: "/reconciliation/compare",
         icon: Upload,
       },
     ],
