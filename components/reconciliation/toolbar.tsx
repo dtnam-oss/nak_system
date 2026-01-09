@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { MultiSelect } from "@/components/ui/multi-select"
 import { ReconciliationFilters } from "@/types/reconciliation"
-import { Search, X, Download, Loader2, Filter } from "lucide-react"
+import { Search, X, Download, Loader2, Filter, Upload } from "lucide-react"
 import { DateRangePickerInput } from "@/components/ui/date-range-picker-input"
+import { useRouter } from "next/navigation"
 import { DateRange } from "react-day-picker"
 import { format } from "date-fns"
 import {
@@ -46,6 +47,8 @@ export function ReconciliationToolbar({
   onFiltersChange,
   totalRecords = 0,
 }: ReconciliationToolbarProps) {
+  const router = useRouter()
+
   // Local state for pending filters (not yet applied)
   const [pendingFilters, setPendingFilters] = useState<ReconciliationFilters>({
     fromDate: filters.fromDate,
@@ -340,6 +343,24 @@ export function ReconciliationToolbar({
                 <span className="md:hidden">Xóa</span>
               </Button>
             )}
+
+            {/* Import Button */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 w-auto text-xs whitespace-nowrap shrink-0"
+                  onClick={() => router.push('/reconciliation/upload')}
+                >
+                  <Upload className="h-3.5 w-3.5 lg:mr-2" />
+                  <span className="hidden lg:inline">Import Đối Soát</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Upload file Excel đối soát từ khách hàng</p>
+              </TooltipContent>
+            </Tooltip>
 
             {/* Export Dropdown Menu - Auto Width */}
             <DropdownMenu>
