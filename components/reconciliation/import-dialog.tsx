@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, FileSpreadsheet, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 interface ImportDialogProps {
   open: boolean;
@@ -43,6 +44,7 @@ interface UploadResult {
 }
 
 export function ImportDialog({ open, onOpenChange, onSuccess }: ImportDialogProps) {
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [templateType, setTemplateType] = useState<string>('auto');
   const [loading, setLoading] = useState(false);
@@ -95,8 +97,8 @@ export function ImportDialog({ open, onOpenChange, onSuccess }: ImportDialogProp
         // Auto close after success
         setTimeout(() => {
           onOpenChange(false);
-          // Navigate to comparison page
-          window.location.href = '/reconciliation/compare';
+          // Navigate to comparison page using Next.js router
+          router.push('/reconciliation/compare');
         }, 1500);
       } else {
         setResult({

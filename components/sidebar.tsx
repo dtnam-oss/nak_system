@@ -45,19 +45,8 @@ const navigation: NavigationItem[] = [
   },
   {
     name: "Đối soát",
+    href: "/reconciliation",
     icon: GitCompare,
-    children: [
-      {
-        name: "Dữ liệu",
-        href: "/reconciliation",
-        icon: Database,
-      },
-      {
-        name: "So sánh",
-        href: "/reconciliation/compare",
-        icon: Upload,
-      },
-    ],
   },
   {
     name: "Nhiên liệu",
