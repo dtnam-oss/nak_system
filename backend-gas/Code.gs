@@ -1037,7 +1037,17 @@ function testAutoPricing() {
 
 const MIGRATION_OPTS = {
   BATCH_SIZE: 25, // Số lượng đơn xử lý mỗi lần chạy. Tăng lên 50 để nhanh hơn.
-  PROP_KEY: 'MIGRATION_LAST_ROW_INDEX' // Biến lưu vị trí dòng
+  PROP_KEY: 'MIGRATION_LAST_ROW_INDEX', // Biến lưu vị trí dòng
+
+  // ========== CẤU HÌNH LỌC THEO NGÀY ==========
+  // Chỉ import các chuyến có ngày_tao >= START_DATE
+  // Format: 'YYYY-MM-DD' hoặc null để import tất cả
+  START_DATE: '2026-01-01',  // ✅ Chỉ import từ 1/1/2026 trở đi
+
+  // ========== CẤU HÌNH DÒNG BẮT ĐẦU ==========
+  // Bắt đầu từ dòng cụ thể (bỏ qua dòng header = 1)
+  // Set null để sử dụng vị trí đã lưu hoặc bắt đầu từ đầu
+  MANUAL_START_ROW: null  // VD: 100 - bắt đầu từ dòng 100
 };
 
 /**
@@ -1056,6 +1066,70 @@ function manualCheckStatus() {
   const lastRow = parseInt(scriptProps.getProperty(MIGRATION_OPTS.PROP_KEY) || '1');
   Logger.log(`ℹ️ [STATUS] Hệ thống đang dừng ở dòng: ${lastRow}`);
   Logger.log(`ℹ️ [STATUS] Lần chạy tiếp theo sẽ xử lý từ dòng: ${lastRow + 1}`);
+
+  // Display filter config
+  if (MIGRATION_OPTS.START_DATE) {
+    Logger.log(`📅 [FILTER] Chỉ import từ ngày: ${MIGRATION_OPTS.START_DATE}`);
+  } else {
+    Logger.log(`📅 [FILTER] Import tất cả (không lọc theo ngày)`);
+  }
+
+  if (MIGRATION_OPTS.MANUAL_START_ROW) {
+    Logger.log(`📍 [START ROW] Manual start row: ${MIGRATION_OPTS.MANUAL_START_ROW}`);
+  }
+}
+
+/**
+ * 2.1. HÀM TIỆN ÍCH: Set ngày bắt đầu import
+ * @param {string} dateString - Ngày bắt đầu format YYYY-MM-DD, VD: '2025-01-01'
+ *
+ * @example
+ * setStartDate('2025-01-01')  // Chỉ import từ 1/1/2025
+ * setStartDate(null)          // Import tất cả
+ */
+function setStartDate(dateString) {
+  if (dateString === null) {
+    Logger.log(`✅ Đã tắt filter ngày. Sẽ import TẤT CẢ dữ liệu.`);
+    Logger.log(`⚠️  LƯU Ý: Bạn cần sửa MIGRATION_OPTS.START_DATE = null trong code.`);
+    return;
+  }
+
+  // Validate date format
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(dateString)) {
+    Logger.log(`❌ LỖI: Format ngày không đúng. Cần format: YYYY-MM-DD (VD: 2025-01-01)`);
+    return;
+  }
+
+  Logger.log(`✅ Đã set ngày bắt đầu: ${dateString}`);
+  Logger.log(`📋 Chỉ các chuyến có ngay_tao >= ${dateString} sẽ được import.`);
+  Logger.log(`⚠️  LƯU Ý: Bạn cần sửa MIGRATION_OPTS.START_DATE = '${dateString}' trong code.`);
+}
+
+/**
+ * 2.2. HÀM TIỆN ÍCH: Set dòng bắt đầu
+ * @param {number} rowNumber - Số dòng bắt đầu (từ 2 trở đi, 1 là header)
+ *
+ * @example
+ * setStartRow(100)  // Bắt đầu từ dòng 100
+ * setStartRow(null) // Sử dụng vị trí đã lưu
+ */
+function setStartRow(rowNumber) {
+  if (rowNumber === null) {
+    Logger.log(`✅ Sẽ sử dụng vị trí đã lưu hoặc bắt đầu từ dòng đầu tiên.`);
+    Logger.log(`⚠️  LƯU Ý: Bạn cần sửa MIGRATION_OPTS.MANUAL_START_ROW = null trong code.`);
+    return;
+  }
+
+  if (rowNumber < 2) {
+    Logger.log(`❌ LỖI: Số dòng phải >= 2 (dòng 1 là header)`);
+    return;
+  }
+
+  Logger.log(`✅ Đã set dòng bắt đầu: ${rowNumber}`);
+  Logger.log(`📋 Import sẽ bắt đầu từ dòng ${rowNumber}.`);
+  Logger.log(`⚠️  LƯU Ý: Bạn cần sửa MIGRATION_OPTS.MANUAL_START_ROW = ${rowNumber} trong code.`);
+  Logger.log(`⚠️  Nhớ chạy manualResetMigration() trước để áp dụng start row.`);
 }
 
 /**
@@ -1070,7 +1144,7 @@ function manualRunMigrationBatch() {
   // 1. Mở Sheet Master qua ID
   const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(config.SHEET_NAMES.MASTER);
-  
+
   if (!sheet) {
     Logger.log(`❌ LỖI: Không tìm thấy sheet "${config.SHEET_NAMES.MASTER}"`);
     return;
@@ -1078,6 +1152,13 @@ function manualRunMigrationBatch() {
 
   // 2. Xác định dòng bắt đầu
   let lastRowIndex = parseInt(scriptProps.getProperty(MIGRATION_OPTS.PROP_KEY) || '1');
+
+  // ✨ NEW: Override bằng MANUAL_START_ROW nếu được set
+  if (MIGRATION_OPTS.MANUAL_START_ROW !== null && lastRowIndex === 1) {
+    lastRowIndex = MIGRATION_OPTS.MANUAL_START_ROW - 1;
+    Logger.log(`📍 Sử dụng MANUAL_START_ROW: Bắt đầu từ dòng ${MIGRATION_OPTS.MANUAL_START_ROW}`);
+  }
+
   let startRow = lastRowIndex + 1;
   const totalRows = sheet.getLastRow();
 
@@ -1086,35 +1167,52 @@ function manualRunMigrationBatch() {
     return;
   }
 
-  // 3. Tìm cột ID
+  // 3. Tìm cột ID và cột ngày
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
   const idColIndex = getColumnIndex(headers, config.FOREIGN_KEY.MASTER_COLUMN);
+  const dateColIndex = getColumnIndex(headers, 'ngay_tao');
 
   if (idColIndex === -1) {
     Logger.log(`❌ Lỗi: Không tìm thấy cột ID "${config.FOREIGN_KEY.MASTER_COLUMN}"`);
     return;
   }
 
+  // ✨ NEW: Log filter config
+  if (MIGRATION_OPTS.START_DATE) {
+    Logger.log(`📅 Filter: Chỉ import chuyến từ ${MIGRATION_OPTS.START_DATE} trở đi`);
+  }
+
   // 4. Lấy dữ liệu Batch
   const numRows = Math.min(MIGRATION_OPTS.BATCH_SIZE, totalRows - startRow + 1);
   Logger.log(`🚀 BẮT ĐẦU BATCH: Xử lý từ dòng ${startRow} đến ${startRow + numRows - 1} (Tổng: ${totalRows})`);
-  
+
   const dataRange = sheet.getRange(startRow, 1, numRows, sheet.getLastColumn());
   const dataValues = dataRange.getValues();
 
   let success = 0;
   let skipped = 0;
   let errors = 0;
+  let filteredByDate = 0;
 
   // 5. Vòng lặp xử lý
   for (let i = 0; i < dataValues.length; i++) {
     const row = dataValues[i];
-    const tripId = row[idColIndex]; 
+    const tripId = row[idColIndex];
 
     // Kiểm tra ID rỗng
     if (!tripId || String(tripId).trim() === '') {
       skipped++;
       continue;
+    }
+
+    // ✨ NEW: Filter theo ngày nếu được cấu hình
+    if (MIGRATION_OPTS.START_DATE && dateColIndex !== -1) {
+      const rowDate = formatDate(row[dateColIndex]);
+
+      if (rowDate && rowDate < MIGRATION_OPTS.START_DATE) {
+        filteredByDate++;
+        continue; // Bỏ qua các chuyến trước ngày bắt đầu
+      }
     }
 
     try {
@@ -1145,8 +1243,11 @@ function manualRunMigrationBatch() {
   Logger.log(`- Thành công: ${success}`);
   Logger.log(`- Lỗi: ${errors}`);
   Logger.log(`- Bỏ qua (No ID): ${skipped}`);
+  if (filteredByDate > 0) {
+    Logger.log(`- Lọc theo ngày: ${filteredByDate} (trước ${MIGRATION_OPTS.START_DATE})`);
+  }
   Logger.log(`📍 Đã lưu vị trí dòng: ${nextRowIndex}`);
-  
+
   if (nextRowIndex < totalRows) {
     Logger.log(`👉 HÃY CHẠY LẠI HÀM 'manualRunMigrationBatch' ĐỂ TIẾP TỤC.`);
   } else {
