@@ -14,6 +14,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  List,
+  Route,
+  Clock,
+  Package,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -44,8 +48,29 @@ const navigation: NavigationItem[] = [
   },
   {
     name: "Đối soát",
-    href: "/reconciliation",
     icon: GitCompare,
+    children: [
+      {
+        name: "Tổng hợp",
+        href: "/reconciliation",
+        icon: List,
+      },
+      {
+        name: "J&T - Theo Tuyến",
+        href: "/reconciliation/jnt-route",
+        icon: Route,
+      },
+      {
+        name: "J&T - Theo Ca",
+        href: "/reconciliation/jnt-shift",
+        icon: Clock,
+      },
+      {
+        name: "GHN",
+        href: "/reconciliation/ghn",
+        icon: Package,
+      },
+    ],
   },
   {
     name: "Nhiên liệu",
