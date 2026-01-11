@@ -9,7 +9,10 @@ import { useReconciliationData } from "@/hooks/use-reconciliation-data"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function GHNReconciliationPage() {
-  const [filters, setFilters] = useState<ReconciliationFilters>({})
+  // Pre-filter for GHN customer
+  const [filters, setFilters] = useState<ReconciliationFilters>({
+    khachHang: "GHN"
+  })
 
   // Fetch data from API
   const { data, isLoading, error } = useReconciliationData({ filters })
@@ -22,16 +25,9 @@ export default function GHNReconciliationPage() {
         { label: "GHN" },
       ]}
     >
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">GHN - Bảng Kê</h1>
-          <p className="text-muted-foreground mt-2">
-            Bảng kê chi tiết từng điểm trong lộ trình cho khách hàng GHN
-          </p>
-        </div>
-
-        {/* Loading State */}
-        {isLoading && (
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-4">
           <Card className="animate-pulse">
             <CardContent className="p-6">
               <div className="space-y-3">
@@ -41,37 +37,37 @@ export default function GHNReconciliationPage() {
               </div>
             </CardContent>
           </Card>
-        )}
+        </div>
+      )}
 
-        {/* Error State */}
-        {error && (
-          <Card className="border-destructive">
-            <CardContent className="pt-6">
-              <p className="text-destructive">
-                Lỗi khi tải dữ liệu: {error.message}
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Vui lòng kiểm tra kết nối hoặc thử lại sau
-              </p>
-            </CardContent>
-          </Card>
-        )}
+      {/* Error State */}
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <p className="text-destructive">
+              Lỗi khi tải dữ liệu: {error.message}
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Vui lòng kiểm tra kết nối hoặc thử lại sau
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Data Display */}
-        {data && (
-          <div className="space-y-4">
-            {/* Toolbar with filters */}
-            <ReconciliationToolbar
-              filters={filters}
-              onFiltersChange={setFilters}
-              totalRecords={data.total}
-            />
+      {/* Data Display */}
+      {data && (
+        <div className="space-y-4">
+          {/* Toolbar with filters */}
+          <ReconciliationToolbar
+            filters={filters}
+            onFiltersChange={setFilters}
+            totalRecords={data.total}
+          />
 
-            {/* GHN Table */}
-            <GHNTable data={data.records} />
-          </div>
-        )}
-      </div>
+          {/* GHN Table */}
+          <GHNTable data={data.records} />
+        </div>
+      )}
     </DashboardLayout>
   )
 }

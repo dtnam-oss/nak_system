@@ -9,7 +9,11 @@ import { useReconciliationData } from "@/hooks/use-reconciliation-data"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function JnTShiftReconciliationPage() {
-  const [filters, setFilters] = useState<ReconciliationFilters>({})
+  // Pre-filter for J&T customers and trip type "Theo ca"
+  const [filters, setFilters] = useState<ReconciliationFilters>({
+    khachHang: "J&T,JNT MIỀN TRUNG 2",
+    loaiChuyen: "Theo ca"
+  })
 
   // Fetch data from API
   const { data, isLoading, error } = useReconciliationData({ filters })
@@ -22,16 +26,9 @@ export default function JnTShiftReconciliationPage() {
         { label: "J&T - Theo Ca" },
       ]}
     >
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">J&T - Báo Cáo Theo Ca</h1>
-          <p className="text-muted-foreground mt-2">
-            Báo cáo đối soát theo ca làm việc với thông tin chi tiết lộ trình
-          </p>
-        </div>
-
-        {/* Loading State */}
-        {isLoading && (
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-4">
           <Card className="animate-pulse">
             <CardContent className="p-6">
               <div className="space-y-3">
@@ -41,37 +38,37 @@ export default function JnTShiftReconciliationPage() {
               </div>
             </CardContent>
           </Card>
-        )}
+        </div>
+      )}
 
-        {/* Error State */}
-        {error && (
-          <Card className="border-destructive">
-            <CardContent className="pt-6">
-              <p className="text-destructive">
-                Lỗi khi tải dữ liệu: {error.message}
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Vui lòng kiểm tra kết nối hoặc thử lại sau
-              </p>
-            </CardContent>
-          </Card>
-        )}
+      {/* Error State */}
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <p className="text-destructive">
+              Lỗi khi tải dữ liệu: {error.message}
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Vui lòng kiểm tra kết nối hoặc thử lại sau
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Data Display */}
-        {data && (
-          <div className="space-y-4">
-            {/* Toolbar with filters */}
-            <ReconciliationToolbar
-              filters={filters}
-              onFiltersChange={setFilters}
-              totalRecords={data.total}
-            />
+      {/* Data Display */}
+      {data && (
+        <div className="space-y-4">
+          {/* Toolbar with filters */}
+          <ReconciliationToolbar
+            filters={filters}
+            onFiltersChange={setFilters}
+            totalRecords={data.total}
+          />
 
-            {/* J&T Shift Table */}
-            <JnTShiftTable data={data.records} />
-          </div>
-        )}
-      </div>
+          {/* J&T Shift Table */}
+          <JnTShiftTable data={data.records} />
+        </div>
+      )}
     </DashboardLayout>
   )
 }

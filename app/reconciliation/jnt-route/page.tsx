@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { ReconciliationToolbar } from "@/components/reconciliation/toolbar"
 import { JnTRouteTable } from "@/components/reconciliation/jnt-route-table"
@@ -9,7 +9,11 @@ import { useReconciliationData } from "@/hooks/use-reconciliation-data"
 import { Card, CardContent } from "@/components/ui/card"
 
 export default function JnTRouteReconciliationPage() {
-  const [filters, setFilters] = useState<ReconciliationFilters>({})
+  // Pre-filter for J&T customers and trip type "Theo tuyến"
+  const [filters, setFilters] = useState<ReconciliationFilters>({
+    khachHang: "J&T,JNT MIỀN TRUNG 2",
+    loaiChuyen: "Theo tuyến"
+  })
 
   // Fetch data from API
   const { data, isLoading, error } = useReconciliationData({ filters })
@@ -22,16 +26,9 @@ export default function JnTRouteReconciliationPage() {
         { label: "J&T - Theo Tuyến" },
       ]}
     >
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">J&T - Báo Cáo Theo Tuyến</h1>
-          <p className="text-muted-foreground mt-2">
-            Báo cáo đối soát theo tuyến với tem chiều đi và tem chiều về
-          </p>
-        </div>
-
-        {/* Loading State */}
-        {isLoading && (
+      {/* Loading State */}
+      {isLoading && (
+        <div className="space-y-4">
           <Card className="animate-pulse">
             <CardContent className="p-6">
               <div className="space-y-3">
@@ -41,37 +38,37 @@ export default function JnTRouteReconciliationPage() {
               </div>
             </CardContent>
           </Card>
-        )}
+        </div>
+      )}
 
-        {/* Error State */}
-        {error && (
-          <Card className="border-destructive">
-            <CardContent className="pt-6">
-              <p className="text-destructive">
-                Lỗi khi tải dữ liệu: {error.message}
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Vui lòng kiểm tra kết nối hoặc thử lại sau
-              </p>
-            </CardContent>
-          </Card>
-        )}
+      {/* Error State */}
+      {error && (
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <p className="text-destructive">
+              Lỗi khi tải dữ liệu: {error.message}
+            </p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Vui lòng kiểm tra kết nối hoặc thử lại sau
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Data Display */}
-        {data && (
-          <div className="space-y-4">
-            {/* Toolbar with filters */}
-            <ReconciliationToolbar
-              filters={filters}
-              onFiltersChange={setFilters}
-              totalRecords={data.total}
-            />
+      {/* Data Display */}
+      {data && (
+        <div className="space-y-4">
+          {/* Toolbar with filters */}
+          <ReconciliationToolbar
+            filters={filters}
+            onFiltersChange={setFilters}
+            totalRecords={data.total}
+          />
 
-            {/* J&T Route Table */}
-            <JnTRouteTable data={data.records} />
-          </div>
-        )}
-      </div>
+          {/* J&T Route Table */}
+          <JnTRouteTable data={data.records} />
+        </div>
+      )}
     </DashboardLayout>
   )
 }

@@ -45,10 +45,16 @@ export function JnTRouteTable({ data }: JnTRouteTableProps) {
                   // Parse chiTietLoTrinh from data
                   const chiTietLoTrinh = record.chiTietLoTrinh || []
 
-                  // Extract data following the same logic as export template
+                  // Extract data from chiTietLoTrinh (details column)
                   const licensePlate = chiTietLoTrinh[0]?.bienKiemSoat || ''
-                  const routeName = record.tenTuyen || ''
+
+                  // Use loTrinh from chiTietLoTrinh (not tenTuyen from record)
+                  const routeName = chiTietLoTrinh[0]?.loTrinh || ''
+
+                  // Tem chiều đi: first maTuyen
                   const stampOut = chiTietLoTrinh[0]?.maTuyen || ''
+
+                  // Tem chiều về: last maTuyen
                   const stampIn = chiTietLoTrinh.length > 0
                     ? chiTietLoTrinh[chiTietLoTrinh.length - 1]?.maTuyen || ''
                     : ''

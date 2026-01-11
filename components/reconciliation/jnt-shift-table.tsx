@@ -64,27 +64,24 @@ export function JnTShiftTable({ data }: JnTShiftTableProps) {
                     .filter(value => value)
                   const route = routes.length > 0 ? routes : [record.tenTuyen || '']
 
-                  // Volumes: all taiTrongTinhPhi joined by newline
-                  const volumes = chiTietLoTrinh
+                  // Volumes: get unique values only
+                  const volumesUnique = chiTietLoTrinh
                     .map(item => item.taiTrongTinhPhi)
-                    .filter(value => value !== null && value !== undefined)
+                    .filter((value, index, self) =>
+                      value !== null && value !== undefined && self.indexOf(value) === index
+                    )
+                  const volume = volumesUnique.length > 0 ? volumesUnique[0] : ''
 
-                  // Shift types: all loaiCa values
-                  const shiftTypes = chiTietLoTrinh
+                  // Shift types: get unique values only
+                  const shiftTypesUnique = chiTietLoTrinh
                     .map(item => {
                       // Try to get loaiCa from the item, might be in different places
                       return (item as any).loaiCa || ''
                     })
-                    .filter(value => value)
-
-                  // Calculate row height based on max items
-                  const maxLines = Math.max(
-                    stampCodes.length,
-                    routes.length,
-                    volumes.length,
-                    shiftTypes.length,
-                    1
-                  )
+                    .filter((value, index, self) =>
+                      value && self.indexOf(value) === index
+                    )
+                  const shiftType = shiftTypesUnique.length > 0 ? shiftTypesUnique[0] : ''
 
                   return (
                     <TableRow key={record.id} className="hover:bg-muted/30">
@@ -106,20 +103,8 @@ export function JnTShiftTable({ data }: JnTShiftTableProps) {
                           ))}
                         </div>
                       </TableCell>
-                      <TableCell className="text-center align-top">
-                        <div className="space-y-1">
-                          {volumes.map((vol, idx) => (
-                            <div key={idx}>{vol}</div>
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center align-top">
-                        <div className="space-y-1">
-                          {shiftTypes.map((type, idx) => (
-                            <div key={idx}>{type}</div>
-                          ))}
-                        </div>
-                      </TableCell>
+                      <TableCell className="text-center align-top">{volume}</TableCell>
+                      <TableCell className="text-center align-top">{shiftType}</TableCell>
                     </TableRow>
                   )
                 })
