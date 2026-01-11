@@ -14,10 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronDown,
-  Database,
-  Upload,
-  List,
-  FileSearch,
+  type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/components/sidebar-context"
@@ -26,11 +23,11 @@ import { Button } from "@/components/ui/button"
 interface NavigationItem {
   name: string
   href?: string
-  icon: any
+  icon: LucideIcon
   children?: {
     name: string
     href: string
-    icon: any
+    icon: LucideIcon
   }[]
 }
 
@@ -47,19 +44,8 @@ const navigation: NavigationItem[] = [
   },
   {
     name: "Đối soát",
+    href: "/reconciliation",
     icon: GitCompare,
-    children: [
-      {
-        name: "Danh sách đối soát",
-        href: "/reconciliation",
-        icon: List,
-      },
-      {
-        name: "Import & So sánh",
-        href: "/reconciliation/upload",
-        icon: FileSearch,
-      },
-    ],
   },
   {
     name: "Nhiên liệu",

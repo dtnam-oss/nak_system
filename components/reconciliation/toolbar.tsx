@@ -1,16 +1,12 @@
 "use client"
 
-import * as React from "react"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import { MultiSelect } from "@/components/ui/multi-select"
 import { ReconciliationFilters } from "@/types/reconciliation"
-import { Search, X, Download, Loader2, Filter, Upload } from "lucide-react"
+import { Search, X, Download, Loader2, Filter } from "lucide-react"
 import { DateRangePickerInput } from "@/components/ui/date-range-picker-input"
-import { ImportDialog } from "@/components/reconciliation/import-dialog"
 import { DateRange } from "react-day-picker"
 import { format } from "date-fns"
 import {
@@ -28,12 +24,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
 import { useDebounce } from "@/hooks/use-debounce"
 
 interface ReconciliationToolbarProps {
@@ -47,9 +37,6 @@ export function ReconciliationToolbar({
   onFiltersChange,
   totalRecords = 0,
 }: ReconciliationToolbarProps) {
-  // Import dialog state
-  const [importDialogOpen, setImportDialogOpen] = useState(false)
-
   // Local state for pending filters (not yet applied)
   const [pendingFilters, setPendingFilters] = useState<ReconciliationFilters>({
     fromDate: filters.fromDate,
@@ -248,8 +235,7 @@ export function ReconciliationToolbar({
   }
 
   return (
-    <TooltipProvider>
-      <div className="mb-4 space-y-3">
+    <div className="mb-4 space-y-3">
         {/* Single Row Compact Toolbar with Horizontal Scroll */}
         <div className="w-full overflow-x-auto">
           <div className="flex flex-row items-center gap-2 w-full flex-nowrap min-w-max">
@@ -345,24 +331,6 @@ export function ReconciliationToolbar({
               </Button>
             )}
 
-            {/* Import Button */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 w-auto text-xs whitespace-nowrap shrink-0"
-                  onClick={() => setImportDialogOpen(true)}
-                >
-                  <Upload className="h-3.5 w-3.5 lg:mr-2" />
-                  <span className="hidden lg:inline">Import Đối Soát</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Upload file Excel đối soát từ khách hàng</p>
-              </TooltipContent>
-            </Tooltip>
-
             {/* Export Dropdown Menu - Auto Width */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -401,20 +369,13 @@ export function ReconciliationToolbar({
           </div>
         </div>
 
-        {/* Pending Changes Indicator */}
-        {hasPendingChanges && (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Filter className="h-3 w-3" />
-            <span>Có thay đổi chưa áp dụng. Click "Áp dụng" để lọc dữ liệu.</span>
-          </div>
-        )}
-      </div>
-
-      {/* Import Dialog */}
-      <ImportDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-      />
-    </TooltipProvider>
+      {/* Pending Changes Indicator */}
+      {hasPendingChanges && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Filter className="h-3 w-3" />
+          <span>Có thay đổi chưa áp dụng. Click "Áp dụng" để lọc dữ liệu.</span>
+        </div>
+      )}
+    </div>
   )
 }
