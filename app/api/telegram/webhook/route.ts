@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { telegramBot } from '../services/telegram-bot';
-import { handleMessage } from '../handlers/message-handler';
-import { handleCallbackQuery } from '../handlers/callback-handler';
-import { validateConfig } from '../config/topics';
+import { telegramBot } from '@/lib/telegram-old/services/telegram-bot';
+import { handleMessage } from '@/lib/telegram-old/handlers/message-handler';
+import { handleCallbackQuery } from '@/lib/telegram-old/handlers/callback-handler';
+import { validateConfig } from '@/lib/telegram-old/config/topics';
 
 // Force Node.js runtime (telegraf doesn't work in Edge runtime)
 export const runtime = 'nodejs';

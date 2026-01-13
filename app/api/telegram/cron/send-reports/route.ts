@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { telegramBot } from '../../services/telegram-bot';
-import { TELEGRAM_TOPICS } from '../../config/topics';
+import { telegramBot } from '@/lib/telegram-old/services/telegram-bot';
+import { TELEGRAM_TOPICS } from '@/lib/telegram-old/config/topics';
 import { sql } from '@vercel/postgres';
 
 // Force Node.js runtime (telegraf doesn't work in Edge runtime)
@@ -13,7 +13,7 @@ import {
   formatEveningDoiTac,
   formatMorningKhachHang,
   formatEveningKhachHang,
-} from '../../formatters/report-formatter';
+} from '@/lib/telegram-old/formatters/report-formatter';
 
 /**
  * Cron endpoint to send scheduled reports
