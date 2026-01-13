@@ -786,6 +786,155 @@ function sendToBackendAPI(payload) {
 
 
 // =============================================================================
+// DEBUG FUNCTIONS - Để troubleshoot issues
+// =============================================================================
+
+/**
+ * Debug: Check sheet connection và data
+ */
+function debugSheetConnection() {
+  const config = getConfig();
+  Logger.log('=== DEBUG SHEET CONNECTION ===');
+  Logger.log('Spreadsheet ID: ' + config.SPREADSHEET_ID);
+  Logger.log('Sheet Name: ' + config.SHEET_NAMES.EMPLOYEES);
+  
+  try {
+    const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+    Logger.log('✅ Spreadsheet opened successfully');
+    
+    const sheet = ss.getSheetByName(config.SHEET_NAMES.EMPLOYEES);
+    if (!sheet) {
+      Logger.log('❌ Sheet "' + config.SHEET_NAMES.EMPLOYEES + '" NOT FOUND');
+      Logger.log('Available sheets:');
+      ss.getSheets().forEach(s => Logger.log('  - ' + s.getName()));
+      return;
+    }
+    
+    Logger.log('✅ Sheet found: ' + sheet.getName());
+    
+    const values = sheet.getDataRange().getValues();
+    Logger.log('Total rows: ' + values.length);
+    
+    if (values.length > 0) {
+      Logger.log('\nHeaders (first 10 columns):');
+      Logger.log(values[0].slice(0, 10));
+      
+      if (values.length > 1) {
+        Logger.log('\nFirst data row (first 10 columns):');
+        Logger.log(values[1].slice(0, 10));
+        Logger.log('\nFirst employee code: ' + values[1][0]);
+      }
+    }
+    
+    Logger.log('\n✅ Sheet connection OK');
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error.message);
+    Logger.log(error.stack);
+  }
+}
+
+/**
+ * Debug: Test getEmployeeData với logging chi tiết
+ */
+function debugGetEmployeeData() {
+  const employeeCode = 'NV001';  // ← SỬA MÃ NÀY
+  
+  Logger.log('=== DEBUG GET EMPLOYEE DATA ===');
+  Logger.log('Looking for employee code: ' + employeeCode);
+  
+  try {
+    const config = getConfig();
+    const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(config.SHEET_NAMES.EMPLOYEES);
+    
+    if (!sheet) {
+      Logger.log('❌ Sheet not found');
+      return;
+    }
+    
+    const values = sheet.getDataRange().getValues();
+    const headers = values[0];
+    
+    Logger.log('Headers: ' + headers.slice(0, 5).join(', ') + '...');
+    
+    // Find column index for ma_nhan_vien
+    const empCodeIndex = getColumnIndex(headers, 'ma_nhan_vien');
+    Logger.log('Employee code column index: ' + empCodeIndex);
+    
+    if (empCodeIndex === -1) {
+      Logger.log('❌ Column "ma_nhan_vien" not found in headers');
+      Logger.log('Available columns: ' + headers.join(', '));
+      return;
+    }
+    
+    // Search for employee
+    Logger.log('\nSearching through ' + (values.length - 1) + ' rows...');
+    
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      const currentCode = String(row[empCodeIndex]).trim();
+      
+      if (i <= 3) {
+        Logger.log('Row ' + i + ' code: "' + currentCode + '"');
+      }
+      
+      if (currentCode === String(employeeCode).trim()) {
+        Logger.log('\n✅ Found employee at row ' + (i + 1));
+        const employee = mapEmployeeRow(row, headers);
+        Logger.log('Mapped data:');
+        Logger.log(JSON.stringify(employee, null, 2));
+        return;
+      }
+    }
+    
+    Logger.log('\n❌ Employee code "' + employeeCode + '" not found');
+    Logger.log('Try one of these codes instead:');
+    for (let i = 1; i <= Math.min(5, values.length - 1); i++) {
+      Logger.log('  - ' + String(values[i][empCodeIndex]).trim());
+    }
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error.message);
+    Logger.log(error.stack);
+  }
+}
+
+/**
+ * Debug: Test build payload
+ */
+function debugBuildPayload() {
+  const employeeCode = 'NV001';  // ← SỬA MÃ NÀY
+  
+  Logger.log('=== DEBUG BUILD PAYLOAD ===');
+  Logger.log('Employee code: ' + employeeCode);
+  
+  try {
+    const config = getConfig();
+    Logger.log('Config loaded');
+    
+    const employeeData = getEmployeeData(employeeCode);
+    if (!employeeData) {
+      Logger.log('❌ getEmployeeData returned null');
+      return;
+    }
+    
+    Logger.log('✅ Employee data retrieved');
+    Logger.log('Employee: ' + employeeData.hoVaTen);
+    
+    const payload = buildEmployeeFullPayload(employeeCode, 'Add');
+    
+    Logger.log('\n✅ Payload created successfully:');
+    Logger.log(JSON.stringify(payload, null, 2));
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error.message);
+    Logger.log(error.stack);
+  }
+}
+
+
+// =============================================================================
 // TEST FUNCTIONS - Chỉ dùng để test trong GAS Editor
 // =============================================================================
 
@@ -801,16 +950,28 @@ function testSyncEmployeeAdd() {
   Logger.log('========================================');
   Logger.log('Testing Employee Sync - ADD');
   Logger.log('========================================');
+  Logger.log('Employee Code: ' + employeeCode);
+  Logger.log('Event Type: ' + eventType);
+  Logger.log('');
   
-  const result = syncEmployeeToBackend(employeeCode, eventType);
-  
-  Logger.log('\nResult:');
-  Logger.log(JSON.stringify(result, null, 2));
-  
-  if (result.success) {
-    Logger.log('\n✅ TEST PASSED');
-  } else {
-    Logger.log('\n❌ TEST FAILED: ' + result.message);
+  try {
+    const result = syncEmployeeToBackend(employeeCode, eventType);
+    
+    Logger.log('\n========================================');
+    Logger.log('RESULT:');
+    Logger.log('========================================');
+    Logger.log(JSON.stringify(result, null, 2));
+    
+    if (result.success) {
+      Logger.log('\n✅ TEST PASSED');
+    } else {
+      Logger.log('\n❌ TEST FAILED');
+      Logger.log('Error: ' + result.message);
+    }
+  } catch (error) {
+    Logger.log('\n❌ EXCEPTION THROWN');
+    Logger.log('Error: ' + error.message);
+    Logger.log('Stack: ' + error.stack);
   }
 }
 
