@@ -786,6 +786,142 @@ function sendToBackendAPI(payload) {
 
 
 // =============================================================================
+// TEST FUNCTIONS - Chỉ dùng để test trong GAS Editor
+// =============================================================================
+
+/**
+ * Test function để test syncEmployeeToBackend
+ * Run function này trong GAS Editor thay vì run syncEmployeeToBackend trực tiếp
+ */
+function testSyncEmployeeAdd() {
+  // IMPORTANT: Thay 'NV001' bằng mã nhân viên thực tế trong Google Sheets
+  const employeeCode = 'NV001';  // ← SỬA MÃ NÀY
+  const eventType = 'Add';
+  
+  Logger.log('========================================');
+  Logger.log('Testing Employee Sync - ADD');
+  Logger.log('========================================');
+  
+  const result = syncEmployeeToBackend(employeeCode, eventType);
+  
+  Logger.log('\nResult:');
+  Logger.log(JSON.stringify(result, null, 2));
+  
+  if (result.success) {
+    Logger.log('\n✅ TEST PASSED');
+  } else {
+    Logger.log('\n❌ TEST FAILED: ' + result.message);
+  }
+}
+
+/**
+ * Test function để test Edit
+ */
+function testSyncEmployeeEdit() {
+  const employeeCode = 'NV001';  // ← SỬA MÃ NÀY
+  const eventType = 'Edit';
+  
+  Logger.log('========================================');
+  Logger.log('Testing Employee Sync - EDIT');
+  Logger.log('========================================');
+  
+  const result = syncEmployeeToBackend(employeeCode, eventType);
+  
+  Logger.log('\nResult:');
+  Logger.log(JSON.stringify(result, null, 2));
+  
+  if (result.success) {
+    Logger.log('\n✅ TEST PASSED');
+  } else {
+    Logger.log('\n❌ TEST FAILED: ' + result.message);
+  }
+}
+
+/**
+ * Test function để test Delete
+ */
+function testSyncEmployeeDelete() {
+  const employeeCode = 'NV001';  // ← SỬA MÃ NÀY
+  const eventType = 'Delete';
+  
+  Logger.log('========================================');
+  Logger.log('Testing Employee Sync - DELETE');
+  Logger.log('========================================');
+  
+  const result = syncEmployeeToBackend(employeeCode, eventType);
+  
+  Logger.log('\nResult:');
+  Logger.log(JSON.stringify(result, null, 2));
+  
+  if (result.success) {
+    Logger.log('\n✅ TEST PASSED');
+  } else {
+    Logger.log('\n❌ TEST FAILED: ' + result.message);
+  }
+}
+
+/**
+ * Test getNhanVien function
+ */
+function testGetNhanVien() {
+  Logger.log('========================================');
+  Logger.log('Testing getNhanVien');
+  Logger.log('========================================');
+  
+  try {
+    const employees = getNhanVien();
+    
+    Logger.log(`\n✅ Found ${employees.length} employees`);
+    
+    if (employees.length > 0) {
+      Logger.log('\nFirst employee:');
+      Logger.log(JSON.stringify(employees[0], null, 2));
+      
+      Logger.log('\nAll employee codes:');
+      employees.forEach(emp => {
+        Logger.log(`  - ${emp.maNhanVien}: ${emp.hoVaTen}`);
+      });
+    }
+    
+    Logger.log('\n✅ TEST PASSED');
+    
+  } catch (error) {
+    Logger.log('\n❌ TEST FAILED: ' + error.message);
+    Logger.log(error.stack);
+  }
+}
+
+/**
+ * Test getEmployeeData cho 1 nhân viên cụ thể
+ */
+function testGetEmployeeData() {
+  const employeeCode = 'NV001';  // ← SỬA MÃ NÀY
+  
+  Logger.log('========================================');
+  Logger.log('Testing getEmployeeData');
+  Logger.log(`Employee Code: ${employeeCode}`);
+  Logger.log('========================================');
+  
+  try {
+    const employee = getEmployeeData(employeeCode);
+    
+    if (employee) {
+      Logger.log('\n✅ Employee found:');
+      Logger.log(JSON.stringify(employee, null, 2));
+      Logger.log('\n✅ TEST PASSED');
+    } else {
+      Logger.log(`\n❌ Employee not found: ${employeeCode}`);
+      Logger.log('Make sure the employee code exists in Google Sheets');
+    }
+    
+  } catch (error) {
+    Logger.log('\n❌ TEST FAILED: ' + error.message);
+    Logger.log(error.stack);
+  }
+}
+
+
+// =============================================================================
 // LOGGING UTILITIES
 // =============================================================================
 
