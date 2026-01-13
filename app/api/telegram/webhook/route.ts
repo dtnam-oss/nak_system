@@ -4,6 +4,10 @@ import { handleMessage } from '../handlers/message-handler';
 import { handleCallbackQuery } from '../handlers/callback-handler';
 import { validateConfig } from '../config/topics';
 
+// Force Node.js runtime (telegraf doesn't work in Edge runtime)
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 /**
  * Telegram Webhook Handler
  * Receives updates from Telegram and processes them

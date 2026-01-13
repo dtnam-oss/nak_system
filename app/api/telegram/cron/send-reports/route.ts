@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { telegramBot } from '../../services/telegram-bot';
 import { TELEGRAM_TOPICS } from '../../config/topics';
+
+// Force Node.js runtime (telegraf doesn't work in Edge runtime)
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import {
   formatMorningKetQuaXuLy,
   formatEveningKetQuaXuLy,
