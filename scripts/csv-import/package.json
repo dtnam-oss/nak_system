@@ -1,0 +1,29 @@
+{
+  "name": "csv-import",
+  "version": "1.0.0",
+  "description": "CSV Bulk Import Tool for NAK Logistics System",
+  "main": "transform-csv.ts",
+  "scripts": {
+    "transform": "tsx transform-csv.ts transform",
+    "import": "tsx transform-csv.ts import",
+    "validate": "tsx transform-csv.ts validate",
+    "build": "tsc",
+    "dev": "tsx transform-csv.ts"
+  },
+  "keywords": [
+    "csv",
+    "import",
+    "postgres",
+    "bulk"
+  ],
+  "author": "NAK Logistics Team",
+  "license": "MIT",
+  "dependencies": {
+    "postgres": "^3.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.6",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}
