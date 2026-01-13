@@ -11,7 +11,11 @@
  * - TELEGRAM_WEBHOOK_URL in .env.local
  */
 
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load .env.local
+config({ path: resolve(process.cwd(), '.env.local') });
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const WEBHOOK_URL = process.env.TELEGRAM_WEBHOOK_URL;

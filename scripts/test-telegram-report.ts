@@ -11,7 +11,11 @@
  *   npx tsx scripts/test-telegram-report.ts evening
  */
 
-import 'dotenv/config';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Load .env.local
+config({ path: resolve(process.cwd(), '.env.local') });
 
 const APP_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 const CRON_SECRET = process.env.CRON_SECRET || 'your-secret-token';
