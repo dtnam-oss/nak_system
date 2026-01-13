@@ -167,6 +167,110 @@ function syncTripToBackend(tripId, eventType) {
   }
 }
 
+/**
+ * Hàm đồng bộ chi tiết lộ trình (dùng cho table chi_tiet_chuyen_di)
+ *
+ * @param {string} detailId - ID của chi tiết lộ trình (từ cột Id)
+ * @param {string} tripId - Mã chuyến đi (ma_chuyen_di) - cần cho Add/Edit
+ * @param {string} eventType - Loại sự kiện: 'Add', 'Edit', hoặc 'Delete'
+ * @returns {Object} Response từ API hoặc error message
+ *
+ * @example
+ * // Gọi từ AppSheet Bot (table chi_tiet_chuyen_di):
+ *
+ * // DELETE event:
+ * syncTripDetailToBackend([_THISROW_BEFORE].[Id], [_THISROW_BEFORE].[ma_chuyen_di], "Delete")
+ *
+ * // ADD event:
+ * syncTripDetailToBackend([Id], [ma_chuyen_di], "Add")
+ *
+ * // EDIT event:
+ * syncTripDetailToBackend([Id], [ma_chuyen_di], "Edit")
+ */
+function syncTripDetailToBackend(detailId, tripId, eventType) {
+  const config = getConfig();
+
+  try {
+    logInfo(`========== START TRIP DETAIL SYNC ==========`);
+    logInfo(`Detail ID: ${detailId}`);
+    logInfo(`Trip ID: ${tripId}`);
+    logInfo(`Event Type: ${eventType}`);
+
+    // Validate inputs
+    if (!detailId) {
+      throw new Error('detailId is required');
+    }
+
+    if (!eventType) {
+      throw new Error('eventType is required');
+    }
+
+    // Validate event type
+    const validEvents = Object.values(config.EVENTS);
+    if (!validEvents.includes(eventType)) {
+      throw new Error(`Invalid eventType: ${eventType}. Must be one of: ${validEvents.join(', ')}`);
+    }
+
+    let payload;
+
+    if (eventType === config.EVENTS.DELETE) {
+      // DELETE: Chỉ cần detailId
+      payload = {
+        Action: 'TripDetail_Delete',
+        detailId: detailId
+      };
+      logInfo('DELETE event - Sending detailId only');
+
+    } else {
+      // ADD/EDIT: Cần đọc toàn bộ chuyến đi để tính lại giá
+      if (!tripId) {
+        throw new Error('tripId is required for Add/Edit events');
+      }
+
+      // Đọc lại toàn bộ chuyến đi (vì cần tính lại tổng)
+      payload = buildFullPayload(tripId, 'Edit'); // Luôn dùng Edit để update
+
+      // Thêm flag để Backend biết đây là update từ detail
+      payload.Action = 'TripDetail_Upsert';
+      payload.triggerDetailId = detailId; // Để Backend biết detail nào trigger
+
+      logInfo('ADD/EDIT event - Full trip payload with updated details');
+    }
+
+    // Log payload (verbose mode)
+    if (config.LOGGING.VERBOSE) {
+      logInfo('Payload JSON:');
+      logInfo(JSON.stringify(payload, null, 2));
+    }
+
+    // Send to Backend API
+    const response = sendToBackendAPI(payload);
+
+    logInfo(`========== TRIP DETAIL SYNC SUCCESS ==========`);
+    return {
+      success: true,
+      message: 'Trip detail synchronized successfully',
+      detailId: detailId,
+      tripId: tripId,
+      eventType: eventType,
+      response: response
+    };
+
+  } catch (error) {
+    logError(`========== TRIP DETAIL SYNC FAILED ==========`);
+    logError(`Error: ${error.message}`);
+    logError(`Stack: ${error.stack}`);
+
+    return {
+      success: false,
+      message: error.message,
+      detailId: detailId,
+      tripId: tripId,
+      eventType: eventType
+    };
+  }
+}
+
 
 // =============================================================================
 // PAYLOAD BUILDERS
@@ -3250,4 +3354,119 @@ function importEmployeesBatch() {
     Logger.log('❌ Batch import failed: ' + error.message);
     Logger.log(error.stack);
   }
+}
+
+// =============================================================================
+// TEST FUNCTIONS - TRIP DETAIL SYNC
+// =============================================================================
+
+/**
+ * Test xóa 1 detail từ chuyến đi
+ * QUAN TRỌNG: Thay đổi giá trị detailId và tripId trước khi chạy
+ */
+function testDeleteTripDetail() {
+  // ⚠️  THAY ĐỔI GIÁ TRỊ NÀY
+  const detailId = 'DETAIL-001';           // ← SỬA: ID của detail cần xóa (từ cột Id)
+  const tripId = 'NAKabc123';              // ← SỬA: Mã chuyến đi (optional cho delete)
+
+  Logger.log('========================================');
+  Logger.log('🧪 Testing Trip Detail Delete');
+  Logger.log('========================================');
+  Logger.log(`Detail ID: ${detailId}`);
+  Logger.log(`Trip ID: ${tripId}`);
+  Logger.log('');
+
+  const result = syncTripDetailToBackend(detailId, tripId, 'Delete');
+
+  Logger.log('\n📊 Result:');
+  Logger.log(JSON.stringify(result, null, 2));
+
+  if (result.success) {
+    Logger.log('\n✅ TEST PASSED - Detail deleted, trip intact');
+  } else {
+    Logger.log('\n❌ TEST FAILED: ' + result.message);
+  }
+}
+
+/**
+ * Test thêm hoặc sửa 1 detail
+ * QUAN TRỌNG: Thay đổi giá trị detailId và tripId trước khi chạy
+ */
+function testUpsertTripDetail() {
+  // ⚠️  THAY ĐỔI GIÁ TRỊ NÀY
+  const detailId = 'DETAIL-001';           // ← SỬA: ID của detail
+  const tripId = 'NAKabc123';              // ← SỬA: Mã chuyến đi (REQUIRED)
+
+  Logger.log('========================================');
+  Logger.log('🧪 Testing Trip Detail Add/Edit');
+  Logger.log('========================================');
+  Logger.log(`Detail ID: ${detailId}`);
+  Logger.log(`Trip ID: ${tripId}`);
+  Logger.log('');
+
+  const result = syncTripDetailToBackend(detailId, tripId, 'Add');
+
+  Logger.log('\n📊 Result:');
+  Logger.log(JSON.stringify(result, null, 2));
+
+  if (result.success) {
+    Logger.log('\n✅ TEST PASSED - Detail upserted, totals recalculated');
+  } else {
+    Logger.log('\n❌ TEST FAILED: ' + result.message);
+  }
+}
+
+/**
+ * Test case thực tế: Tìm 1 detail có thật từ Google Sheets và test delete
+ */
+function testDeleteRealDetail() {
+  Logger.log('========================================');
+  Logger.log('🔍 Finding real detail to test delete');
+  Logger.log('========================================');
+
+  const config = getConfig();
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(config.SHEET_NAMES.DETAIL);
+
+  if (!sheet) {
+    Logger.log(`❌ Sheet "${config.SHEET_NAMES.DETAIL}" not found`);
+    return;
+  }
+
+  // Lấy 1 row bất kỳ (row thứ 2 - sau header)
+  const values = sheet.getDataRange().getValues();
+
+  if (values.length < 2) {
+    Logger.log('❌ No detail records found in sheet');
+    return;
+  }
+
+  const headers = values[0];
+  const testRow = values[1]; // Row đầu tiên sau header
+
+  // Get column indexes
+  const idIndex = getColumnIndex(headers, 'Id');
+  const tripIdIndex = getColumnIndex(headers, 'ma_chuyen_di');
+
+  if (idIndex === -1 || tripIdIndex === -1) {
+    Logger.log('❌ Required columns not found');
+    return;
+  }
+
+  const detailId = testRow[idIndex];
+  const tripId = testRow[tripIdIndex];
+
+  Logger.log(`\n✓ Found detail:`);
+  Logger.log(`  - Detail ID: ${detailId}`);
+  Logger.log(`  - Trip ID: ${tripId}`);
+  Logger.log('');
+
+  Logger.log('⚠️  WARNING: This will DELETE the detail from database!');
+  Logger.log('Press Continue if you want to proceed...\n');
+
+  // Uncomment dòng dưới để thực hiện delete
+  // const result = syncTripDetailToBackend(detailId, tripId, 'Delete');
+  // Logger.log(JSON.stringify(result, null, 2));
+
+  Logger.log('👉 To execute, uncomment the delete line in the code');
 }

@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 // ==================== TYPE DEFINITIONS ====================
 
 interface GASPayload {
-  Action: 'Add' | 'Edit' | 'Delete' | 'UpsertVehicles' | 'FuelImport_Upsert' | 'FuelImport_Delete' | 'FuelTransaction_Upsert' | 'FuelTransaction_Delete' | 'Employee_Add' | 'Employee_Edit' | 'Employee_Delete';
+  Action: 'Add' | 'Edit' | 'Delete' | 'UpsertVehicles' | 'FuelImport_Upsert' | 'FuelImport_Delete' | 'FuelTransaction_Upsert' | 'FuelTransaction_Delete' | 'Employee_Add' | 'Employee_Edit' | 'Employee_Delete' | 'TripDetail_Delete' | 'TripDetail_Upsert';
   maChuyenDi?: string;
   maNhanVien?: string;  // For Employee actions
   ngayTao?: string;
@@ -25,6 +25,9 @@ interface GASPayload {
   // Fuel sync fields
   id?: string;  // For Fuel Import/Transaction Delete
   data?: FuelImportPayload | FuelTransactionPayload;  // For Fuel Upsert
+  // Trip Detail sync fields
+  detailId?: string;  // For TripDetail_Delete
+  triggerDetailId?: string;  // For TripDetail_Upsert - ID của detail trigger event
 }
 
 interface VehiclePayload {
@@ -952,7 +955,213 @@ export async function POST(request: Request) {
       });
     }
 
-    // 6. Validate required fields for reconciliation actions
+    // 6. Handle TripDetail_Delete action (Delete 1 chi tiết lộ trình)
+    if (payload.Action === 'TripDetail_Delete') {
+      console.log('🗑️  Processing TripDetail_Delete action...');
+
+      if (!payload.detailId) {
+        console.error('❌ Missing detail ID');
+        return NextResponse.json({
+          error: 'Missing detail ID'
+        }, { status: 400 });
+      }
+
+      try {
+        // Xóa detail trong JSONB array của reconciliation_orders.details
+        // Strategy: Tìm order chứa detail này bằng cách scan tất cả orders và filter trong application code
+
+        // Step 1: Lấy tất cả orders (hoặc filter by date range nếu performance issue)
+        const allOrdersResult = await sql`
+          SELECT order_id, details
+          FROM reconciliation_orders
+          WHERE details IS NOT NULL
+          ORDER BY updated_at DESC
+          LIMIT 1000
+        `;
+
+        let orderId: string | null = null;
+        let currentDetails: any = null;
+
+        // Tìm order chứa detail với id này
+        for (const row of allOrdersResult.rows) {
+          const details = row.details;
+          const chiTietLoTrinh = details?.chiTietLoTrinh || [];
+
+          // Check if this order contains the detail
+          const foundDetail = chiTietLoTrinh.find((item: any) => item.id === payload.detailId);
+
+          if (foundDetail) {
+            orderId = row.order_id;
+            currentDetails = details;
+            console.log(`📍 Found detail in order: ${orderId}`);
+            break;
+          }
+        }
+
+        if (!orderId) {
+          console.log(`⚠️  Detail ${payload.detailId} not found in any order`);
+          return NextResponse.json({
+            success: true,
+            action: 'trip_detail_delete',
+            detailId: payload.detailId,
+            message: 'Detail not found (already deleted or invalid ID)'
+          });
+        }
+
+        // Step 2: Remove detail từ chiTietLoTrinh array
+        const chiTietLoTrinh = currentDetails.chiTietLoTrinh || [];
+        const newChiTietLoTrinh = chiTietLoTrinh.filter((item: any) => {
+          // Có thể dùng id hoặc thuTu để identify
+          return item.id !== payload.detailId;
+        });
+
+        console.log(`🔄 Removed 1 detail. Old count: ${chiTietLoTrinh.length}, New count: ${newChiTietLoTrinh.length}`);
+
+        // Step 3: Update lại details với array mới
+        const updatedDetails = {
+          ...currentDetails,
+          chiTietLoTrinh: newChiTietLoTrinh
+        };
+
+        const updatedDetailsJson = JSON.stringify(updatedDetails);
+
+        await sql`
+          UPDATE reconciliation_orders
+          SET
+            details = ${updatedDetailsJson},
+            updated_at = CURRENT_TIMESTAMP
+          WHERE order_id = ${orderId}
+        `;
+
+        console.log(`✅ Detail deleted successfully from order ${orderId}`);
+
+        return NextResponse.json({
+          success: true,
+          action: 'trip_detail_delete',
+          detailId: payload.detailId,
+          orderId: orderId,
+          message: 'Detail deleted successfully',
+          remainingDetails: newChiTietLoTrinh.length
+        });
+
+      } catch (dbError: any) {
+        console.error('❌ Database error:', dbError.message);
+        return NextResponse.json({
+          error: 'Database error',
+          message: dbError.message,
+          code: dbError.code
+        }, { status: 500 });
+      }
+    }
+
+    // 7. Handle TripDetail_Upsert action (Add/Edit chi tiết lộ trình)
+    if (payload.Action === 'TripDetail_Upsert') {
+      console.log('✏️  Processing TripDetail_Upsert action...');
+      console.log(`📍 Triggered by detail: ${payload.triggerDetailId}`);
+      console.log(`📦 Order ID: ${payload.maChuyenDi}`);
+
+      // Với TripDetail_Upsert, GAS đã tính lại toàn bộ trip (including all details)
+      // Chúng ta chỉ cần xử lý giống như Edit bình thường
+
+      if (!payload.maChuyenDi) {
+        console.error('❌ Missing maChuyenDi');
+        return NextResponse.json({
+          error: 'Missing maChuyenDi'
+        }, { status: 400 });
+      }
+
+      // Normalize và upsert giống như Edit
+      console.log('🔄 Normalizing full trip payload (with updated details)...');
+      const normalized = normalizePayload(payload);
+
+      console.log('✅ Payload normalized');
+      console.log(`📋 Order: ${normalized.orderId}`);
+      console.log(`📊 Revenue: ${normalized.revenue}, Cost: ${normalized.cost}`);
+      console.log(`📦 Details count: ${normalized.details?.chiTietLoTrinh?.length || 0}`);
+
+      const detailsJson = JSON.stringify(normalized.details);
+
+      try {
+        await sql`
+          INSERT INTO reconciliation_orders (
+            order_id,
+            date,
+            customer,
+            trip_type,
+            route_type,
+            route_name,
+            driver_name,
+            provider,
+            total_distance,
+            cost,
+            revenue,
+            status,
+            weight,
+            note,
+            details
+          ) VALUES (
+            ${normalized.orderId},
+            ${normalized.date},
+            ${normalized.customer},
+            ${normalized.tripType},
+            ${normalized.routeType},
+            ${normalized.routeName},
+            ${normalized.driverName},
+            ${normalized.provider},
+            ${normalized.totalDistance},
+            ${normalized.cost},
+            ${normalized.revenue},
+            ${normalized.status},
+            ${normalized.weight},
+            ${normalized.note},
+            ${detailsJson}
+          )
+          ON CONFLICT (order_id) DO UPDATE SET
+            date = EXCLUDED.date,
+            customer = EXCLUDED.customer,
+            trip_type = EXCLUDED.trip_type,
+            route_type = EXCLUDED.route_type,
+            route_name = EXCLUDED.route_name,
+            driver_name = EXCLUDED.driver_name,
+            provider = EXCLUDED.provider,
+            total_distance = EXCLUDED.total_distance,
+            cost = EXCLUDED.cost,
+            revenue = EXCLUDED.revenue,
+            status = EXCLUDED.status,
+            weight = EXCLUDED.weight,
+            note = EXCLUDED.note,
+            details = EXCLUDED.details,
+            updated_at = CURRENT_TIMESTAMP
+        `;
+
+        console.log('✅ TripDetail_Upsert successful');
+        console.log(`🎯 Detail ${payload.triggerDetailId} triggered full trip update`);
+
+        return NextResponse.json({
+          success: true,
+          action: 'trip_detail_upsert',
+          orderId: normalized.orderId,
+          triggerDetailId: payload.triggerDetailId,
+          message: 'Trip updated with detail changes',
+          normalized: {
+            cost: normalized.cost,
+            revenue: normalized.revenue,
+            totalDistance: normalized.totalDistance,
+            detailsCount: normalized.details?.chiTietLoTrinh?.length || 0
+          }
+        });
+
+      } catch (dbError: any) {
+        console.error('❌ Database error:', dbError.message);
+        return NextResponse.json({
+          error: 'Database error',
+          message: dbError.message,
+          code: dbError.code
+        }, { status: 500 });
+      }
+    }
+
+    // 8. Validate required fields for reconciliation actions
     if (!payload.maChuyenDi) {
       console.error('❌ Missing required field: maChuyenDi');
       return NextResponse.json({
@@ -963,7 +1172,7 @@ export async function POST(request: Request) {
     console.log('🎬 Action:', payload.Action);
     console.log('🆔 Order ID:', payload.maChuyenDi);
 
-    // 7. Handle DELETE action
+    // 9. Handle DELETE action
     if (payload.Action === 'Delete') {
       console.log('🗑️  Processing DELETE action...');
       
@@ -982,12 +1191,12 @@ export async function POST(request: Request) {
       });
     }
 
-    // 8. Handle ADD/EDIT - Normalize payload
+    // 10. Handle ADD/EDIT - Normalize payload
     console.log('🔄 Processing ADD/EDIT action...');
     console.log('📊 Starting payload normalization...');
-    
+
     const normalized = normalizePayload(payload);
-    
+
     console.log('✅ Payload normalized successfully');
     console.log('📋 Normalized Data:');
     console.log(`   - Order ID: ${normalized.orderId}`);
@@ -1004,7 +1213,7 @@ export async function POST(request: Request) {
     console.log(`   - Route Name: ${normalized.routeName}`);
     console.log(`   - Weight: ${normalized.weight}`);
 
-    // 9. Execute UPSERT with normalized data
+    // 11. Execute UPSERT with normalized data
     console.log('💾 Executing database UPSERT...');
     console.log('[DB INSERT] Values to insert:');
     console.log(`  - revenue: ${normalized.revenue}`);
@@ -1084,7 +1293,7 @@ export async function POST(request: Request) {
       }, { status: 500 });
     }
 
-    // 10. Return success response
+    // 12. Return success response
     return NextResponse.json({
       success: true,
       action: payload.Action.toLowerCase(),
