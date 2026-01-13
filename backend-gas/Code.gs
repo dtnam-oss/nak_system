@@ -786,155 +786,6 @@ function sendToBackendAPI(payload) {
 
 
 // =============================================================================
-// DEBUG FUNCTIONS - Để troubleshoot issues
-// =============================================================================
-
-/**
- * Debug: Check sheet connection và data
- */
-function debugSheetConnection() {
-  const config = getConfig();
-  Logger.log('=== DEBUG SHEET CONNECTION ===');
-  Logger.log('Spreadsheet ID: ' + config.SPREADSHEET_ID);
-  Logger.log('Sheet Name: ' + config.SHEET_NAMES.EMPLOYEES);
-  
-  try {
-    const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
-    Logger.log('✅ Spreadsheet opened successfully');
-    
-    const sheet = ss.getSheetByName(config.SHEET_NAMES.EMPLOYEES);
-    if (!sheet) {
-      Logger.log('❌ Sheet "' + config.SHEET_NAMES.EMPLOYEES + '" NOT FOUND');
-      Logger.log('Available sheets:');
-      ss.getSheets().forEach(s => Logger.log('  - ' + s.getName()));
-      return;
-    }
-    
-    Logger.log('✅ Sheet found: ' + sheet.getName());
-    
-    const values = sheet.getDataRange().getValues();
-    Logger.log('Total rows: ' + values.length);
-    
-    if (values.length > 0) {
-      Logger.log('\nHeaders (first 10 columns):');
-      Logger.log(values[0].slice(0, 10));
-      
-      if (values.length > 1) {
-        Logger.log('\nFirst data row (first 10 columns):');
-        Logger.log(values[1].slice(0, 10));
-        Logger.log('\nFirst employee code: ' + values[1][0]);
-      }
-    }
-    
-    Logger.log('\n✅ Sheet connection OK');
-    
-  } catch (error) {
-    Logger.log('❌ Error: ' + error.message);
-    Logger.log(error.stack);
-  }
-}
-
-/**
- * Debug: Test getEmployeeData với logging chi tiết
- */
-function debugGetEmployeeData() {
-  const employeeCode = 'NV001';  // ← SỬA MÃ NÀY
-  
-  Logger.log('=== DEBUG GET EMPLOYEE DATA ===');
-  Logger.log('Looking for employee code: ' + employeeCode);
-  
-  try {
-    const config = getConfig();
-    const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
-    const sheet = ss.getSheetByName(config.SHEET_NAMES.EMPLOYEES);
-    
-    if (!sheet) {
-      Logger.log('❌ Sheet not found');
-      return;
-    }
-    
-    const values = sheet.getDataRange().getValues();
-    const headers = values[0];
-    
-    Logger.log('Headers: ' + headers.slice(0, 5).join(', ') + '...');
-    
-    // Find column index for ma_nhan_vien
-    const empCodeIndex = getColumnIndex(headers, 'ma_nhan_vien');
-    Logger.log('Employee code column index: ' + empCodeIndex);
-    
-    if (empCodeIndex === -1) {
-      Logger.log('❌ Column "ma_nhan_vien" not found in headers');
-      Logger.log('Available columns: ' + headers.join(', '));
-      return;
-    }
-    
-    // Search for employee
-    Logger.log('\nSearching through ' + (values.length - 1) + ' rows...');
-    
-    for (let i = 1; i < values.length; i++) {
-      const row = values[i];
-      const currentCode = String(row[empCodeIndex]).trim();
-      
-      if (i <= 3) {
-        Logger.log('Row ' + i + ' code: "' + currentCode + '"');
-      }
-      
-      if (currentCode === String(employeeCode).trim()) {
-        Logger.log('\n✅ Found employee at row ' + (i + 1));
-        const employee = mapEmployeeRow(row, headers);
-        Logger.log('Mapped data:');
-        Logger.log(JSON.stringify(employee, null, 2));
-        return;
-      }
-    }
-    
-    Logger.log('\n❌ Employee code "' + employeeCode + '" not found');
-    Logger.log('Try one of these codes instead:');
-    for (let i = 1; i <= Math.min(5, values.length - 1); i++) {
-      Logger.log('  - ' + String(values[i][empCodeIndex]).trim());
-    }
-    
-  } catch (error) {
-    Logger.log('❌ Error: ' + error.message);
-    Logger.log(error.stack);
-  }
-}
-
-/**
- * Debug: Test build payload
- */
-function debugBuildPayload() {
-  const employeeCode = 'NV001';  // ← SỬA MÃ NÀY
-  
-  Logger.log('=== DEBUG BUILD PAYLOAD ===');
-  Logger.log('Employee code: ' + employeeCode);
-  
-  try {
-    const config = getConfig();
-    Logger.log('Config loaded');
-    
-    const employeeData = getEmployeeData(employeeCode);
-    if (!employeeData) {
-      Logger.log('❌ getEmployeeData returned null');
-      return;
-    }
-    
-    Logger.log('✅ Employee data retrieved');
-    Logger.log('Employee: ' + employeeData.hoVaTen);
-    
-    const payload = buildEmployeeFullPayload(employeeCode, 'Add');
-    
-    Logger.log('\n✅ Payload created successfully:');
-    Logger.log(JSON.stringify(payload, null, 2));
-    
-  } catch (error) {
-    Logger.log('❌ Error: ' + error.message);
-    Logger.log(error.stack);
-  }
-}
-
-
-// =============================================================================
 // TEST FUNCTIONS - Chỉ dùng để test trong GAS Editor
 // =============================================================================
 
@@ -950,28 +801,16 @@ function testSyncEmployeeAdd() {
   Logger.log('========================================');
   Logger.log('Testing Employee Sync - ADD');
   Logger.log('========================================');
-  Logger.log('Employee Code: ' + employeeCode);
-  Logger.log('Event Type: ' + eventType);
-  Logger.log('');
   
-  try {
-    const result = syncEmployeeToBackend(employeeCode, eventType);
-    
-    Logger.log('\n========================================');
-    Logger.log('RESULT:');
-    Logger.log('========================================');
-    Logger.log(JSON.stringify(result, null, 2));
-    
-    if (result.success) {
-      Logger.log('\n✅ TEST PASSED');
-    } else {
-      Logger.log('\n❌ TEST FAILED');
-      Logger.log('Error: ' + result.message);
-    }
-  } catch (error) {
-    Logger.log('\n❌ EXCEPTION THROWN');
-    Logger.log('Error: ' + error.message);
-    Logger.log('Stack: ' + error.stack);
+  const result = syncEmployeeToBackend(employeeCode, eventType);
+  
+  Logger.log('\nResult:');
+  Logger.log(JSON.stringify(result, null, 2));
+  
+  if (result.success) {
+    Logger.log('\n✅ TEST PASSED');
+  } else {
+    Logger.log('\n❌ TEST FAILED: ' + result.message);
   }
 }
 
@@ -3174,5 +3013,241 @@ function getNhanVien() {
     logError(`Failed to get employees: ${error.message}`);
     logError(error.stack);
     throw error;
+  }
+}
+
+// =============================================================================
+// BULK IMPORT EMPLOYEES TO DATABASE
+// =============================================================================
+
+/**
+ * Import tất cả nhân viên từ Google Sheets lên Database
+ * Tương tự như syncFuelImports() - chạy trực tiếp từ GAS Editor
+ * 
+ * CÁCH SỬ DỤNG:
+ * 1. Mở GAS Editor
+ * 2. Chọn function: importEmployeesToDB
+ * 3. Click Run
+ * 4. Xem logs (View → Logs)
+ * 
+ * @returns {Object} Summary của quá trình import
+ */
+function importEmployeesToDB() {
+  const config = getConfig();
+  
+  try {
+    logInfo('========== START BULK EMPLOYEE IMPORT ==========');
+    logInfo(`Target: ${config.API.ENDPOINT}`);
+    
+    // 1. Đọc tất cả nhân viên từ Sheet
+    logInfo('Step 1: Reading employees from Google Sheets...');
+    const employees = getNhanVien();
+    
+    if (employees.length === 0) {
+      logInfo('⚠️  No employees found in sheet');
+      return {
+        success: true,
+        total: 0,
+        imported: 0,
+        failed: 0,
+        errors: []
+      };
+    }
+    
+    logInfo(`✓ Found ${employees.length} employees`);
+    
+    // 2. Import từng nhân viên
+    logInfo('Step 2: Importing employees to database...');
+    
+    let imported = 0;
+    let failed = 0;
+    const errors = [];
+    
+    for (let i = 0; i < employees.length; i++) {
+      const employee = employees[i];
+      const rowNumber = i + 1;
+      
+      try {
+        logInfo(`\n--- Processing ${rowNumber}/${employees.length} ---`);
+        logInfo(`  Employee: ${employee.maNhanVien} - ${employee.hoVaTen}`);
+        
+        // Build payload
+        const payload = {
+          Action: 'Employee_Add',  // Sử dụng Add, API sẽ tự UPSERT
+          ...employee
+        };
+        
+        // Send to API
+        const response = sendToBackendAPI(payload);
+        
+        logInfo(`  ✓ Imported successfully`);
+        imported++;
+        
+        // Delay để tránh quá tải API (100ms)
+        Utilities.sleep(100);
+        
+      } catch (error) {
+        logError(`  ✗ Failed: ${error.message}`);
+        failed++;
+        errors.push({
+          row: rowNumber,
+          employeeCode: employee.maNhanVien,
+          employeeName: employee.hoVaTen,
+          error: error.message
+        });
+      }
+    }
+    
+    // 3. Summary
+    logInfo('\n========== IMPORT SUMMARY ==========');
+    logInfo(`Total: ${employees.length}`);
+    logInfo(`✓ Imported: ${imported}`);
+    logInfo(`✗ Failed: ${failed}`);
+    
+    if (errors.length > 0) {
+      logError('\nFailed employees:');
+      errors.forEach(err => {
+        logError(`  Row ${err.row}: ${err.employeeCode} - ${err.employeeName}`);
+        logError(`    Error: ${err.error}`);
+      });
+    }
+    
+    logInfo('========== IMPORT COMPLETE ==========\n');
+    
+    return {
+      success: true,
+      total: employees.length,
+      imported: imported,
+      failed: failed,
+      errors: errors
+    };
+    
+  } catch (error) {
+    logError('========== IMPORT FAILED ==========');
+    logError(`Error: ${error.message}`);
+    logError(error.stack);
+    
+    return {
+      success: false,
+      error: error.message,
+      total: 0,
+      imported: 0,
+      failed: 0
+    };
+  }
+}
+
+/**
+ * Test function - Import 1 nhân viên để test
+ */
+function testImportOneEmployee() {
+  const employeeCode = 'NV001';  // ← SỬA MÃ NÀY
+  
+  Logger.log('=== TEST IMPORT ONE EMPLOYEE ===');
+  Logger.log(`Employee Code: ${employeeCode}`);
+  
+  try {
+    // Get employee data
+    const employee = getEmployeeData(employeeCode);
+    
+    if (!employee) {
+      Logger.log('❌ Employee not found in sheet');
+      return;
+    }
+    
+    Logger.log('✓ Employee data retrieved:');
+    Logger.log(`  - ${employee.maNhanVien}: ${employee.hoVaTen}`);
+    Logger.log(`  - Department: ${employee.phongBan}`);
+    Logger.log(`  - Position: ${employee.chucVu}`);
+    
+    // Build payload
+    const payload = {
+      Action: 'Employee_Add',
+      ...employee
+    };
+    
+    Logger.log('\nSending to API...');
+    
+    // Send to API
+    const response = sendToBackendAPI(payload);
+    
+    Logger.log('✓ API Response:');
+    Logger.log(JSON.stringify(response, null, 2));
+    
+    Logger.log('\n✅ TEST PASSED');
+    
+  } catch (error) {
+    Logger.log('❌ TEST FAILED');
+    Logger.log('Error: ' + error.message);
+    Logger.log(error.stack);
+  }
+}
+
+/**
+ * Import với batch size (import từng nhóm)
+ * Hữu ích khi có nhiều nhân viên (>100)
+ */
+function importEmployeesBatch() {
+  const BATCH_SIZE = 10;  // Import 10 nhân viên mỗi lần
+  const BATCH_DELAY = 1000;  // Delay 1s giữa các batch
+  
+  Logger.log('=== BATCH IMPORT EMPLOYEES ===');
+  Logger.log(`Batch size: ${BATCH_SIZE}`);
+  Logger.log(`Batch delay: ${BATCH_DELAY}ms`);
+  
+  try {
+    // Get all employees
+    const employees = getNhanVien();
+    Logger.log(`Total employees: ${employees.length}`);
+    
+    const totalBatches = Math.ceil(employees.length / BATCH_SIZE);
+    Logger.log(`Total batches: ${totalBatches}\n`);
+    
+    let imported = 0;
+    let failed = 0;
+    
+    for (let batchNum = 0; batchNum < totalBatches; batchNum++) {
+      const start = batchNum * BATCH_SIZE;
+      const end = Math.min(start + BATCH_SIZE, employees.length);
+      const batch = employees.slice(start, end);
+      
+      Logger.log(`\n--- Batch ${batchNum + 1}/${totalBatches} (${start + 1}-${end}) ---`);
+      
+      for (let i = 0; i < batch.length; i++) {
+        const employee = batch[i];
+        
+        try {
+          const payload = {
+            Action: 'Employee_Add',
+            ...employee
+          };
+          
+          sendToBackendAPI(payload);
+          Logger.log(`  ✓ ${employee.maNhanVien}: ${employee.hoVaTen}`);
+          imported++;
+          
+          Utilities.sleep(100);  // Small delay between records
+          
+        } catch (error) {
+          Logger.log(`  ✗ ${employee.maNhanVien}: ${error.message}`);
+          failed++;
+        }
+      }
+      
+      // Delay between batches
+      if (batchNum < totalBatches - 1) {
+        Logger.log(`Waiting ${BATCH_DELAY}ms before next batch...`);
+        Utilities.sleep(BATCH_DELAY);
+      }
+    }
+    
+    Logger.log('\n=== BATCH IMPORT COMPLETE ===');
+    Logger.log(`Total: ${employees.length}`);
+    Logger.log(`✓ Imported: ${imported}`);
+    Logger.log(`✗ Failed: ${failed}`);
+    
+  } catch (error) {
+    Logger.log('❌ Batch import failed: ' + error.message);
+    Logger.log(error.stack);
   }
 }
