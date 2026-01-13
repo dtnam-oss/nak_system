@@ -1,0 +1,23 @@
+# Vercel ignore file
+# Ignore files that should not be deployed
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+
+# Local env files
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+
+# OS files
+.DS_Store
+Thumbs.db
