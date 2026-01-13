@@ -14,5 +14,9 @@ export async function GET() {
     hasBotToken: !!telegramBotToken,
     botTokenLength: telegramBotToken?.length || 0,
     allEnvKeys: Object.keys(process.env).filter(k => k.includes('CRON') || k.includes('TELEGRAM')),
+    groupChatId: process.env.TELEGRAM_GROUP_CHAT_ID,
+    topicKetQua: process.env.TELEGRAM_TOPIC_KET_QUA_XU_LY,
+    topicDoiTac: process.env.TELEGRAM_TOPIC_DOI_TAC,
+    topicKhachHang: process.env.TELEGRAM_TOPIC_KHACH_HANG,
   });
 }
