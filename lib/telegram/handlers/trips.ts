@@ -7,7 +7,7 @@
  */
 
 import { sql } from '@vercel/postgres';
-import { BotContext, TripRecord, RouteDetail, AuthenticatedUser } from '../types';
+import { BotContext, TripRecord, AuthenticatedUser } from '../types';
 import {
   formatCurrency,
   formatDistance,
@@ -77,7 +77,13 @@ export async function handleTripsSearch(ctx: BotContext) {
 // =============================================================================
 
 export async function handleSearchCommand(ctx: BotContext) {
-  const args = ctx.message?.text?.split(' ').slice(1) || [];
+  // Type guard: ensure message exists and has text
+  if (!ctx.message || !('text' in ctx.message)) {
+    await ctx.reply('❌ Lỗi: Không thể đọc tin nhắn.');
+    return;
+  }
+
+  const args = ctx.message.text.split(' ').slice(1);
 
   if (args.length === 0) {
     await ctx.reply(

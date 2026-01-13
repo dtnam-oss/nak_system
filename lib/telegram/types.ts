@@ -65,6 +65,7 @@ export interface TripRecord {
   ngayTao: Date;
   tenKhachHang: string;
   tenTuyen: string;
+  loaiChuyen?: string;
   tenTaiXe: string;
   bienKiemSoat: string;
   trangThai: string;
