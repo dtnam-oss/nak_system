@@ -595,7 +595,8 @@ function parseNumber(value) {
 
 /**
  * Format date thành chuẩn YYYY-MM-DD
- * 
+ * Strips time portion if present (e.g. "2026-01-02 01:30:00" -> "2026-01-02")
+ *
  * @param {*} value - Giá trị date (có thể là Date object, string, hoặc number)
  * @returns {string} Date string format YYYY-MM-DD, hoặc empty string nếu invalid
  */
@@ -603,32 +604,46 @@ function formatDate(value) {
   if (!value) {
     return '';
   }
-  
+
   try {
     let date;
-    
+
     if (value instanceof Date) {
+      // Date object - use directly
       date = value;
     } else if (typeof value === 'number') {
       // Excel serial date number
       date = new Date((value - 25569) * 86400 * 1000);
+    } else if (typeof value === 'string') {
+      // String value - handle different formats
+      const strValue = String(value).trim();
+
+      // IMPORTANT: If string contains datetime (with space), extract only date part
+      // Example: "2026-01-02 01:30:00" -> "2026-01-02"
+      if (strValue.includes(' ')) {
+        const datePart = strValue.split(' ')[0];
+        date = new Date(datePart);
+      } else {
+        // Regular date string
+        date = new Date(strValue);
+      }
     } else {
-      // Try to parse as string
+      // Try to parse as is
       date = new Date(value);
     }
-    
+
     // Check if valid date
     if (isNaN(date.getTime())) {
       return '';
     }
-    
-    // Format as YYYY-MM-DD
+
+    // Format as YYYY-MM-DD (strips time if present)
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
-    
+
     return `${year}-${month}-${day}`;
-    
+
   } catch (error) {
     logWarning(`Error formatting date: ${value}, Error: ${error.message}`);
     return '';
