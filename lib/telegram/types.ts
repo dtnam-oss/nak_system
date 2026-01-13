@@ -6,7 +6,7 @@
  * TypeScript types and interfaces for Telegram Bot
  */
 
-import { Context as TelegrafContext } from 'telegraf';
+import { Context } from 'telegraf';
 
 // =============================================================================
 // USER & AUTHENTICATION
@@ -41,9 +41,9 @@ export interface UserSession {
 // CONTEXT (Extended Telegraf Context)
 // =============================================================================
 
-export interface BotContext extends TelegrafContext {
+export interface BotContext extends Context {
   session?: UserSession;
-  state?: {
+  state: {
     user?: AuthenticatedUser;
     [key: string]: any;
   };
