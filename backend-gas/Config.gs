@@ -18,7 +18,8 @@ const CONFIG = {
     PRICING: 'bang_gia',           // Sheet chứa bảng giá cước
     VEHICLES: 'phuong_tien',       // Sheet chứa danh sách phương tiện
     FUEL_IMPORT: 'nhap_nhien_lieu',   // Sheet chứa nhập nhiên liệu
-    FUEL_EXPORT: 'xuat_nhien_lieu'    // Sheet chứa xuất nhiên liệu
+    FUEL_EXPORT: 'xuat_nhien_lieu',   // Sheet chứa xuất nhiên liệu
+    EMPLOYEES: 'nhan_vien'            // Sheet chứa thông tin nhân viên
   },
 
   // =============================================================================
@@ -136,6 +137,36 @@ const CONFIG = {
     'so_odo': 'odoNumber',
     'trang_thai': 'status',
     'hang_muc': 'category'  // Chốt đầu | Đổ dặm | Chốt cuối
+  },
+
+  // =============================================================================
+  // COLUMN MAPPINGS - Employees Sheet (nhan_vien)
+  // =============================================================================
+  EMPLOYEES_COLUMNS: {
+    // Tên cột trong Sheet -> Key trong JSON
+    'ma_nhan_vien': 'maNhanVien',
+    'ho_va_ten': 'hoVaTen',
+    'phong_ban': 'phongBan',
+    'chuc_vu': 'chucVu',
+    'hinh_anh': 'hinhAnh',
+    'so_dien_thoai': 'soDienThoai',
+    'email': 'email',
+    'chat_id': 'chatId',
+    'trang_thai': 'trangThai',
+    'ngay_vao_lam': 'ngayVaoLam',
+    'ngay_nghi_viec': 'ngayNghiViec',
+    'dia_chi': 'diaChi',
+    'so_cccd': 'soCccd',
+    'ngay_sinh': 'ngaySinh',
+    'gioi_tinh': 'gioiTinh',
+    'tinh_trang_hon_nhan': 'tinhTrangHonNhan',
+    'nguoi_lien_he_khan_cap': 'nguoiLienHeKhanCap',
+    'so_dien_thoai_khan_cap': 'soDienThoaiKhanCap',
+    'phan_quyen': 'phanQuyen',
+    'xem': 'xem',
+    'them': 'them',
+    'sua': 'sua',
+    'xoa': 'xoa'
   },
 
   // =============================================================================

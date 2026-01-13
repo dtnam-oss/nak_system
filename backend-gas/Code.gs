@@ -28,6 +28,64 @@
 // =============================================================================
 
 /**
+ * Handle GET requests to the Apps Script web app
+ * URL: https://script.google.com/macros/s/{SCRIPT_ID}/exec?action={ACTION}
+ * 
+ * @param {Object} e - Event object from doGet
+ * @returns {TextOutput} JSON response
+ * 
+ * @example
+ * // Get all employees:
+ * https://script.google.com/macros/s/{SCRIPT_ID}/exec?action=getNhanVien
+ */
+function doGet(e) {
+  try {
+    const action = e.parameter.action;
+    
+    if (!action) {
+      return ContentService
+        .createTextOutput(JSON.stringify({
+          success: false,
+          error: 'Missing action parameter'
+        }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Route to appropriate function
+    let result;
+    switch(action) {
+      case 'getNhanVien':
+        result = getNhanVien();
+        break;
+      default:
+        return ContentService
+          .createTextOutput(JSON.stringify({
+            success: false,
+            error: `Unknown action: ${action}`
+          }))
+          .setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // Return success response
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: true,
+        data: result
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+      
+  } catch (error) {
+    logError(`doGet error: ${error.message}`);
+    return ContentService
+      .createTextOutput(JSON.stringify({
+        success: false,
+        error: error.message
+      }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+/**
  * Hàm chính được gọi từ AppSheet Bot
  * 
  * @param {string} tripId - Mã chuyến đi (ma_chuyen_di)
@@ -2498,3 +2556,326 @@ function importHistoricalFuelTransactions() {
   };
 }
 
+
+// =============================================================================
+// EMPLOYEE SYNC FUNCTIONS (Similar to Trip Sync)
+// =============================================================================
+
+/**
+ * Hàm chính được gọi từ AppSheet Bot để sync nhân viên
+ * 
+ * @param {string} employeeCode - Mã nhân viên (ma_nhan_vien)
+ * @param {string} eventType - Loại sự kiện: 'Add', 'Edit', hoặc 'Delete'
+ * @returns {Object} Response từ API hoặc error message
+ * 
+ * @example
+ * // Gọi từ AppSheet Bot:
+ * syncEmployeeToBackend([ma_nhan_vien], "Add")
+ * syncEmployeeToBackend([ma_nhan_vien], "Edit")
+ * syncEmployeeToBackend([ma_nhan_vien], "Delete")
+ */
+function syncEmployeeToBackend(employeeCode, eventType) {
+  const config = getConfig();
+  
+  try {
+    logInfo(`========== START EMPLOYEE SYNC ==========`);
+    logInfo(`Employee Code: ${employeeCode}`);
+    logInfo(`Event Type: ${eventType}`);
+    
+    // Validate inputs
+    if (!employeeCode) {
+      throw new Error('employeeCode is required');
+    }
+    
+    if (!eventType) {
+      throw new Error('eventType is required');
+    }
+    
+    // Validate event type
+    const validEvents = Object.values(config.EVENTS);
+    if (!validEvents.includes(eventType)) {
+      throw new Error(`Invalid eventType: ${eventType}. Must be one of: ${validEvents.join(', ')}`);
+    }
+    
+    // Build payload based on event type
+    let payload;
+    
+    if (eventType === config.EVENTS.DELETE) {
+      // DELETE: Không cần đọc Sheet, chỉ gửi employeeCode
+      payload = buildEmployeeDeletePayload(employeeCode);
+      logInfo('DELETE event - Payload created without reading sheet');
+    } else {
+      // ADD/EDIT: Đọc đầy đủ dữ liệu từ Sheet
+      payload = buildEmployeeFullPayload(employeeCode, eventType);
+      logInfo('ADD/EDIT event - Full payload created');
+    }
+    
+    // Log payload (trong môi trường development)
+    if (config.LOGGING.VERBOSE) {
+      logInfo('Employee Payload JSON:');
+      logInfo(JSON.stringify(payload, null, 2));
+    }
+    
+    // Send to Backend API
+    const response = sendToBackendAPI(payload);
+    
+    logInfo(`========== EMPLOYEE SYNC SUCCESS ==========`);
+    return {
+      success: true,
+      message: 'Employee data synchronized successfully',
+      employeeCode: employeeCode,
+      eventType: eventType,
+      response: response
+    };
+    
+  } catch (error) {
+    logError(`========== EMPLOYEE SYNC FAILED ==========`);
+    logError(`Error: ${error.message}`);
+    logError(`Stack: ${error.stack}`);
+    
+    // Return error để AppSheet có thể xử lý
+    return {
+      success: false,
+      message: error.message,
+      employeeCode: employeeCode,
+      eventType: eventType
+    };
+  }
+}
+
+/**
+ * Build payload cho event DELETE (Employee)
+ */
+function buildEmployeeDeletePayload(employeeCode) {
+  return {
+    Action: 'Employee_Delete',
+    maNhanVien: employeeCode
+  };
+}
+
+/**
+ * Build payload đầy đủ cho event ADD/EDIT (Employee)
+ */
+function buildEmployeeFullPayload(employeeCode, eventType) {
+  const config = getConfig();
+  
+  // Lấy thông tin nhân viên
+  const employeeData = getEmployeeData(employeeCode);
+  if (!employeeData) {
+    throw new Error(`Không tìm thấy nhân viên với ma_nhan_vien: ${employeeCode}`);
+  }
+  
+  // Build JSON payload
+  const payload = {
+    Action: eventType === config.EVENTS.ADD ? 'Employee_Add' : 'Employee_Edit',
+    ...employeeData
+  };
+  
+  logInfo(`[EMPLOYEE PAYLOAD] maNhanVien: ${payload.maNhanVien}, hoVaTen: ${payload.hoVaTen}`);
+  
+  return payload;
+}
+
+/**
+ * Lấy dữ liệu nhân viên từ Sheet nhan_vien
+ * 
+ * @param {string} employeeCode - Mã nhân viên
+ * @returns {Object|null} Object chứa dữ liệu nhân viên đã được map
+ */
+function getEmployeeData(employeeCode) {
+  const config = getConfig();
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(config.SHEET_NAMES.EMPLOYEES);
+  
+  if (!sheet) {
+    throw new Error(`Sheet "${config.SHEET_NAMES.EMPLOYEES}" not found`);
+  }
+  
+  // Lấy tất cả data
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+  
+  if (values.length === 0) {
+    throw new Error('Employee sheet is empty');
+  }
+  
+  // Row đầu tiên là header
+  const headers = values[0];
+  
+  // Tìm column index của ma_nhan_vien
+  const employeeCodeIndex = getColumnIndex(headers, 'ma_nhan_vien');
+  
+  if (employeeCodeIndex === -1) {
+    throw new Error(`Column "ma_nhan_vien" not found in sheet "${config.SHEET_NAMES.EMPLOYEES}"`);
+  }
+  
+  // Tìm row (bỏ qua header row)
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const currentEmployeeCode = String(row[employeeCodeIndex]).trim();
+    
+    if (currentEmployeeCode === String(employeeCode).trim()) {
+      // Found the row, map data
+      return mapEmployeeRow(row, headers);
+    }
+  }
+  
+  return null; // Không tìm thấy
+}
+
+/**
+ * Map một row từ Employee Sheet sang JSON object
+ * 
+ * @param {Array} row - Dữ liệu row từ sheet
+ * @param {Array} headers - Header row
+ * @returns {Object} Mapped object
+ */
+function mapEmployeeRow(row, headers) {
+  const config = getConfig();
+  const mappedData = {};
+  
+  // Duyệt qua tất cả các column mapping
+  for (const [sheetColumn, jsonKey] of Object.entries(config.EMPLOYEES_COLUMNS)) {
+    const columnIndex = getColumnIndex(headers, sheetColumn);
+    
+    if (columnIndex === -1) {
+      logWarning(`Column "${sheetColumn}" not found in Employee sheet, skipping`);
+      continue;
+    }
+    
+    let value = row[columnIndex];
+    
+    // Xử lý data type theo loại column
+    if (['ngay_vao_lam', 'ngay_nghi_viec', 'ngay_sinh'].includes(sheetColumn)) {
+      // Date columns
+      value = formatDate(value);
+    } else if (['xem', 'them', 'sua', 'xoa'].includes(sheetColumn)) {
+      // Boolean columns
+      if (typeof value === 'boolean') {
+        // Keep as is
+      } else if (typeof value === 'string') {
+        const normalized = String(value).trim().toUpperCase();
+        value = (normalized === 'TRUE' || normalized === '1' || normalized === 'YES');
+      } else {
+        value = false; // Default to false
+      }
+    } else {
+      // String: trim và convert về string
+      value = String(value || '').trim();
+      if (value === '') {
+        value = null;
+      }
+    }
+    
+    mappedData[jsonKey] = value;
+  }
+  
+  return mappedData;
+}
+
+
+// =============================================================================
+// FUNCTION: GET EMPLOYEES (Read All)
+// =============================================================================
+/**
+ * Get all employees from nhan_vien sheet
+ * URL: https://script.google.com/macros/s/{SCRIPT_ID}/exec?action=getNhanVien
+ * 
+ * Returns JSON array of all employee records
+ */
+function getNhanVien() {
+  try {
+    logInfo('========== GET EMPLOYEES - START ==========');
+    
+    const config = getConfig();
+    const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+    const sheet = ss.getSheetByName(config.SHEET_NAMES.EMPLOYEES);
+    
+    if (!sheet) {
+      throw new Error(`Sheet "${config.SHEET_NAMES.EMPLOYEES}" not found`);
+    }
+    
+    logInfo(`Reading from sheet: ${config.SHEET_NAMES.EMPLOYEES}`);
+    
+    // Get all data
+    const values = sheet.getDataRange().getValues();
+    if (values.length === 0) {
+      logWarning('Sheet is empty');
+      return [];
+    }
+    
+    // Get headers (row 1)
+    const headers = values[0].map(h => String(h).trim().toLowerCase());
+    logInfo(`Found ${headers.length} columns, ${values.length - 1} rows`);
+    
+    // Column mapping
+    const columnMap = config.EMPLOYEES_COLUMNS;
+    
+    // Transform rows to objects
+    const employees = [];
+    for (let i = 1; i < values.length; i++) {
+      const row = values[i];
+      const employee = {};
+      
+      // Map each column
+      for (let j = 0; j < headers.length; j++) {
+        const headerName = headers[j];
+        const jsonKey = columnMap[headerName];
+        
+        if (jsonKey) {
+          let value = row[j];
+          
+          // Handle dates
+          if (['ngay_vao_lam', 'ngay_nghi_viec', 'ngay_sinh'].includes(headerName)) {
+            if (value instanceof Date) {
+              value = Utilities.formatDate(value, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+            } else if (value) {
+              value = String(value).trim();
+            } else {
+              value = null;
+            }
+          }
+          // Handle booleans
+          else if (['xem', 'them', 'sua', 'xoa'].includes(headerName)) {
+            if (typeof value === 'boolean') {
+              // Keep as is
+            } else if (typeof value === 'string') {
+              const normalized = String(value).trim().toUpperCase();
+              value = (normalized === 'TRUE' || normalized === '1' || normalized === 'YES');
+            } else {
+              value = false; // Default to false
+            }
+          }
+          // Handle strings
+          else if (typeof value === 'string') {
+            value = value.trim();
+            if (value === '') {
+              value = null;
+            }
+          }
+          // Handle empty values
+          else if (value === '' || value === null || value === undefined) {
+            value = null;
+          }
+          
+          employee[jsonKey] = value;
+        }
+      }
+      
+      // Only add if has employee code
+      if (employee.maNhanVien) {
+        employees.push(employee);
+      }
+    }
+    
+    logInfo(`✓ Processed ${employees.length} employees`);
+    logInfo('========== GET EMPLOYEES - COMPLETE ==========');
+    
+    return employees;
+    
+  } catch (error) {
+    logError(`Failed to get employees: ${error.message}`);
+    logError(error.stack);
+    throw error;
+  }
+}

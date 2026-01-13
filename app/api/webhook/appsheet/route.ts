@@ -6,8 +6,9 @@ export const dynamic = 'force-dynamic';
 // ==================== TYPE DEFINITIONS ====================
 
 interface GASPayload {
-  Action: 'Add' | 'Edit' | 'Delete' | 'UpsertVehicles' | 'FuelImport_Upsert' | 'FuelImport_Delete' | 'FuelTransaction_Upsert' | 'FuelTransaction_Delete';
+  Action: 'Add' | 'Edit' | 'Delete' | 'UpsertVehicles' | 'FuelImport_Upsert' | 'FuelImport_Delete' | 'FuelTransaction_Upsert' | 'FuelTransaction_Delete' | 'Employee_Add' | 'Employee_Edit' | 'Employee_Delete';
   maChuyenDi?: string;
+  maNhanVien?: string;  // For Employee actions
   ngayTao?: string;
   tenKhachHang?: string;
   tongDoanhThu?: number | string;
@@ -65,6 +66,32 @@ interface FuelTransactionPayload {
   odoNumber: number;
   status: string | null;
   category: string | null;
+}
+
+interface EmployeePayload {
+  maNhanVien: string;
+  hoVaTen: string;
+  phongBan?: string | null;
+  chucVu?: string | null;
+  hinhAnh?: string | null;
+  soDienThoai?: string | null;
+  email?: string | null;
+  chatId?: string | null;
+  trangThai?: string | null;
+  ngayVaoLam?: string | null;
+  ngayNghiViec?: string | null;
+  diaChi?: string | null;
+  soCccd?: string | null;
+  ngaySinh?: string | null;
+  gioiTinh?: string | null;
+  tinhTrangHonNhan?: string | null;
+  nguoiLienHeKhanCap?: string | null;
+  soDienThoaiKhanCap?: string | null;
+  phanQuyen?: string | null;
+  xem?: boolean;
+  them?: boolean;
+  sua?: boolean;
+  xoa?: boolean;
 }
 
 interface NormalizedPayload {
@@ -401,7 +428,132 @@ export async function POST(request: Request) {
 
     console.log('🔓 Authentication successful');
 
-    // 3. Handle Fuel Import Actions
+    // 3. Handle Employee Actions
+    if (payload.Action === 'Employee_Add' || payload.Action === 'Employee_Edit') {
+      console.log(`👤 Processing ${payload.Action} action...`);
+      
+      const employeeData: EmployeePayload = {
+        maNhanVien: payload.maNhanVien!,
+        hoVaTen: (payload as any).hoVaTen,
+        phongBan: (payload as any).phongBan || null,
+        chucVu: (payload as any).chucVu || null,
+        hinhAnh: (payload as any).hinhAnh || null,
+        soDienThoai: (payload as any).soDienThoai || null,
+        email: (payload as any).email || null,
+        chatId: (payload as any).chatId || null,
+        trangThai: (payload as any).trangThai || 'Đang làm việc',
+        ngayVaoLam: (payload as any).ngayVaoLam || null,
+        ngayNghiViec: (payload as any).ngayNghiViec || null,
+        diaChi: (payload as any).diaChi || null,
+        soCccd: (payload as any).soCccd || null,
+        ngaySinh: (payload as any).ngaySinh || null,
+        gioiTinh: (payload as any).gioiTinh || null,
+        tinhTrangHonNhan: (payload as any).tinhTrangHonNhan || null,
+        nguoiLienHeKhanCap: (payload as any).nguoiLienHeKhanCap || null,
+        soDienThoaiKhanCap: (payload as any).soDienThoaiKhanCap || null,
+        phanQuyen: (payload as any).phanQuyen || 'user',
+        xem: (payload as any).xem !== undefined ? (payload as any).xem : true,
+        them: (payload as any).them !== undefined ? (payload as any).them : false,
+        sua: (payload as any).sua !== undefined ? (payload as any).sua : false,
+        xoa: (payload as any).xoa !== undefined ? (payload as any).xoa : false
+      };
+
+      try {
+        await sql`
+          INSERT INTO nhan_vien (
+            ma_nhan_vien, ho_va_ten, phong_ban, chuc_vu, hinh_anh,
+            so_dien_thoai, email, chat_id, trang_thai,
+            ngay_vao_lam, ngay_nghi_viec, dia_chi, so_cccd, ngay_sinh,
+            gioi_tinh, tinh_trang_hon_nhan, nguoi_lien_he_khan_cap,
+            so_dien_thoai_khan_cap, phan_quyen, xem, them, sua, xoa
+          ) VALUES (
+            ${employeeData.maNhanVien}, ${employeeData.hoVaTen}, ${employeeData.phongBan},
+            ${employeeData.chucVu}, ${employeeData.hinhAnh}, ${employeeData.soDienThoai},
+            ${employeeData.email}, ${employeeData.chatId}, ${employeeData.trangThai},
+            ${employeeData.ngayVaoLam}, ${employeeData.ngayNghiViec}, ${employeeData.diaChi},
+            ${employeeData.soCccd}, ${employeeData.ngaySinh}, ${employeeData.gioiTinh},
+            ${employeeData.tinhTrangHonNhan}, ${employeeData.nguoiLienHeKhanCap},
+            ${employeeData.soDienThoaiKhanCap}, ${employeeData.phanQuyen},
+            ${employeeData.xem}, ${employeeData.them}, ${employeeData.sua}, ${employeeData.xoa}
+          )
+          ON CONFLICT (ma_nhan_vien) DO UPDATE SET
+            ho_va_ten = EXCLUDED.ho_va_ten,
+            phong_ban = EXCLUDED.phong_ban,
+            chuc_vu = EXCLUDED.chuc_vu,
+            hinh_anh = EXCLUDED.hinh_anh,
+            so_dien_thoai = EXCLUDED.so_dien_thoai,
+            email = EXCLUDED.email,
+            chat_id = EXCLUDED.chat_id,
+            trang_thai = EXCLUDED.trang_thai,
+            ngay_vao_lam = EXCLUDED.ngay_vao_lam,
+            ngay_nghi_viec = EXCLUDED.ngay_nghi_viec,
+            dia_chi = EXCLUDED.dia_chi,
+            so_cccd = EXCLUDED.so_cccd,
+            ngay_sinh = EXCLUDED.ngay_sinh,
+            gioi_tinh = EXCLUDED.gioi_tinh,
+            tinh_trang_hon_nhan = EXCLUDED.tinh_trang_hon_nhan,
+            nguoi_lien_he_khan_cap = EXCLUDED.nguoi_lien_he_khan_cap,
+            so_dien_thoai_khan_cap = EXCLUDED.so_dien_thoai_khan_cap,
+            phan_quyen = EXCLUDED.phan_quyen,
+            xem = EXCLUDED.xem,
+            them = EXCLUDED.them,
+            sua = EXCLUDED.sua,
+            xoa = EXCLUDED.xoa,
+            updated_at = CURRENT_TIMESTAMP
+        `;
+
+        console.log(`✅ Employee ${payload.Action} successful:`, employeeData.maNhanVien);
+        return NextResponse.json({
+          success: true,
+          action: payload.Action,
+          employeeCode: employeeData.maNhanVien,
+          message: `Employee ${payload.Action === 'Employee_Add' ? 'created' : 'updated'} successfully`
+        });
+      } catch (dbError: any) {
+        console.error('❌ Database error:', dbError.message);
+        return NextResponse.json({
+          error: 'Database error',
+          message: dbError.message,
+          code: dbError.code
+        }, { status: 500 });
+      }
+    }
+
+    // Handle Employee Delete
+    if (payload.Action === 'Employee_Delete') {
+      console.log('👤 Processing Employee_Delete action...');
+      
+      if (!payload.maNhanVien) {
+        console.error('❌ Missing employee code');
+        return NextResponse.json({
+          error: 'Missing employee code'
+        }, { status: 400 });
+      }
+
+      try {
+        await sql`
+          DELETE FROM nhan_vien
+          WHERE ma_nhan_vien = ${payload.maNhanVien}
+        `;
+
+        console.log('✅ Employee deleted successfully:', payload.maNhanVien);
+        return NextResponse.json({
+          success: true,
+          action: 'Employee_Delete',
+          employeeCode: payload.maNhanVien,
+          message: 'Employee deleted successfully'
+        });
+      } catch (dbError: any) {
+        console.error('❌ Database error:', dbError.message);
+        return NextResponse.json({
+          error: 'Database error',
+          message: dbError.message,
+          code: dbError.code
+        }, { status: 500 });
+      }
+    }
+
+    // 4. Handle Fuel Import Actions
     if (payload.Action === 'FuelImport_Upsert') {
       console.log('⛽ Processing FuelImport_Upsert action...');
       
