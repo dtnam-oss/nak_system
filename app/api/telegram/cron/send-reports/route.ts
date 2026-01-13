@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { telegramBot } from '../../services/telegram-bot';
 import { TELEGRAM_TOPICS } from '../../config/topics';
+import { sql } from '@vercel/postgres';
 
 // Force Node.js runtime (telegraf doesn't work in Edge runtime)
 export const runtime = 'nodejs';
@@ -48,7 +49,16 @@ export async function GET(req: NextRequest) {
     console.log(`📊 Sending ${reportType} reports...`);
 
     // Fetch data for reports
-    const data = await fetchReportData();
+    const data = await fetchReportData(reportType);
+    
+    // Debug log
+    console.log('📈 Fetched data summary:', {
+      reportDate: data.reportDate,
+      totalTrips: data.trips.totalTrips,
+      customers: data.customers.totalCustomers,
+      topCustomersCount: data.customers.topCustomers.length,
+      topPartnersCount: data.partners.topPartners.length,
+    });
 
     // Send reports to each topic
     const results = await sendReports(reportType, data);
@@ -73,58 +83,243 @@ export async function GET(req: NextRequest) {
 
 /**
  * Fetch data for all reports
+ * @param reportType - 'morning' for yesterday data, 'evening' for today data
  */
-async function fetchReportData() {
+async function fetchReportData(reportType: 'morning' | 'evening') {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+    // Determine base URL
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL 
+      || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+    
+    const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    const yesterday = new Date(today.getTime() - 86400000);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const twoDaysAgo = new Date(today.getTime() - 2 * 86400000);
+    const twoDaysAgoStr = twoDaysAgo.toISOString().split('T')[0];
+    
+    // Determine report date based on type
+    // Morning report: yesterday's data
+    // Evening report: today's data
+    const reportDate = reportType === 'morning' ? yesterdayStr : todayStr;
+    const comparisonDate = reportType === 'morning' ? twoDaysAgoStr : yesterdayStr;
+    
+    // Calculate dates for comparisons
+    const lastWeek = new Date(today.getTime() - 7 * 86400000);
+    const lastWeekStr = lastWeek.toISOString().split('T')[0];
+    const lastMonth = new Date(today.getTime() - 30 * 86400000);
+    const lastMonthStr = lastMonth.toISOString().split('T')[0];
 
-    // Fetch dashboard stats
+    console.log('📅 Date range:', { 
+      reportType,
+      reportDate,
+      comparisonDate,
+      lastWeekStr,
+      lastMonthStr,
+      todayStr, 
+      yesterdayStr 
+    });
+
+    // Fetch dashboard stats (keep HTTP call - lightweight)
     const dashboardRes = await fetch(`${baseUrl}/api/dashboard/stats`, {
       cache: 'no-store',
     });
     const dashboard = await dashboardRes.json();
 
-    // Fetch fuel data
+    // Fetch fuel data (keep HTTP call - lightweight)
     const fuelRes = await fetch(`${baseUrl}/api/fuel/inventory/fifo`, {
       cache: 'no-store',
     });
     const fuel = await fuelRes.json();
 
-    // TODO: Add more API calls for partner and customer data
+    // Direct DB query for trips analytics (avoid env issue with HTTP)
+    // Query for the report date only
+    const analyticsQuery = await sql`
+      SELECT 
+        COUNT(*) as total_trips,
+        COUNT(DISTINCT customer) as total_customers
+      FROM reconciliation_orders
+      WHERE date = ${reportDate}
+    `;
+    
+    // Query for comparison date (previous day)
+    const comparisonQuery = await sql`
+      SELECT 
+        COUNT(*) as total_trips,
+        COUNT(DISTINCT customer) as total_customers
+      FROM reconciliation_orders
+      WHERE date = ${comparisonDate}
+    `;
+    
+    // Query for same day last week
+    const lastWeekQuery = await sql`
+      SELECT 
+        COUNT(*) as total_trips,
+        COUNT(DISTINCT customer) as total_customers
+      FROM reconciliation_orders
+      WHERE date = ${lastWeekStr}
+    `;
+    
+    // Query for same day last month
+    const lastMonthQuery = await sql`
+      SELECT 
+        COUNT(*) as total_trips,
+        COUNT(DISTINCT customer) as total_customers
+      FROM reconciliation_orders
+      WHERE date = ${lastMonthStr}
+    `;
+
+    const statusQuery = await sql`
+      SELECT status, COUNT(*) as count
+      FROM reconciliation_orders
+      WHERE date = ${reportDate}
+      GROUP BY status
+    `;
+
+    const tripsQuery = await sql`
+      SELECT 
+        customer,
+        provider,
+        driver_name,
+        revenue,
+        status
+      FROM reconciliation_orders
+      WHERE date = ${reportDate}
+      ORDER BY revenue DESC
+    `;
+
+    const customersQuery = await sql`
+      SELECT DISTINCT customer
+      FROM reconciliation_orders
+      WHERE customer IS NOT NULL AND customer != ''
+    `;
+
+    console.log('📊 Analytics from DB:', JSON.stringify(analyticsQuery.rows[0], null, 2));
+
+    // Process trips data
+    const trips = tripsQuery.rows || [];
+    const totalTrips = parseInt(analyticsQuery.rows[0]?.total_trips || '0');
+    const totalCustomers = parseInt(analyticsQuery.rows[0]?.total_customers || '0');
+    const comparisonTotal = parseInt(comparisonQuery.rows[0]?.total_trips || '0');
+    const comparison = totalTrips - comparisonTotal;
+    
+    // Calculate comparisons for customers
+    const comparisonCustomers = parseInt(comparisonQuery.rows[0]?.total_customers || '0');
+    const lastWeekTrips = parseInt(lastWeekQuery.rows[0]?.total_trips || '0');
+    const lastWeekCustomers = parseInt(lastWeekQuery.rows[0]?.total_customers || '0');
+    const lastMonthTrips = parseInt(lastMonthQuery.rows[0]?.total_trips || '0');
+    const lastMonthCustomers = parseInt(lastMonthQuery.rows[0]?.total_customers || '0');
+    
+    const customerComparisons = {
+      vsYesterday: totalCustomers - comparisonCustomers,
+      vsLastWeek: totalCustomers - lastWeekCustomers,
+      vsLastMonth: totalCustomers - lastMonthCustomers,
+    };
+    
+    const tripComparisons = {
+      vsYesterday: totalTrips - comparisonTotal,
+      vsLastWeek: totalTrips - lastWeekTrips,
+      vsLastMonth: totalTrips - lastMonthTrips,
+    };
+
+    // Calculate status breakdown
+    const statusBreakdown: Record<string, number> = {};
+    statusQuery.rows.forEach((row: any) => {
+      statusBreakdown[row.status || 'unknown'] = parseInt(row.count);
+    });
+    
+    const processed = (statusBreakdown.completed || 0) + (statusBreakdown.done || 0);
+    const processedPercent = totalTrips > 0 ? (processed / totalTrips) * 100 : 0;
+
+    // Get detailed partner stats with status breakdown using driver_name
+    // provider: NAK or VENDOR (who handles the transport)
+    // driver_name: Actual partner/driver details
+    const driverStats: Record<string, { total: number; inProgress: number; completed: number; provider: string; }> = {};
+    trips.forEach((trip: any) => {
+      const provider = trip.provider || 'NAK';
+      const driverName = trip.driver_name || `Chưa gán | ${provider}`;
+      const status = trip.status || 'unknown';
+      
+      if (!driverStats[driverName]) {
+        driverStats[driverName] = { total: 0, inProgress: 0, completed: 0, provider };
+      }
+      
+      driverStats[driverName].total += 1;
+      
+      // In-progress: not completed and not cancelled
+      if (status !== 'completed' && status !== 'done' && status !== 'cancelled') {
+        driverStats[driverName].inProgress += 1;
+      }
+      
+      // Completed
+      if (status === 'completed' || status === 'done') {
+        driverStats[driverName].completed += 1;
+      }
+    });
+
+    // Get all drivers/partners with details
+    const allVendors = Object.entries(driverStats)
+      .map(([name, stats]) => ({
+        name,
+        total: stats.total,
+        inProgress: stats.inProgress,
+        completed: stats.completed,
+        provider: stats.provider,
+        percentage: totalTrips > 0 ? Math.round((stats.total / totalTrips) * 100) : 0,
+      }))
+      .sort((a, b) => b.total - a.total);
+    
+    // Top 3 partners by trip count
+    const topPartners = allVendors.slice(0, 3);
+    
+    // Calculate NAK vs Vendor breakdown
+    const nakTrips = trips.filter((t: any) => t.provider === 'NAK').length;
+    const vendorTrips = trips.filter((t: any) => t.provider === 'VENDOR').length;
+
+    // Get top customers by trip count and revenue
+    const customerStats: Record<string, { trips: number; revenue: number }> = {};
+    trips.forEach((trip: any) => {
+      const customer = trip.customer || 'Unknown';
+      if (!customerStats[customer]) {
+        customerStats[customer] = { trips: 0, revenue: 0 };
+      }
+      customerStats[customer].trips += 1;
+      customerStats[customer].revenue += parseFloat(trip.revenue || 0);
+    });
+
+    const topCustomers = Object.entries(customerStats)
+      .map(([name, stats]) => ({
+        name,
+        trips: stats.trips,
+        revenue: stats.revenue,
+      }))
+      .sort((a, b) => b.trips - a.trips)  // Sort by trips count, not revenue
+      .slice(0, 5);
+
+    const totalCustomersDistinct = customersQuery.rows.length;
 
     return {
+      reportDate,
       dashboard,
       fuel,
-      // Mock data for now - replace with real API calls
       trips: {
-        totalTrips: 174,
-        processed: 0,
-        processedPercent: 0,
-        byStatus: {
-          initializing: 0,
-          new: 0,
-          pending: 0,
-          delivering: 0,
-          completed: 78,
-          done: 89,
-          cancelled: 7,
-        },
-        comparison: 17, // vs yesterday
+        totalTrips,
+        processed,
+        processedPercent,
+        byStatus: statusBreakdown,
+        comparison,
+        comparisons: tripComparisons,
       },
       partners: {
-        topPartners: [
-          { name: 'Viettel Post', trips: 52, percentage: 30 },
-          { name: 'GHN', trips: 45, percentage: 26 },
-          { name: 'J&T Express', trips: 38, percentage: 22 },
-        ],
+        topPartners,
+        allVendors,
+        nakTrips,
+        vendorTrips,
       },
       customers: {
-        totalCustomers: 32,
-        topCustomers: [
-          { name: 'Shopee Vietnam', trips: 45, revenue: 245000000 },
-          { name: 'Lazada', trips: 38, revenue: 198000000 },
-          { name: 'Tiki', trips: 32, revenue: 167000000 },
-        ],
+        totalCustomers: totalCustomersDistinct,
+        topCustomers,
+        comparisons: customerComparisons,
       },
     };
   } catch (error) {
@@ -145,17 +340,14 @@ async function sendReports(reportType: 'morning' | 'evening', data: any) {
       reportType === 'morning'
         ? formatMorningKetQuaXuLy({
             plannedTrips: data.trips.totalTrips,
-            nakVehicles: data.dashboard.vehicles?.active || 0,
-            vendorVehicles: Math.floor((data.dashboard.vehicles?.total || 0) * 0.4),
+            nakTrips: data.partners.nakTrips || 0,
+            vendorTrips: data.partners.vendorTrips || 0,
             fuel: {
               current: data.fuel.totalInventory || 0,
               percentage: ((data.fuel.totalInventory || 0) / 4000) * 100,
               estimatedConsumption: 520,
             },
-            priorities: [
-              'Theo dõi chuyến đi ưu tiên của Shopee',
-              'Kiểm tra tình trạng xe trước 7:00',
-            ],
+            priorities: [], // No mock data - leave empty
           })
         : formatEveningKetQuaXuLy(data.trips);
 
@@ -180,6 +372,7 @@ async function sendReports(reportType: 'morning' | 'evening', data: any) {
               processedPercent: data.trips.processedPercent,
               byStatus: data.trips.byStatus,
               topPartners: data.partners.topPartners,
+              allVendors: data.partners.allVendors,
               underperformers: [],
             });
 
@@ -205,9 +398,7 @@ async function sendReports(reportType: 'morning' | 'evening', data: any) {
               totalCustomers: data.customers.totalCustomers,
               totalTrips: data.trips.totalTrips,
               topCustomers: data.customers.topCustomers,
-              newCustomers: 2,
-              avgTripsPerCustomer: 5.4,
-              completionRate: 95,
+              comparisons: data.customers.comparisons,
             });
 
       await telegramBot.sendToTopic(TELEGRAM_TOPICS.KHACH_HANG.id, khachHangMessage, {
