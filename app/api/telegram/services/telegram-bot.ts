@@ -80,9 +80,9 @@ class TelegramBotService {
       } else {
         await bot.telegram.sendMessage(chatId, message, {
           message_thread_id: topicId,
-          parse_mode: options.parseMode,
-          reply_markup: options.keyboard,
-          disable_notification: options.disableNotification,
+          parse_mode: options?.parseMode,
+          reply_markup: options?.keyboard,
+          disable_notification: options?.disableNotification,
         });
       }
 
