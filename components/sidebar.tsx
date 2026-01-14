@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   LayoutDashboard,
   FileText,
@@ -18,11 +18,13 @@ import {
   Route,
   Clock,
   Package,
+  LogOut,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useSidebar } from "@/components/sidebar-context"
 import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 interface NavigationItem {
   name: string
@@ -86,7 +88,37 @@ const navigation: NavigationItem[] = [
 
 export function Sidebar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { isCollapsed, toggle } = useSidebar()
+  const [user, setUser] = useState<{ name: string; email: string; role: string } | null>(null)
+
+  // Fetch user info
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const response = await fetch('/api/auth/me')
+        if (response.ok) {
+          const data = await response.json()
+          setUser(data.user)
+        }
+      } catch (error) {
+        console.error('Failed to fetch user:', error)
+      }
+    }
+    fetchUser()
+  }, [])
+
+  const handleLogout = async () => {
+    try {
+      const response = await fetch('/api/auth/logout', { method: 'POST' })
+      if (response.ok) {
+        router.push('/login')
+        router.refresh()
+      }
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
 
   // Initialize expanded items with active parent
   const [expandedItems, setExpandedItems] = useState<string[]>(() => {
@@ -242,20 +274,23 @@ export function Sidebar() {
         </nav>
 
         {/* User Profile & Settings */}
-        <div className="border-t border-border p-2">
+        <div className="border-t border-border p-2 space-y-1">
           {!isCollapsed && (
-            <div className="mb-2 flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-accent">
-              <User className="h-5 w-5 text-muted-foreground shrink-0" />
+            <div className="mb-2 flex items-center gap-3 rounded-lg px-3 py-2.5 bg-accent/30 border border-accent/50">
+              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-4 w-4 text-primary shrink-0" />
+              </div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-medium text-foreground truncate">
-                  Admin User
+                <p className="text-sm font-semibold text-foreground truncate">
+                  {user?.name || "Đang tải..."}
                 </p>
-                <p className="text-xs text-muted-foreground truncate">
-                  admin@nak.com
+                <p className="text-[10px] font-medium text-primary uppercase tracking-wider">
+                  {user?.role === 'admin' ? "Quản trị viên" : user?.role || "Đang tải..."}
                 </p>
               </div>
             </div>
           )}
+
           <Link
             href="/settings"
             className={cn(
@@ -274,6 +309,25 @@ export function Sidebar() {
               Cài đặt
             </span>
           </Link>
+
+          <button
+            onClick={handleLogout}
+            className={cn(
+              "w-full flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-all",
+              isCollapsed && "justify-center"
+            )}
+            title={isCollapsed ? "Đăng xuất" : undefined}
+          >
+            <LogOut className="h-5 w-5 shrink-0" />
+            <span
+              className={cn(
+                "whitespace-nowrap transition-all duration-300",
+                isCollapsed ? "opacity-0 w-0 overflow-hidden" : "opacity-100"
+              )}
+            >
+              Đăng xuất
+            </span>
+          </button>
         </div>
       </div>
     </aside>
