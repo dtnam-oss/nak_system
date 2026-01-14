@@ -50,7 +50,7 @@ export function getDashboardMenuKeyboard() {
       Markup.button.callback('📏 Quãng đường', 'dashboard_distance')
     ],
     [
-      Markup.button.callback('◀️ Quay lại', 'dashboard_back')
+      Markup.button.callback('◀️ Quay lại', 'menu_main')
     ]
   ]);
 }
