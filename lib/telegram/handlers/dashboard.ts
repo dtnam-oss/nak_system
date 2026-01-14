@@ -25,6 +25,8 @@ import { getDashboardMenuKeyboard, getRefreshBackKeyboard } from '../keyboards';
 
 export async function handleDashboardMenu(ctx: BotContext) {
   try {
+    await ctx.answerCbQuery();
+
     await ctx.editMessageText(
       '📊 **DASHBOARD**\n\n' + 'Chọn loại thống kê bạn muốn xem:',
       {
@@ -32,10 +34,13 @@ export async function handleDashboardMenu(ctx: BotContext) {
         ...getDashboardMenuKeyboard()
       }
     );
-    await ctx.answerCbQuery();
   } catch (error) {
     console.error('[DASHBOARD_MENU] Error:', error);
-    await ctx.answerCbQuery('❌ Lỗi khi tải menu');
+    try {
+      await ctx.answerCbQuery('❌ Lỗi khi tải menu');
+    } catch (e) {
+      console.error('[DASHBOARD_MENU] Failed to answer callback:', e);
+    }
   }
 }
 
