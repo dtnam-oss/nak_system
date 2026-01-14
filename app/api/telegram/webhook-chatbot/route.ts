@@ -286,6 +286,7 @@ bot.action('dashboard_top_routes', requireAuth, handleDashboardTopRoutes);
 bot.action('dashboard_top_drivers', requireAuth, handleDashboardTopDrivers);
 bot.action('dashboard_revenue', requireAuth, handleDashboardRevenue);
 bot.action('dashboard_distance', requireAuth, handleDashboardDistance);
+bot.action('dashboard_back', requireAuth, handleDashboardMenu);
 
 // Trips callbacks
 bot.action('menu_trips', requireAuth, handleTripsMenu);

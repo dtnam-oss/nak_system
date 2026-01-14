@@ -52,11 +52,11 @@ export async function handleDashboardToday(ctx: BotContext) {
     const result = await sql`
       SELECT
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(tong_doanh_thu), 0) as "totalRevenue",
-        COALESCE(SUM(tong_quang_duong), 0) as "totalDistance",
-        COUNT(DISTINCT ten_tai_xe) as "totalDrivers"
-      FROM chuyen_di
-      WHERE ngay_tao = ${today}
+        COALESCE(SUM(revenue), 0) as "totalRevenue",
+        COALESCE(SUM(total_distance), 0) as "totalDistance",
+        COUNT(DISTINCT driver_name) as "totalDrivers"
+      FROM reconciliation_orders
+      WHERE date = ${today}
     `;
 
     const stats = result.rows[0] as DashboardStats;
@@ -96,12 +96,12 @@ export async function handleDashboardMonth(ctx: BotContext) {
     const result = await sql`
       SELECT
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(tong_doanh_thu), 0) as "totalRevenue",
-        COALESCE(SUM(tong_quang_duong), 0) as "totalDistance",
-        COUNT(DISTINCT ten_tai_xe) as "totalDrivers"
-      FROM chuyen_di
-      WHERE ngay_tao >= ${startDate}
-        AND ngay_tao <= ${endDate}
+        COALESCE(SUM(revenue), 0) as "totalRevenue",
+        COALESCE(SUM(total_distance), 0) as "totalDistance",
+        COUNT(DISTINCT driver_name) as "totalDrivers"
+      FROM reconciliation_orders
+      WHERE date >= ${startDate}
+        AND date <= ${endDate}
     `;
 
     const stats = result.rows[0] as DashboardStats;
@@ -144,16 +144,16 @@ export async function handleDashboardTopRoutes(ctx: BotContext) {
 
     const result = await sql`
       SELECT
-        ten_tuyen as "tenTuyen",
+        route_name as "tenTuyen",
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(tong_doanh_thu), 0) as "totalRevenue",
-        COALESCE(SUM(tong_quang_duong), 0) as "totalDistance"
-      FROM chuyen_di
-      WHERE ngay_tao >= ${startDate}
-        AND ngay_tao <= ${endDate}
-        AND ten_tuyen IS NOT NULL
-        AND ten_tuyen != ''
-      GROUP BY ten_tuyen
+        COALESCE(SUM(revenue), 0) as "totalRevenue",
+        COALESCE(SUM(total_distance), 0) as "totalDistance"
+      FROM reconciliation_orders
+      WHERE date >= ${startDate}
+        AND date <= ${endDate}
+        AND route_name IS NOT NULL
+        AND route_name != ''
+      GROUP BY route_name
       ORDER BY "totalRevenue" DESC
       LIMIT 10
     `;
@@ -211,16 +211,16 @@ export async function handleDashboardTopDrivers(ctx: BotContext) {
 
     const result = await sql`
       SELECT
-        ten_tai_xe as "tenTaiXe",
+        driver_name as "tenTaiXe",
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(tong_doanh_thu), 0) as "totalRevenue",
-        COALESCE(SUM(tong_quang_duong), 0) as "totalDistance"
-      FROM chuyen_di
-      WHERE ngay_tao >= ${startDate}
-        AND ngay_tao <= ${endDate}
-        AND ten_tai_xe IS NOT NULL
-        AND ten_tai_xe != ''
-      GROUP BY ten_tai_xe
+        COALESCE(SUM(revenue), 0) as "totalRevenue",
+        COALESCE(SUM(total_distance), 0) as "totalDistance"
+      FROM reconciliation_orders
+      WHERE date >= ${startDate}
+        AND date <= ${endDate}
+        AND driver_name IS NOT NULL
+        AND driver_name != ''
+      GROUP BY driver_name
       ORDER BY "totalTrips" DESC
       LIMIT 10
     `;
@@ -282,14 +282,14 @@ export async function handleDashboardRevenue(ctx: BotContext) {
     // Get revenue by date
     const result = await sql`
       SELECT
-        ngay_tao as "date",
+        date as "date",
         COUNT(*) as "trips",
-        COALESCE(SUM(tong_doanh_thu), 0) as "revenue"
-      FROM chuyen_di
-      WHERE ngay_tao >= ${startDate}
-        AND ngay_tao <= ${endDate}
-      GROUP BY ngay_tao
-      ORDER BY ngay_tao DESC
+        COALESCE(SUM(revenue), 0) as "revenue"
+      FROM reconciliation_orders
+      WHERE date >= ${startDate}
+        AND date <= ${endDate}
+      GROUP BY date
+      ORDER BY date DESC
       LIMIT 7
     `;
 
@@ -341,14 +341,14 @@ export async function handleDashboardDistance(ctx: BotContext) {
     const result = await sql`
       SELECT
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(tong_quang_duong), 0) as "totalDistance",
-        COALESCE(AVG(tong_quang_duong), 0) as "avgDistance",
-        COALESCE(MAX(tong_quang_duong), 0) as "maxDistance",
-        COALESCE(MIN(tong_quang_duong), 0) as "minDistance"
-      FROM chuyen_di
-      WHERE ngay_tao >= ${startDate}
-        AND ngay_tao <= ${endDate}
-        AND tong_quang_duong > 0
+        COALESCE(SUM(total_distance), 0) as "totalDistance",
+        COALESCE(AVG(total_distance), 0) as "avgDistance",
+        COALESCE(MAX(total_distance), 0) as "maxDistance",
+        COALESCE(MIN(total_distance), 0) as "minDistance"
+      FROM reconciliation_orders
+      WHERE date >= ${startDate}
+        AND date <= ${endDate}
+        AND total_distance > 0
     `;
 
     const stats = result.rows[0];
