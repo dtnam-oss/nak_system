@@ -266,16 +266,26 @@ bot.command('users', requireAuth, requireRole(['admin']), async (ctx) => {
 
 // Main menu callbacks
 bot.action('menu_main', requireAuth, async (ctx) => {
-  const user = ctx.state!.user!;
+  try {
+    await ctx.answerCbQuery();
 
-  await ctx.editMessageText(
-    `🏠 **MENU CHÍNH**\n\n` + `Xin chào ${user.hoVaTen}!\n` + `Chọn chức năng bạn muốn sử dụng:`,
-    {
-      parse_mode: 'Markdown',
-      ...getMainMenuKeyboard()
+    const user = ctx.state!.user!;
+
+    await ctx.editMessageText(
+      `🏠 **MENU CHÍNH**\n\n` + `Xin chào ${user.hoVaTen}!\n` + `Chọn chức năng bạn muốn sử dụng:`,
+      {
+        parse_mode: 'Markdown',
+        ...getMainMenuKeyboard()
+      }
+    );
+  } catch (error) {
+    console.error('[MENU_MAIN] Error:', error);
+    try {
+      await ctx.answerCbQuery('❌ Lỗi khi tải menu chính');
+    } catch (e) {
+      console.error('[MENU_MAIN] Failed to answer callback:', e);
     }
-  );
-  await ctx.answerCbQuery();
+  }
 });
 
 // Dashboard callbacks
