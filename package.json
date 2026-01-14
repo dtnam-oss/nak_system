@@ -9,7 +9,8 @@
     "lint": "eslint",
     "telegram:setup": "tsx scripts/setup-telegram-webhook.ts",
     "telegram:test:morning": "tsx scripts/test-telegram-report.ts morning",
-    "telegram:test:evening": "tsx scripts/test-telegram-report.ts evening"
+    "telegram:test:evening": "tsx scripts/test-telegram-report.ts evening",
+    "migrate:legacy": "tsx scripts/migrate-legacy.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.71.2",

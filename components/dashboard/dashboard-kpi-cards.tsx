@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { TrendingUp, TrendingDown, AlertCircle, Truck, Droplet, FileText } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertCircle, Truck, Droplet, FileText, Wallet, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface KPICardsProps {
@@ -39,94 +39,124 @@ export function DashboardKpiCards({ revenue, pendingOrders, vehicles, fuelTank }
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {/* Revenue Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-          <CardTitle className="text-xs font-medium">Doanh thu tháng này</CardTitle>
-          <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+      <Card className="glass-card border-none relative overflow-hidden group">
+        <div className="absolute right-[-20px] top-[-20px] opacity-5 transform rotate-12 transition-transform group-hover:scale-110 duration-500">
+          <Wallet className="w-32 h-32 text-primary" />
+        </div>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 relative z-10">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Doanh thu tháng này</CardTitle>
+          <div className="p-2 bg-primary/10 rounded-full">
+            <FileText className="h-4 w-4 text-primary" />
+          </div>
         </CardHeader>
-        <CardContent className="pt-1">
-          <div className="text-lg font-bold">{formatCurrency(revenue.current)}</div>
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5">
-            {isRevenueUp ? (
-              <TrendingUp className="h-3 w-3 text-green-600" />
-            ) : (
-              <TrendingDown className="h-3 w-3 text-red-600" />
-            )}
+        <CardContent className="pt-1 relative z-10">
+          <div className="text-2xl font-bold text-foreground">{formatCurrency(revenue.current)}</div>
+          <div className="flex items-center gap-1 text-xs mt-1">
             <span className={cn(
-              isRevenueUp ? "text-green-600" : "text-red-600"
+              "flex items-center font-medium",
+              isRevenueUp ? "text-emerald-500" : "text-rose-500"
             )}>
+              {isRevenueUp ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
               {Math.abs(revenue.percentageChange)}%
             </span>
-            <span>so với tháng trước</span>
+            <span className="text-muted-foreground">so với tháng trước</span>
           </div>
         </CardContent>
       </Card>
 
       {/* Pending Orders Card */}
       <Card className={cn(
-        isPendingCritical && "border-orange-500 bg-orange-50/50"
+        "glass-card border-none relative overflow-hidden group transition-all duration-300",
+        isPendingCritical && "shadow-orange-500/20" // colored shadow if critical
       )}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-          <CardTitle className="text-xs font-medium">Đơn cần đối soát</CardTitle>
-          <AlertCircle className={cn(
-            "h-3.5 w-3.5",
-            isPendingCritical ? "text-orange-600" : "text-muted-foreground"
-          )} />
+        <div className="absolute right-[-20px] top-[-20px] opacity-5 transform rotate-12 transition-transform group-hover:scale-110 duration-500">
+          <Clock className={cn("w-32 h-32", isPendingCritical ? "text-orange-500" : "text-primary")} />
+        </div>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 relative z-10">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Đơn cần đối soát</CardTitle>
+          <div className={cn("p-2 rounded-full", isPendingCritical ? "bg-orange-500/10" : "bg-primary/10")}>
+            <AlertCircle className={cn(
+              "h-4 w-4",
+              isPendingCritical ? "text-orange-600" : "text-primary"
+            )} />
+          </div>
         </CardHeader>
-        <CardContent className="pt-1">
+        <CardContent className="pt-1 relative z-10">
           <div className={cn(
-            "text-lg font-bold",
-            isPendingCritical && "text-orange-600"
+            "text-2xl font-bold",
+            isPendingCritical ? "text-orange-600" : "text-foreground"
           )}>
             {pendingOrders}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground mt-1 font-medium">
             {isPendingCritical ? "Cần xử lý ngay" : "Không có đơn chờ"}
           </p>
         </CardContent>
       </Card>
 
       {/* Vehicles Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-          <CardTitle className="text-xs font-medium">Tình trạng đội xe</CardTitle>
-          <Truck className="h-3.5 w-3.5 text-muted-foreground" />
-        </CardHeader>
-        <CardContent className="pt-1">
-          <div className="text-lg font-bold">
-            {vehicles.active}/{vehicles.total}
+      <Card className="glass-card border-none relative overflow-hidden group">
+        <div className="absolute right-[-20px] top-[-20px] opacity-5 transform rotate-12 transition-transform group-hover:scale-110 duration-500">
+          <Truck className="w-32 h-32 text-blue-500" />
+        </div>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 relative z-10">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Tình trạng đội xe</CardTitle>
+          <div className="p-2 bg-blue-500/10 rounded-full">
+            <Truck className="h-4 w-4 text-blue-600" />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-0.5">
-            {vehicles.active} xe đang hoạt động
-          </p>
+        </CardHeader>
+        <CardContent className="pt-1 relative z-10">
+          <div className="text-2xl font-bold text-foreground">
+            {vehicles.active}<span className="text-lg text-muted-foreground font-normal">/{vehicles.total}</span>
+          </div>
+          <div className="mt-1 flex items-center gap-2">
+            <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                style={{ width: `${(vehicles.active / (vehicles.total || 1)) * 100}%` }}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground whitespace-nowrap">
+              {vehicles.active} xe chạy
+            </p>
+          </div>
         </CardContent>
       </Card>
 
       {/* Fuel Tank Card */}
       <Card className={cn(
-        isFuelLow && "border-red-500 bg-red-50/50"
+        "glass-card border-none relative overflow-hidden group",
+        isFuelLow && "shadow-red-500/20"
       )}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-          <CardTitle className="text-xs font-medium">Mức nhiên liệu</CardTitle>
-          <Droplet className={cn(
-            "h-3.5 w-3.5",
-            isFuelLow ? "text-red-600" : "text-blue-600"
-          )} />
-        </CardHeader>
-        <CardContent className="pt-1">
-          <div className="text-lg font-bold">
-            {Math.round(fuelTank.currentLevel).toLocaleString('vi-VN')} L
+        <div className="absolute right-[-20px] top-[-20px] opacity-5 transform rotate-12 transition-transform group-hover:scale-110 duration-500">
+          <Droplet className={cn("w-32 h-32", isFuelLow ? "text-red-500" : "text-cyan-500")} />
+        </div>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 relative z-10">
+          <CardTitle className="text-sm font-medium text-muted-foreground">Kho nhiên liệu</CardTitle>
+          <div className={cn("p-2 rounded-full", isFuelLow ? "bg-red-500/10" : "bg-cyan-500/10")}>
+            <Droplet className={cn(
+              "h-4 w-4",
+              isFuelLow ? "text-red-600" : "text-cyan-600"
+            )} />
           </div>
-          <div className="mt-1.5 space-y-1">
-            <Progress 
-              value={fuelTank.percentage} 
+        </CardHeader>
+        <CardContent className="pt-1 relative z-10">
+          <div className="text-2xl font-bold text-foreground">
+            {Math.round(fuelTank.currentLevel).toLocaleString('vi-VN')} <span className="text-sm font-normal text-muted-foreground">L</span>
+          </div>
+          <div className="mt-2 space-y-1">
+            <Progress
+              value={fuelTank.percentage}
+              className="h-1.5 bg-secondary"
               indicatorClassName={cn(
-                isFuelLow ? "bg-red-600" : "bg-blue-600"
+                "transition-all duration-500",
+                isFuelLow ? "bg-red-600" : "bg-gradient-to-r from-cyan-500 to-blue-500"
               )}
             />
-            <p className="text-[10px] text-muted-foreground">
-              {fuelTank.percentage.toFixed(1)}% / {fuelTank.capacity.toLocaleString('vi-VN')}L
-            </p>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{fuelTank.percentage.toFixed(1)}%</span>
+              <span>{fuelTank.capacity.toLocaleString('vi-VN')}L</span>
+            </div>
           </div>
         </CardContent>
       </Card>
