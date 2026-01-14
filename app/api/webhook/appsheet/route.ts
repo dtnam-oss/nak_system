@@ -123,10 +123,10 @@ interface NormalizedPayload {
 function parseNumber(val: any): number {
   if (typeof val === 'number') return val;
   if (!val || val === '') return 0;
-  
+
   const str = String(val).replace(/[^0-9.-]+/g, '');
   const parsed = parseFloat(str);
-  
+
   return isNaN(parsed) ? 0 : parsed;
 }
 
@@ -168,7 +168,7 @@ function formatDate(val: any): string {
  */
 function normalizeStatus(val: any): 'approved' | 'pending' | 'rejected' {
   if (!val) return 'pending';
-  
+
   const s = String(val).toLowerCase().trim();
 
   // Map to "approved" - Đã duyệt
@@ -209,7 +209,7 @@ function normalizeStatus(val: any): 'approved' | 'pending' | 'rejected' {
  */
 function normalizeProvider(val: any): 'NAK' | 'VENDOR' | 'OTHER' {
   if (!val) return 'OTHER';
-  
+
   const s = String(val).toUpperCase().trim();
 
   if (s.includes('NAK')) return 'NAK';
@@ -223,7 +223,7 @@ function normalizeProvider(val: any): 'NAK' | 'VENDOR' | 'OTHER' {
  */
 function normalizeTripType(val: any): string | null {
   if (!val) return null;
-  
+
   const s = String(val).toLowerCase().trim();
 
   if (s.includes('một chiều') || s.includes('1 chiều') || s.includes('mot chieu')) return 'Một chiều';
@@ -241,7 +241,7 @@ function normalizeTripType(val: any): string | null {
  */
 function normalizeRouteType(val: any): string | null {
   if (!val) return null;
-  
+
   const s = String(val).toLowerCase().trim();
 
   if (s.includes('nội thành') || s.includes('noi thanh')) return 'Nội thành';
@@ -260,9 +260,17 @@ function calculateTotalWeight(details: any): number {
   if (!details?.chiTietLoTrinh || !Array.isArray(details.chiTietLoTrinh)) {
     return 0;
   }
-  
+
   return details.chiTietLoTrinh.reduce((sum: number, item: any) => {
-    const weight = parseNumber(item.tai_trong || item.tai_trong_tinh_phi || 0);
+    // FIX: Check for camelCase keys from GAS first (taiTrongTinhPhi, taiTrong)
+    // Fallback to snake_case for legacy data stability
+    const weight = parseNumber(
+      item.taiTrongTinhPhi ||
+      item.taiTrong ||
+      item.tai_trong_tinh_phi ||
+      item.tai_trong ||
+      0
+    );
     return sum + weight;
   }, 0);
 }
@@ -276,40 +284,65 @@ function generateRouteName(routeType: string | null, customer: string | null, pr
   if (providedName && providedName.trim()) {
     return providedName.trim();
   }
-  
+
   // Auto-generate
   const parts: string[] = [];
-  
+
   if (routeType) parts.push(routeType);
   if (customer) parts.push(customer);
-  
+
   if (parts.length > 0) {
     return parts.join(' - ');
   }
-  
+
   return 'Chưa xác định';
 }
 
 /**
  * Parse data_json safely
  */
+/**
+ * Parse data_json safely
+ */
 function parseDataJson(data: any): any {
-  if (!data) return {};
+  let parsed: any = {};
 
-  if (typeof data === 'object' && !Array.isArray(data)) {
-    return data;
-  }
-
-  if (typeof data === 'string') {
+  if (!data) {
+    parsed = {};
+  } else if (typeof data === 'object' && !Array.isArray(data)) {
+    parsed = data;
+  } else if (typeof data === 'string') {
     try {
-      return JSON.parse(data);
+      parsed = JSON.parse(data);
     } catch (e) {
       console.error('[ERROR] Failed to parse data_json:', e);
-      return {};
+      parsed = {};
     }
   }
 
-  return {};
+  // NORMALIZE DETAILS (Fix snake_case vs camelCase mismatch)
+  if (parsed && Array.isArray(parsed.chiTietLoTrinh)) {
+    parsed.chiTietLoTrinh = parsed.chiTietLoTrinh.map((item: any) => ({
+      ...item,
+      // Standardize to camelCase (Frontend expects these)
+      id: item.id || item.Id,
+      maChuyenDi: item.maChuyenDi || item.ma_chuyen_di,
+      loTrinh: item.loTrinh || item.lo_trinh, // Critical for display
+      loTrinhChiTiet: item.loTrinhChiTiet || item.lo_trinh_chi_tiet_theo_diem, // Critical
+      maTuyen: item.maTuyen || item.ma_chuyen_di_kh, // Fixed mapping
+      bienKiemSoat: item.bienKiemSoat || item.bien_kiem_soat,
+      ngayTrenTem: item.ngayTrenTem || item.ngay_tren_tem,
+
+      // Numeric fields
+      taiTrong: parseNumber(item.taiTrong || item.tai_trong),
+      taiTrongTinhPhi: parseNumber(item.taiTrongTinhPhi || item.tai_trong_tinh_phi),
+      thanhTien: parseNumber(item.thanhTien || item.thanh_tien),
+      donGia: parseNumber(item.donGia || item.don_gia),
+      quangDuong: parseNumber(item.quangDuong || item.quang_duong)
+    }));
+  }
+
+  return parsed;
 }
 
 /**
@@ -318,31 +351,31 @@ function parseDataJson(data: any): any {
  */
 function normalizePayload(payload: GASPayload): NormalizedPayload {
   console.log('[NORMALIZE] Starting payload normalization...');
-  
+
   // Parse details first
   const details = parseDataJson(payload.data_json);
-  
+
   // Extract and normalize each field
   const orderId = payload.maChuyenDi || '';  // Add fallback for TypeScript
   const date = formatDate(payload.ngayTao);
   const customer = payload.tenKhachHang || null;
-  
+
   // CRITICAL: Map tongDoanhThu -> revenue (doanh thu)
   const revenue = parseNumber(payload.tongDoanhThu);
   console.log(`[NORMALIZE] tongDoanhThu: ${payload.tongDoanhThu} -> revenue: ${revenue}`);
-  
+
   // CRITICAL: Map tongChiPhi -> cost (chi phí)
   const cost = parseNumber(payload.tongChiPhi);
   console.log(`[NORMALIZE] tongChiPhi: ${payload.tongChiPhi} -> cost: ${cost}`);
-  
+
   // CRITICAL: Map tongQuangDuong -> total_distance
   const totalDistance = parseNumber(payload.tongQuangDuong);
   console.log(`[NORMALIZE] tongQuangDuong: ${payload.tongQuangDuong} -> totalDistance: ${totalDistance}`);
-  
+
   // CRITICAL: Normalize status correctly
   const status = normalizeStatus(payload.trangThai);
   console.log(`[NORMALIZE] trangThai: "${payload.trangThai}" -> status: "${status}"`);
-  
+
   const driverName = payload.tenTaiXe || null;
   const provider = normalizeProvider(payload.donViVanChuyen);
   const tripType = normalizeTripType(payload.loaiChuyen);
@@ -375,12 +408,12 @@ function normalizePayload(payload: GASPayload): NormalizedPayload {
     note,
     details
   };
-  
+
   console.log('[NORMALIZE] Normalization complete. Final values:');
   console.log(`  - revenue: ${normalized.revenue}`);
   console.log(`  - cost: ${normalized.cost}`);
   console.log('[NORMALIZE] Full normalized object:', JSON.stringify(normalized, null, 2));
-  
+
   return normalized;
 }
 
@@ -434,7 +467,7 @@ export async function POST(request: Request) {
     // 3. Handle Employee Actions
     if (payload.Action === 'Employee_Add' || payload.Action === 'Employee_Edit') {
       console.log(`👤 Processing ${payload.Action} action...`);
-      
+
       const employeeData: EmployeePayload = {
         maNhanVien: payload.maNhanVien!,
         hoVaTen: (payload as any).hoVaTen,
@@ -525,7 +558,7 @@ export async function POST(request: Request) {
     // Handle Employee Delete
     if (payload.Action === 'Employee_Delete') {
       console.log('👤 Processing Employee_Delete action...');
-      
+
       if (!payload.maNhanVien) {
         console.error('❌ Missing employee code');
         return NextResponse.json({
@@ -559,7 +592,7 @@ export async function POST(request: Request) {
     // 4. Handle Fuel Import Actions
     if (payload.Action === 'FuelImport_Upsert') {
       console.log('⛽ Processing FuelImport_Upsert action...');
-      
+
       if (!payload.data) {
         console.error('❌ Missing fuel import data');
         return NextResponse.json({
@@ -626,7 +659,7 @@ export async function POST(request: Request) {
 
     if (payload.Action === 'FuelImport_Delete') {
       console.log('🗑️  Processing FuelImport_Delete action...');
-      
+
       if (!payload.id) {
         console.error('❌ Missing fuel import ID');
         return NextResponse.json({
@@ -661,7 +694,7 @@ export async function POST(request: Request) {
     // 4. Handle Fuel Transaction Actions with Auto-Calculation
     if (payload.Action === 'FuelTransaction_Upsert') {
       console.log('⛽ Processing FuelTransaction_Upsert action...');
-      
+
       if (!payload.data) {
         console.error('❌ Missing fuel transaction data');
         return NextResponse.json({
@@ -831,7 +864,7 @@ export async function POST(request: Request) {
 
     if (payload.Action === 'FuelTransaction_Delete') {
       console.log('🗑️  Processing FuelTransaction_Delete action...');
-      
+
       if (!payload.id) {
         console.error('❌ Missing fuel transaction ID');
         return NextResponse.json({
@@ -866,7 +899,7 @@ export async function POST(request: Request) {
     // 5. Handle UpsertVehicles action
     if (payload.Action === 'UpsertVehicles') {
       console.log('🚗 Processing UpsertVehicles action...');
-      
+
       if (!payload.vehicles || !Array.isArray(payload.vehicles)) {
         console.error('❌ Missing or invalid vehicles array');
         return NextResponse.json({
@@ -1175,7 +1208,7 @@ export async function POST(request: Request) {
     // 9. Handle DELETE action
     if (payload.Action === 'Delete') {
       console.log('🗑️  Processing DELETE action...');
-      
+
       await sql`
         DELETE FROM reconciliation_orders
         WHERE order_id = ${payload.maChuyenDi}
@@ -1218,9 +1251,9 @@ export async function POST(request: Request) {
     console.log('[DB INSERT] Values to insert:');
     console.log(`  - revenue: ${normalized.revenue}`);
     console.log(`  - cost: ${normalized.cost}`);
-    
+
     const detailsJson = JSON.stringify(normalized.details);
-    
+
     try {
       await sql`
         INSERT INTO reconciliation_orders (

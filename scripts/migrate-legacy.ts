@@ -82,26 +82,35 @@ function normalizeTripType(val: any): string | null {
   if (!val) return null;
   const s = String(val).toLowerCase().trim();
 
-  // Valid DB Enums: 'Một chiều', 'Hai chiều', 'Nhiều điểm'
+  // Valid DB Enums (Standardized)
   if (s.includes('một chiều') || s.includes('1 chiều')) return 'Một chiều';
   if (s.includes('hai chiều') || s.includes('2 chiều') || s.includes('khứ hồi')) return 'Hai chiều';
   if (s.includes('nhiều điểm')) return 'Nhiều điểm';
 
-  // These exist in Excel but NOT in DB Constraint -> Map to NULL to allow import
-  // Alternatively, we could default to 'Một chiều' if business logic requires it, 
-  // but NULL is safer for reconciliation.
-  return null;
+  // Specific types from AppSheet
+  if (s.includes('theo tuyến')) return 'Theo tuyến';
+  if (s.includes('theo ca')) return 'Theo ca';
+  if (s.includes('theo chuyến')) return 'Theo chuyến';
+
+  // Fallback: Return original string (capitalized first letter) to avoid data loss
+  return String(val).trim();
 }
 
 function normalizeRouteType(val: any): string | null {
   if (!val) return null;
   const s = String(val).toLowerCase().trim();
+
+  // Standard types
   if (s.includes('nội thành')) return 'Nội thành';
   if (s.includes('liên tỉnh')) return 'Liên tỉnh';
   if (s.includes('đường dài')) return 'Đường dài';
-  // Strict check constraint in DB: ('Nội thành', 'Liên tỉnh', 'Đường dài')
-  // Return null for others (e.g. Tăng cường, Cố định) to avoid insertion error
-  return null;
+
+  // Extended types (supported in Webhook)
+  if (s.includes('cố định')) return 'Cố định';
+  if (s.includes('tăng cường')) return 'Tăng cường';
+
+  // Fallback: Return original string
+  return String(val).trim();
 }
 
 function generateRouteName(routeType: string | null, customer: string | null, providedName?: string): string {
@@ -189,6 +198,7 @@ async function main() {
     loTrinh: getCol(detailHeaders, 'lo_trinh', ['Lộ trình']),
     loTrinhChiTiet: getCol(detailHeaders, 'lo_trinh_chi_tiet_theo_diem', ['Lộ trình chi tiết']),
     bienKiemSoat: getCol(detailHeaders, 'bien_kiem_soat', ['Biển kiểm soát', 'BKS']),
+    maTuyen: getCol(detailHeaders, 'ma_chuyen_di_kh', ['Mã chuyến KH', 'Mã tuyến']), // New field
     taiTrong: getCol(detailHeaders, 'tai_trong', ['Tải trọng']),
     quangDuong: getCol(detailHeaders, 'quang_duong', ['Quãng đường']),
     soChieu: getCol(detailHeaders, 'so_chieu', ['Số chiều']),
@@ -210,15 +220,17 @@ async function main() {
     const detailItem = {
       id: getVal(detailColMap.id) || `migrated-${rowNumber}`,
       maChuyenDi: maChuyenDi,
+      maTuyen: getVal(detailColMap.maTuyen), // Mapped
       loTrinh: getVal(detailColMap.loTrinh),
       loTrinhChiTiet: getVal(detailColMap.loTrinhChiTiet),
       bienKiemSoat: getVal(detailColMap.bienKiemSoat),
-      tai_trong: parseNumber(getVal(detailColMap.taiTrong), 99999999.99),
-      quang_duong: parseNumber(getVal(detailColMap.quangDuong), 99999999.99),
-      so_chieu: parseNumber(getVal(detailColMap.soChieu), 999),
-      don_gia: parseNumber(getVal(detailColMap.donGia), 999999999999),
-      thanh_tien: parseNumber(getVal(detailColMap.thanhTien), 999999999999),
-      ngay_tren_tem: formatDate(getVal(detailColMap.ngayTrenTem))
+      // Normalize to camelCase
+      taiTrong: parseNumber(getVal(detailColMap.taiTrong), 99999999.99),
+      quangDuong: parseNumber(getVal(detailColMap.quangDuong), 99999999.99),
+      soChieu: parseNumber(getVal(detailColMap.soChieu), 999),
+      donGia: parseNumber(getVal(detailColMap.donGia), 999999999999),
+      thanhTien: parseNumber(getVal(detailColMap.thanhTien), 999999999999),
+      ngayTrenTem: formatDate(getVal(detailColMap.ngayTrenTem))
     };
 
     const existing = detailsMap.get(maChuyenDi) || [];
@@ -265,8 +277,8 @@ async function main() {
     // Get associated details
     const orderDetails = detailsMap.get(maChuyenDi) || [];
 
-    // Calculate total weight from details
-    const totalWeight = orderDetails.reduce((sum, item) => sum + (item.tai_trong || 0), 0);
+    // Calculate total weight from details (using new camelCase key)
+    const totalWeight = orderDetails.reduce((sum, item) => sum + (item.taiTrong || 0), 0);
 
     // Normalize
     const normalized: NormalizedPayload = {

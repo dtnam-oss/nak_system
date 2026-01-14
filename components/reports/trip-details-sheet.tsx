@@ -165,14 +165,14 @@ export function TripDetailsSheet({ trip, open, onOpenChange, errors = [] }: Trip
                           <TableCell className={cn(
                             hasFieldError(index, 'loTrinh') && "bg-destructive/20 font-semibold text-destructive"
                           )}>
-                            {detail.loTrinh || (
+                            {detail.loTrinh || detail.lo_trinh || (
                               <span className="text-destructive text-xs">⚠️ Thiếu</span>
                             )}
                           </TableCell>
                           <TableCell className={cn(
                             hasFieldError(index, 'loTrinhChiTiet') && "bg-destructive/20 font-semibold text-destructive"
                           )}>
-                            {detail.loTrinhChiTiet || (
+                            {detail.loTrinhChiTiet || detail.lo_trinh_chi_tiet_theo_diem || (
                               <span className="text-destructive text-xs">⚠️ Thiếu</span>
                             )}
                           </TableCell>
@@ -180,25 +180,25 @@ export function TripDetailsSheet({ trip, open, onOpenChange, errors = [] }: Trip
                             "font-mono text-xs",
                             hasFieldError(index, 'bienKiemSoat') && "bg-destructive/20 font-semibold text-destructive"
                           )}>
-                            {detail.bienKiemSoat || (
+                            {detail.bienKiemSoat || detail.bien_kiem_soat || (
                               <span className="text-destructive text-xs">⚠️ Thiếu</span>
                             )}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
-                            {detail.ngayTrenTem || '-'}
+                            {detail.ngayTrenTem || detail.ngay_tren_tem || '-'}
                           </TableCell>
                           <TableCell className={cn(
                             "text-right",
                             hasFieldError(index, 'taiTrongTinhPhi') && "bg-destructive/20 font-semibold text-destructive"
                           )}>
-                            {detail.taiTrongTinhPhi ? (
-                              <span className="text-xs">{Number(detail.taiTrongTinhPhi).toLocaleString('vi-VN')} kg</span>
+                            {(detail.taiTrongTinhPhi || detail.tai_trong_tinh_phi || detail.taiTrong || detail.tai_trong) ? (
+                              <span className="text-xs">{Number(detail.taiTrongTinhPhi || detail.tai_trong_tinh_phi || detail.taiTrong || detail.tai_trong).toLocaleString('vi-VN')} kg</span>
                             ) : (
                               <span className="text-destructive text-xs">⚠️ Thiếu</span>
                             )}
                           </TableCell>
                           <TableCell className="text-right font-medium text-xs">
-                            {detail.thanhTien ? formatCurrency(Number(detail.thanhTien)) : '-'}
+                            {formatCurrency(Number(detail.thanhTien || detail.thanh_tien || 0))}
                           </TableCell>
                         </TableRow>
                       )
