@@ -88,14 +88,17 @@ export function getTripsMenuKeyboard(userPermissions?: AuthenticatedUser['permis
 export function getEmployeesMenuKeyboard() {
   return Markup.inlineKeyboard([
     [
-      Markup.button.callback('🔍 Tra cứu', 'employees_search'),
-      Markup.button.callback('📋 Danh sách', 'employees_list')
+      Markup.button.callback('📊 Tổng quan', 'employees_overview'),
+      Markup.button.callback('🔍 Tra cứu', 'employees_search')
     ],
     [
-      Markup.button.callback('🏢 Theo phòng ban', 'employees_by_department'),
-      Markup.button.callback('👔 Theo chức vụ', 'employees_by_position')
+      Markup.button.callback('📋 Danh sách', 'employees_list'),
+      Markup.button.callback('🏢 Phòng ban', 'employees_by_department')
     ],
-    [Markup.button.callback('⬅️ Quay lại', 'menu_main')]
+    [
+      Markup.button.callback('👔 Chức vụ', 'employees_by_position'),
+      Markup.button.callback('⬅️ Quay lại', 'menu_main')
+    ]
   ]);
 }
 
