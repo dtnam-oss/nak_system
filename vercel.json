@@ -3,11 +3,11 @@
   "framework": "nextjs",
   "crons": [
     {
-      "path": "/api/telegram/cron/send-reports?type=morning&secret=my-super-secret-key-abc123xyz",
+      "path": "/api/telegram/cron/send-reports?type=morning&secret=nak-2025-telegram-secret-abc123xyz789",
       "schedule": "0 23 * * *"
     },
     {
-      "path": "/api/telegram/cron/send-reports?type=evening&secret=my-super-secret-key-abc123xyz",
+      "path": "/api/telegram/cron/send-reports?type=evening&secret=nak-2025-telegram-secret-abc123xyz789",
       "schedule": "0 11 * * *"
     }
   ]
