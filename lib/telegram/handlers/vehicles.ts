@@ -23,6 +23,7 @@ import {
     getRefreshBackKeyboard,
     getPaginationKeyboard
 } from '../keyboards';
+import { Markup } from 'telegraf';
 
 // =============================================================================
 // VEHICLES MENU
@@ -52,47 +53,31 @@ export async function handleVehiclesMenu(ctx: BotContext) {
 
 export async function handleVehiclesRoutes(ctx: BotContext) {
     try {
-        await ctx.answerCbQuery('⏳ Đang tải lộ trình gần đây...');
+        await ctx.answerCbQuery();
 
-        // Get 5 most recent unique routes from orders
-        const result = await sql`
-      SELECT 
-        route_name as "tenTuyen",
-        COUNT(*) as "soChuyen",
-        MAX(date) as "ngayGanNhat"
-      FROM reconciliation_orders
-      WHERE route_name IS NOT NULL AND route_name != ''
-      GROUP BY route_name
-      ORDER BY "ngayGanNhat" DESC
-      LIMIT 10
-    `;
+        const miniAppUrl = process.env.NEXT_PUBLIC_APP_URL
+            ? `${process.env.NEXT_PUBLIC_APP_URL}/mini-app/vehicle-routes`
+            : 'https://nak-logistic-system.vercel.app/mini-app/vehicle-routes';
 
-        if (result.rows.length === 0) {
-            await ctx.editMessageText(
-                '🗺️ **LỘ TRÌNH PHƯƠNG TIỆN**\n\n' + 'Chưa có dữ liệu lộ trình.',
-                {
-                    parse_mode: 'Markdown',
-                    ...getRefreshBackKeyboard('vehicles_routes', 'menu_vehicles')
-                }
-            );
-            return;
-        }
-
-        let message = '🗺️ **CÁC LỘ TRÌNH GẦN ĐÂY**\n\n';
-        result.rows.forEach((row, index) => {
-            message += `${index + 1}. **${truncate(row.tenTuyen, 40)}**\n` +
-                `   🚚 ${row.soChuyen} chuyến | 📅 ${formatDate(row.ngayGanNhat)}\n\n`;
-        });
-
-        message += '💡 Để xem chi tiết lộ trình của từng xe, vui lòng vào phần **Thông tin phương tiện**.';
-
-        await ctx.editMessageText(message, {
-            parse_mode: 'Markdown',
-            ...getRefreshBackKeyboard('vehicles_routes', 'menu_vehicles')
-        });
+        await ctx.editMessageText(
+            '🗺️ **TRA CỨU LỘ TRÌNH PHƯƠNG TIỆN**\n\n' +
+            'Tính năng này cho phép bạn tra cứu lịch sử chạy của xe trong một khoảng thời gian cụ thể.\n\n' +
+            '💡 **Hướng dẫn:**\n' +
+            '1. Nhấn nút bên dưới để mở ứng dụng.\n' +
+            '2. Nhập Biển số xe cần tra.\n' +
+            '3. Chọn khoảng thời gian (Từ ngày - Đến ngày).\n' +
+            '4. Xem danh sách khách hàng và lộ trình chi tiết.',
+            {
+                parse_mode: 'Markdown',
+                ...Markup.inlineKeyboard([
+                    [Markup.button.webApp('🗺️ Mở Tra cứu Lộ trình', miniAppUrl)],
+                    [Markup.button.callback('◀️ Quay lại', 'menu_vehicles')]
+                ])
+            }
+        );
     } catch (error) {
         console.error('[VEHICLES_ROUTES] Error:', error);
-        await ctx.editMessageText(formatError('Không thể tải dữ liệu lộ trình'), {
+        await ctx.editMessageText(formatError('Không thể mở ứng dụng tra cứu'), {
             parse_mode: 'Markdown',
             ...getRefreshBackKeyboard('vehicles_routes', 'menu_vehicles')
         });
