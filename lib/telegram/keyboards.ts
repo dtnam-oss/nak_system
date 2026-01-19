@@ -25,9 +25,12 @@ export function getMainMenuKeyboard() {
     ],
     [
       Markup.button.callback('📈 Báo cáo', 'menu_reports'),
-      Markup.button.callback('⚙️ Cài đặt', 'menu_settings')
+      Markup.button.callback('🚛 Phương tiện', 'menu_vehicles')
     ],
-    [Markup.button.callback('ℹ️ Trợ giúp', 'help')]
+    [
+      Markup.button.callback('⚙️ Cài đặt', 'menu_settings'),
+      Markup.button.callback('ℹ️ Trợ giúp', 'help')
+    ]
   ]);
 }
 
@@ -98,6 +101,25 @@ export function getEmployeesMenuKeyboard() {
     [
       Markup.button.callback('👔 Chức vụ', 'employees_by_position'),
       Markup.button.callback('⬅️ Quay lại', 'menu_main')
+    ]
+  ]);
+}
+
+// =============================================================================
+// VEHICLES SUBMENU
+// =============================================================================
+
+export function getVehiclesMenuKeyboard() {
+  return Markup.inlineKeyboard([
+    [
+      Markup.button.callback('🗺️ Lộ trình', 'vehicles_routes'),
+      Markup.button.callback('⛽ Sử dụng nhiên liệu', 'vehicles_fuel')
+    ],
+    [
+      Markup.button.callback('ℹ️ Thông tin phương tiện', 'vehicles_info')
+    ],
+    [
+      Markup.button.callback('◀️ Quay lại', 'menu_main')
     ]
   ]);
 }

@@ -24,6 +24,7 @@ import {
 } from '@/lib/telegram/auth';
 import {
   getMainMenuKeyboard,
+  getVehiclesMenuKeyboard,
   getAdminMenuKeyboard,
   NOOP_ACTION
 } from '@/lib/telegram/keyboards';
@@ -52,7 +53,12 @@ import {
   handleReportWeek,
   handleReportMonth,
   handleReportCustom,
-  handleReportExport
+  handleReportExport,
+  handleVehiclesMenu,
+  handleVehiclesRoutes,
+  handleVehiclesFuel,
+  handleVehiclesInfo,
+  handleVehicleSearchCommand
 } from '@/lib/telegram/handlers';
 import { formatError } from '@/lib/telegram/formatters';
 
@@ -104,12 +110,12 @@ bot.command('start', async (ctx) => {
       // ✅ Authenticated
       await ctx.reply(
         `🎉 **Xin chào ${user.hoVaTen}!**\n\n` +
-          `✅ Bạn đã được xác thực thành công.\n` +
-          `📋 Mã nhân viên: ${user.maNhanVien}\n` +
-          `🏢 Phòng ban: ${user.phongBan}\n` +
-          `👔 Chức vụ: ${user.chucVu}\n` +
-          `👤 Phân quyền: ${user.phanQuyen}\n\n` +
-          `Sử dụng /menu để bắt đầu.`,
+        `✅ Bạn đã được xác thực thành công.\n` +
+        `📋 Mã nhân viên: ${user.maNhanVien}\n` +
+        `🏢 Phòng ban: ${user.phongBan}\n` +
+        `👔 Chức vụ: ${user.chucVu}\n` +
+        `👤 Phân quyền: ${user.phanQuyen}\n\n` +
+        `Sử dụng /menu để bắt đầu.`,
         {
           parse_mode: 'Markdown',
           ...getMainMenuKeyboard()
@@ -119,12 +125,12 @@ bot.command('start', async (ctx) => {
       // ❌ Not registered
       await ctx.reply(
         `👋 **Xin chào ${firstName} ${lastName}!**\n\n` +
-          `⚠️ Chat ID của bạn chưa được đăng ký trong hệ thống.\n` +
-          `🔑 Chat ID: \`${chatId}\`\n\n` +
-          `📝 **Cách đăng ký:**\n` +
-          `Gửi lệnh: \`/register <mã_nhân_viên>\`\n` +
-          `Ví dụ: \`/register NV001\`\n\n` +
-          `💡 Hoặc liên hệ Admin để được cấp quyền truy cập.`,
+        `⚠️ Chat ID của bạn chưa được đăng ký trong hệ thống.\n` +
+        `🔑 Chat ID: \`${chatId}\`\n\n` +
+        `📝 **Cách đăng ký:**\n` +
+        `Gửi lệnh: \`/register <mã_nhân_viên>\`\n` +
+        `Ví dụ: \`/register NV001\`\n\n` +
+        `💡 Hoặc liên hệ Admin để được cấp quyền truy cập.`,
         { parse_mode: 'Markdown' }
       );
     }
@@ -144,9 +150,9 @@ bot.command('register', async (ctx) => {
   if (args.length === 0) {
     await ctx.reply(
       '❌ **Sai cú pháp**\n\n' +
-        'Vui lòng nhập mã nhân viên.\n\n' +
-        'Cú pháp: `/register <mã_nhân_viên>`\n' +
-        'Ví dụ: `/register NV001`',
+      'Vui lòng nhập mã nhân viên.\n\n' +
+      'Cú pháp: `/register <mã_nhân_viên>`\n' +
+      'Ví dụ: `/register NV001`',
       { parse_mode: 'Markdown' }
     );
     return;
@@ -160,8 +166,8 @@ bot.command('register', async (ctx) => {
     if (!user) {
       await ctx.reply(
         `❌ **Đăng ký thất bại**\n\n` +
-          `Không tìm thấy nhân viên với mã: \`${employeeCode}\`\n\n` +
-          `Vui lòng kiểm tra lại mã nhân viên hoặc liên hệ Admin.`,
+        `Không tìm thấy nhân viên với mã: \`${employeeCode}\`\n\n` +
+        `Vui lòng kiểm tra lại mã nhân viên hoặc liên hệ Admin.`,
         { parse_mode: 'Markdown' }
       );
       return;
@@ -169,11 +175,11 @@ bot.command('register', async (ctx) => {
 
     await ctx.reply(
       `✅ **Đăng ký thành công!**\n\n` +
-        `👤 Tên: ${user.hoVaTen}\n` +
-        `📋 Mã NV: ${user.maNhanVien}\n` +
-        `🏢 Phòng ban: ${user.phongBan}\n` +
-        `🔑 Phân quyền: ${user.phanQuyen}\n\n` +
-        `Sử dụng /menu để bắt đầu.`,
+      `👤 Tên: ${user.hoVaTen}\n` +
+      `📋 Mã NV: ${user.maNhanVien}\n` +
+      `🏢 Phòng ban: ${user.phongBan}\n` +
+      `🔑 Phân quyền: ${user.phanQuyen}\n\n` +
+      `Sử dụng /menu để bắt đầu.`,
       {
         parse_mode: 'Markdown',
         ...getMainMenuKeyboard()
@@ -206,18 +212,20 @@ bot.command('menu', requireAuth, async (ctx) => {
 bot.command('help', async (ctx) => {
   await ctx.reply(
     `ℹ️ **HƯỚNG DẪN SỬ DỤNG BOT**\n\n` +
-      `**Lệnh cơ bản:**\n` +
-      `/start - Khởi tạo bot\n` +
-      `/menu - Hiển thị menu chính\n` +
-      `/search <mã> - Tra cứu chuyến đi\n` +
-      `/register <mã_NV> - Đăng ký tài khoản\n` +
-      `/help - Hiển thị trợ giúp\n\n` +
-      `**Menu chức năng:**\n` +
-      `📊 Dashboard - Thống kê tổng quan\n` +
-      `🚚 Chuyến đi - Quản lý chuyến đi\n` +
-      `⛽ Nhiên liệu - Quản lý nhiên liệu\n` +
-      `📈 Báo cáo - Xem báo cáo\n\n` +
-      `💡 **Mẹo:** Sử dụng các nút bấm để điều hướng nhanh hơn!`,
+    `**Lệnh cơ bản:**\n` +
+    `/start - Khởi tạo bot\n` +
+    `/menu - Hiển thị menu chính\n` +
+    `/search <mã> - Tra cứu chuyến đi\n` +
+    `/register <mã_NV> - Đăng ký tài khoản\n` +
+    `/help - Hiển thị trợ giúp\n\n` +
+    `**Menu chức năng:**\n` +
+    `📊 Dashboard - Thống kê tổng quan\n` +
+    `🚚 Chuyến đi - Quản lý chuyến đi\n` +
+    `🚛 Phương tiện - Quản lý phương tiện\n` +
+    `/v <biển_số> - Tra cứu xe nhanh\n` +
+    `⛽ Nhiên liệu - Quản lý nhiên liệu\n` +
+    `📈 Báo cáo - Xem báo cáo\n\n` +
+    `💡 **Mẹo:** Sử dụng các nút bấm để điều hướng nhanh hơn!`,
     { parse_mode: 'Markdown' }
   );
 });
@@ -226,6 +234,7 @@ bot.command('help', async (ctx) => {
  * /search - Search trip by ID
  */
 bot.command('search', requireAuth, rateLimit(5, 60000), handleSearchCommand);
+bot.command('v', requireAuth, rateLimit(10, 60000), handleVehicleSearchCommand);
 
 // =============================================================================
 // ADMIN COMMANDS
@@ -305,6 +314,18 @@ bot.action('trips_today', requireAuth, handleTripsToday);
 bot.action('trips_by_customer', requireAuth, handleTripsByCustomer);
 bot.action('trips_by_vehicle', requireAuth, handleTripsByVehicle);
 
+// Vehicles callbacks
+bot.action('menu_vehicles', requireAuth, handleVehiclesMenu);
+bot.action('vehicles_routes', requireAuth, handleVehiclesRoutes);
+bot.action('vehicles_fuel', requireAuth, handleVehiclesFuel);
+bot.action('vehicles_info', requireAuth, async (ctx) => {
+  await handleVehiclesInfo(ctx, 1);
+});
+bot.action(/^vehicles_info_page_(\d+)$/, requireAuth, async (ctx) => {
+  const page = parseInt(ctx.match[1]);
+  await handleVehiclesInfo(ctx, page);
+});
+
 // Trip refresh with dynamic ID
 bot.action(/^trip_refresh_(.+)$/, requireAuth, async (ctx) => {
   const tripId = ctx.match[1];
@@ -336,12 +357,12 @@ bot.action('report_export', requireAuth, requirePermission('xem'), handleReportE
 bot.action('menu_settings', requireAuth, async (ctx) => {
   await ctx.editMessageText(
     '⚙️ **CÀI ĐẶT**\n\n' +
-      '⚠️ Tính năng đang được phát triển.\n\n' +
-      'Các tùy chọn sẽ có:\n' +
-      '🔔 Thông báo\n' +
-      '🌐 Ngôn ngữ\n' +
-      '👤 Thông tin cá nhân\n' +
-      '🔐 Bảo mật',
+    '⚠️ Tính năng đang được phát triển.\n\n' +
+    'Các tùy chọn sẽ có:\n' +
+    '🔔 Thông báo\n' +
+    '🌐 Ngôn ngữ\n' +
+    '👤 Thông tin cá nhân\n' +
+    '🔐 Bảo mật',
     {
       parse_mode: 'Markdown',
       ...getMainMenuKeyboard()
@@ -354,18 +375,20 @@ bot.action('menu_settings', requireAuth, async (ctx) => {
 bot.action('help', async (ctx) => {
   await ctx.editMessageText(
     `ℹ️ **HƯỚNG DẪN SỬ DỤNG BOT**\n\n` +
-      `**Lệnh cơ bản:**\n` +
-      `/start - Khởi tạo bot\n` +
-      `/menu - Hiển thị menu chính\n` +
-      `/search <mã> - Tra cứu chuyến đi\n` +
-      `/register <mã_NV> - Đăng ký tài khoản\n` +
-      `/help - Hiển thị trợ giúp\n\n` +
-      `**Menu chức năng:**\n` +
-      `📊 Dashboard - Thống kê tổng quan\n` +
-      `🚚 Chuyến đi - Quản lý chuyến đi\n` +
-      `⛽ Nhiên liệu - Quản lý nhiên liệu\n` +
-      `📈 Báo cáo - Xem báo cáo\n\n` +
-      `💡 **Mẹo:** Sử dụng các nút bấm để điều hướng nhanh hơn!`,
+    `**Lệnh cơ bản:**\n` +
+    `/start - Khởi tạo bot\n` +
+    `/menu - Hiển thị menu chính\n` +
+    `/search <mã> - Tra cứu chuyến đi\n` +
+    `/register <mã_NV> - Đăng ký tài khoản\n` +
+    `/help - Hiển thị trợ giúp\n\n` +
+    `**Menu chức năng:**\n` +
+    `📊 Dashboard - Thống kê tổng quan\n` +
+    `🚚 Chuyến đi - Quản lý chuyến đi\n` +
+    `🚛 Phương tiện - Quản lý phương tiện\n` +
+    `/v <biển_số> - Tra cứu xe nhanh\n` +
+    `⛽ Nhiên liệu - Quản lý nhiên liệu\n` +
+    `📈 Báo cáo - Xem báo cáo\n\n` +
+    `💡 **Mẹo:** Sử dụng các nút bấm để điều hướng nhanh hơn!`,
     {
       parse_mode: 'Markdown',
       ...getMainMenuKeyboard()
