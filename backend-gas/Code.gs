@@ -57,6 +57,12 @@ function doGet(e) {
       case 'getNhanVien':
         result = getNhanVien();
         break;
+      case 'getVehicles':
+        result = getVehicles();
+        break;
+      case 'importVehicles':
+        result = importVehiclesToDB();
+        break;
       default:
         return ContentService
           .createTextOutput(JSON.stringify({
@@ -3484,4 +3490,184 @@ function testDeleteRealDetail() {
   // Logger.log(JSON.stringify(result, null, 2));
 
   Logger.log('👉 To execute, uncomment the delete line in the code');
+}
+
+// =============================================================================
+// VEHICLE SYNC MODULE
+// =============================================================================
+
+/**
+ * Hàm chính được gọi từ AppSheet Bot để sync phương tiện
+ * 
+ * @param {string} licensePlate - Biển kiểm soát (bien_kiem_soat)
+ * @param {string} eventType - Loại sự kiện: 'Add', 'Edit', hoặc 'Delete'
+ * @returns {Object} Response từ API hoặc error message
+ * 
+ * @example
+ * // Gọi từ AppSheet Bot:
+ * syncVehicleToBackend([bien_kiem_soat], "Add")
+ */
+function syncVehicleToBackend(licensePlate, eventType) {
+  const config = getConfig();
+  
+  try {
+    logInfo(`========== START VEHICLE SYNC ==========`);
+    logInfo(`License Plate: ${licensePlate}`);
+    logInfo(`Event Type: ${eventType}`);
+    
+    if (!licensePlate) throw new Error('licensePlate is required');
+    if (!eventType) throw new Error('eventType is required');
+    
+    const validEvents = Object.values(config.EVENTS);
+    if (!validEvents.includes(eventType)) {
+      throw new Error(`Invalid eventType: ${eventType}`);
+    }
+    
+    let payload;
+    if (eventType === config.EVENTS.DELETE) {
+      payload = {
+        Action: 'Vehicle_Delete',
+        licensePlate: licensePlate
+      };
+      logInfo('DELETE event - Payload created');
+    } else {
+      const vehicle = getVehicleData(licensePlate);
+      if (!vehicle) throw new Error(`Vehicle ${licensePlate} not found in sheet`);
+      
+      payload = {
+        Action: 'UpsertVehicles',
+        vehicles: [vehicle]
+      };
+      logInfo('ADD/EDIT event - Payload created');
+    }
+    
+    const response = sendToBackendAPI(payload);
+    logInfo(`========== VEHICLE SYNC SUCCESS ==========`);
+    return { success: true, message: 'Vehicle synchronized', response: response };
+    
+  } catch (error) {
+    logError(`========== VEHICLE SYNC FAILED ==========`);
+    logError(`Error: ${error.message}`);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Hàm import toàn bộ phương tiện từ Sheet lên DB
+ * 
+ * @returns {Object} Summary của quá trình import
+ */
+function importVehiclesToDB() {
+  const config = getConfig();
+  try {
+    logInfo('========== START BULK VEHICLE IMPORT ==========');
+    const vehicles = getVehicles();
+    
+    if (vehicles.length === 0) {
+      logInfo('⚠️ No vehicles found in sheet');
+      return { success: true, total: 0, message: 'No vehicles found' };
+    }
+    
+    logInfo(`✓ Found ${vehicles.length} vehicles. Sending to API...`);
+    
+    const payload = {
+      Action: 'UpsertVehicles',
+      vehicles: vehicles
+    };
+    
+    const response = sendToBackendAPI(payload);
+    logInfo(`========== BULK VEHICLE IMPORT SUCCESS ==========`);
+    return { success: true, total: vehicles.length, response: response };
+  } catch (error) {
+    logError(`========== BULK VEHICLE IMPORT FAILED ==========`);
+    logError(`Error: ${error.message}`);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Đọc toàn bộ phương tiện từ Sheet
+ * 
+ * @returns {Array} Mảng các phương tiện đã được map
+ */
+function getVehicles() {
+  const config = getConfig();
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(config.SHEET_NAMES.VEHICLES);
+  if (!sheet) throw new Error(`Sheet "${config.SHEET_NAMES.VEHICLES}" not found`);
+  
+  const values = sheet.getDataRange().getValues();
+  if (values.length <= 1) return [];
+  
+  const headers = values[0];
+  const vehicles = [];
+  for (let i = 1; i < values.length; i++) {
+    const vehicle = mapVehicleRow(values[i], headers);
+    if (vehicle.licensePlate) vehicles.push(vehicle);
+  }
+  return vehicles;
+}
+
+/**
+ * Đọc 1 phương tiện từ Sheet dựa trên biển số
+ * 
+ * @param {string} licensePlate - Biển số xe
+ * @returns {Object|null} Payload vehicle
+ */
+function getVehicleData(licensePlate) {
+  const config = getConfig();
+  const ss = SpreadsheetApp.openById(config.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(config.SHEET_NAMES.VEHICLES);
+  if (!sheet) throw new Error(`Sheet "${config.SHEET_NAMES.VEHICLES}" not found`);
+  
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0];
+  const lpIndex = getColumnIndex(headers, 'bien_kiem_soat');
+  
+  if (lpIndex === -1) throw new Error('Column "bien_kiem_soat" not found in vehicle sheet');
+  
+  for (let i = 1; i < values.length; i++) {
+    if (String(values[i][lpIndex]).trim() === String(licensePlate).trim()) {
+      return mapVehicleRow(values[i], headers);
+    }
+  }
+  return null;
+}
+
+/**
+ * Map row sang JSON object theo VEHICLES_COLUMNS config
+ * 
+ * @param {Array} row - Row data
+ * @param {Array} headers - Headers
+ * @returns {Object} Mapped data
+ */
+function mapVehicleRow(row, headers) {
+  const config = getConfig();
+  const mappedData = {};
+  for (const [sheetColumn, jsonKey] of Object.entries(config.VEHICLES_COLUMNS)) {
+    const index = getColumnIndex(headers, sheetColumn);
+    if (index === -1) continue;
+    
+    let value = row[index];
+    
+    // Xử lý data type
+    if (config.NUMBER_COLUMNS.includes(sheetColumn)) {
+      value = parseNumber(value);
+    } else if (config.DATE_COLUMNS.includes(sheetColumn)) {
+      value = formatDate(value);
+    } else if (jsonKey === 'history') {
+      try {
+        // AppSheet thường lưu JSON string cho history
+        value = typeof value === 'string' ? JSON.parse(value || '[]') : value;
+      } catch (e) {
+        value = [];
+      }
+    } else if (jsonKey === 'partnerVehicle') {
+      value = String(value).toLowerCase() === 'true' || value === true;
+    } else {
+      value = String(value || '').trim();
+    }
+    mappedData[jsonKey] = value;
+  }
+  return mappedData;
 }

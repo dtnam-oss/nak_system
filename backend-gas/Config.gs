@@ -97,10 +97,30 @@ const CONFIG = {
     'tai_trong_chu': 'weightText',          // Tải trọng bằng chữ
     'hieu_xe': 'brand',                     // Hiệu xe (Hino, Isuzu...)
     'loai_xe': 'bodyType',                  // Loại xe (Thùng kín, Mui bạt...)
-    'tinh_trang': 'currentStatus',          // Tình trạng (Đang hoạt động, Bảo dưỡng...)
+    'ngay_mua': 'purchaseDate',
+    'thoi_gian_khau_hao': 'depreciationPeriod',
+    'thoi_gian_dang_kiem_lan_dau': 'firstRegistrationDate',
+    'han_dang_kiem_tiep_theo': 'nextRegistrationDeadline',
+    'nhan': 'label',
+    'hinh_anh': 'imageUrl',
+    'icon': 'iconUrl',
+    'kich_thuoc_thung': 'cargoBoxDimension',
+    'the_tich': 'volume',
+    'tinh_trang': 'currentStatus',
+    'khu_vuc': 'area',
+    'lat_log': 'latLng',
     'dinh_muc_d': 'fuelNorm',              // Định mức dầu (lít/100km)
     'tai_xe_theo_': 'assignedDriverCodes', // Mã tài xế phân công
-    'loai_hinh': 'provider'                 // Loại hình (Xe thuê, Xe tự có...)
+    'loai_hinh': 'provider',                // Loại hình (Xe thuê, Xe tự có...)
+    'ngay_tao': 'createdAtOriginal',
+    'nguoi_tao': 'createdBy',
+    'thoi_gian_tao': 'creationTime',
+    'lich_su': 'history',
+    'nam': 'year',
+    'thang': 'month',
+    'quan_ly_xe': 'manager',
+    'xe_doi_tac': 'partnerVehicle',
+    'trang_thai': 'status'
   },
 
   // =============================================================================
@@ -208,6 +228,9 @@ const CONFIG = {
     'thanh_tien',
     'tai_trong_tinh_phi',
     'dinh_muc_d',  // Định mức dầu trong sheet phuong_tien
+    'the_tich',    // NEW: Volume
+    'nam',         // NEW: Year
+    'thang',       // NEW: Month
     // Fuel columns
     'so_luong',
     'don_gia_nhap',
@@ -220,7 +243,10 @@ const CONFIG = {
   DATE_COLUMNS: [
     'ngay_tao',
     'ngay_nhap',
-    'ngay_tren_tem'  // NEW: Date field in chi_tiet_chuyen_di
+    'ngay_tren_tem',
+    'ngay_mua',                   // NEW: Purchase date
+    'thoi_gian_dang_kiem_lan_dau', // NEW: First registration
+    'han_dang_kiem_tiep_theo'      // NEW: Next registration
   ],
 
   // =============================================================================

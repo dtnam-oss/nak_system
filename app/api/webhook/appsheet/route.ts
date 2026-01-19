@@ -6,9 +6,10 @@ export const dynamic = 'force-dynamic';
 // ==================== TYPE DEFINITIONS ====================
 
 interface GASPayload {
-  Action: 'Add' | 'Edit' | 'Delete' | 'UpsertVehicles' | 'FuelImport_Upsert' | 'FuelImport_Delete' | 'FuelTransaction_Upsert' | 'FuelTransaction_Delete' | 'Employee_Add' | 'Employee_Edit' | 'Employee_Delete' | 'TripDetail_Delete' | 'TripDetail_Upsert';
+  Action: 'Add' | 'Edit' | 'Delete' | 'UpsertVehicles' | 'Vehicle_Delete' | 'FuelImport_Upsert' | 'FuelImport_Delete' | 'FuelTransaction_Upsert' | 'FuelTransaction_Delete' | 'Employee_Add' | 'Employee_Edit' | 'Employee_Delete' | 'TripDetail_Delete' | 'TripDetail_Upsert';
   maChuyenDi?: string;
   maNhanVien?: string;  // For Employee actions
+  licensePlate?: string; // For Vehicle actions
   ngayTao?: string;
   tenKhachHang?: string;
   tongDoanhThu?: number | string;
@@ -37,10 +38,30 @@ interface VehiclePayload {
   weightText: string | null; // Tải trọng bằng chữ
   brand: string | null;      // Hiệu xe
   bodyType: string | null;   // Loại xe
-  currentStatus: string | null; // Tình trạng
+  purchaseDate: string | null;
+  depreciationPeriod: string | null;
+  firstRegistrationDate: string | null;
+  nextRegistrationDeadline: string | null;
+  label: string | null;
+  imageUrl: string | null;
+  iconUrl: string | null;
+  cargoBoxDimension: string | null;
+  volume: number | null;
+  currentStatus: string | null;
+  area: string | null;
+  latLng: string | null;
   fuelNorm: number;          // Định mức dầu
   assignedDriverCodes: string | null; // Mã tài xế
   provider: string | null;   // Loại hình
+  createdAtOriginal: string | null;
+  createdBy: string | null;
+  creationTime: string | null;
+  history: any | null;
+  year: number | null;
+  month: number | null;
+  manager: string | null;
+  partnerVehicle: boolean | null;
+  status: string | null;
 }
 
 interface FuelImportPayload {
@@ -930,10 +951,30 @@ export async function POST(request: Request) {
               weight_text,
               brand,
               body_type,
+              purchase_date,
+              depreciation_period,
+              first_registration_date,
+              next_registration_deadline,
+              label,
+              image_url,
+              icon_url,
+              cargo_box_dimension,
+              volume,
               current_status,
+              area,
+              lat_lng,
               fuel_norm,
               assigned_driver_codes,
               provider,
+              created_at_original,
+              created_by,
+              creation_time,
+              history,
+              year,
+              month,
+              manager,
+              partner_vehicle,
+              status,
               updated_at
             ) VALUES (
               ${vehicle.licensePlate.trim()},
@@ -942,10 +983,30 @@ export async function POST(request: Request) {
               ${vehicle.weightText},
               ${vehicle.brand},
               ${vehicle.bodyType},
+              ${vehicle.purchaseDate},
+              ${vehicle.depreciationPeriod},
+              ${vehicle.firstRegistrationDate},
+              ${vehicle.nextRegistrationDeadline},
+              ${vehicle.label},
+              ${vehicle.imageUrl},
+              ${vehicle.iconUrl},
+              ${vehicle.cargoBoxDimension},
+              ${vehicle.volume},
               ${vehicle.currentStatus},
+              ${vehicle.area},
+              ${vehicle.latLng},
               ${vehicle.fuelNorm || 0},
               ${vehicle.assignedDriverCodes},
               ${vehicle.provider},
+              ${vehicle.createdAtOriginal},
+              ${vehicle.createdBy},
+              ${vehicle.creationTime},
+              ${vehicle.history ? JSON.stringify(vehicle.history) : null},
+              ${vehicle.year},
+              ${vehicle.month},
+              ${vehicle.manager},
+              ${vehicle.partnerVehicle},
+              ${vehicle.status},
               NOW()
             )
             ON CONFLICT (license_plate) DO UPDATE SET
@@ -954,10 +1015,30 @@ export async function POST(request: Request) {
               weight_text = EXCLUDED.weight_text,
               brand = EXCLUDED.brand,
               body_type = EXCLUDED.body_type,
+              purchase_date = EXCLUDED.purchase_date,
+              depreciation_period = EXCLUDED.depreciation_period,
+              first_registration_date = EXCLUDED.first_registration_date,
+              next_registration_deadline = EXCLUDED.next_registration_deadline,
+              label = EXCLUDED.label,
+              image_url = EXCLUDED.image_url,
+              icon_url = EXCLUDED.icon_url,
+              cargo_box_dimension = EXCLUDED.cargo_box_dimension,
+              volume = EXCLUDED.volume,
               current_status = EXCLUDED.current_status,
+              area = EXCLUDED.area,
+              lat_lng = EXCLUDED.lat_lng,
               fuel_norm = EXCLUDED.fuel_norm,
               assigned_driver_codes = EXCLUDED.assigned_driver_codes,
               provider = EXCLUDED.provider,
+              created_at_original = EXCLUDED.created_at_original,
+              created_by = EXCLUDED.created_by,
+              creation_time = EXCLUDED.creation_time,
+              history = EXCLUDED.history,
+              year = EXCLUDED.year,
+              month = EXCLUDED.month,
+              manager = EXCLUDED.manager,
+              partner_vehicle = EXCLUDED.partner_vehicle,
+              status = EXCLUDED.status,
               updated_at = NOW()
           `;
 
@@ -986,6 +1067,40 @@ export async function POST(request: Request) {
         errorCount,
         errors: errors.length > 0 ? errors : undefined
       });
+    }
+
+    // Handle Vehicle Delete
+    if (payload.Action === 'Vehicle_Delete') {
+      console.log('🗑️ Processing Vehicle_Delete action...');
+
+      if (!payload.licensePlate) {
+        console.error('❌ Missing license plate');
+        return NextResponse.json({
+          error: 'Missing license plate'
+        }, { status: 400 });
+      }
+
+      try {
+        await sql`
+          DELETE FROM vehicles
+          WHERE license_plate = ${payload.licensePlate}
+        `;
+
+        console.log('✅ Vehicle deleted successfully:', payload.licensePlate);
+        return NextResponse.json({
+          success: true,
+          action: 'Vehicle_Delete',
+          licensePlate: payload.licensePlate,
+          message: 'Vehicle deleted successfully'
+        });
+      } catch (dbError: any) {
+        console.error('❌ Database error:', dbError.message);
+        return NextResponse.json({
+          error: 'Database error',
+          message: dbError.message,
+          code: dbError.code
+        }, { status: 500 });
+      }
     }
 
     // 6. Handle TripDetail_Delete action (Delete 1 chi tiết lộ trình)
