@@ -1,9 +1,8 @@
 "use client"
 
-import { useState, useEffect } from 'react'
-import { Search, Calendar, Landmark, MapPin, Navigation } from 'lucide-react'
+import { useState } from 'react'
+import { Search, Calendar, Landmark, MapPin, Navigation, XCircle, RefreshCcw } from 'lucide-react'
 import { format } from 'date-fns'
-import { vi } from 'date-fns/locale'
 
 interface TripRecord {
     maChuyenDi: string
@@ -35,14 +34,22 @@ export default function VehicleRoutesMiniApp() {
             const res = await fetch(`/api/vehicles/route-history?licensePlate=${encodeURIComponent(licensePlate.toUpperCase())}&startDate=${startDate}&endDate=${endDate}`)
             const data = await res.json()
 
-            if (data.error) throw new Error(data.message || data.error)
+            if (data.error) {
+                // Handle specific technical errors with user-friendly messages
+                if (data.message?.includes('connection_string') || data.message?.includes('DATABASE_URL') || data.message?.includes('POSTGRES_URL')) {
+                    throw new Error('Lỗi cấu hình hệ thống (Database) - Vui lòng liên hệ Admin.')
+                }
+                throw new Error(data.message || data.error)
+            }
             setTrips(data.records || [])
         } catch (err: any) {
-            setError(err.message || 'Lỗi khi tải dữ liệu')
+            setError(err.message || 'Lỗi khi tải dữ liệu. Vui lòng thử lại.')
         } finally {
             setLoading(false)
         }
     }
+
+    const clearError = () => setError('')
 
     return (
         <div className="min-h-screen bg-slate-50 pb-10">
@@ -96,9 +103,14 @@ export default function VehicleRoutesMiniApp() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold shadow-md shadow-blue-200 transition-colors disabled:opacity-50"
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold shadow-md shadow-blue-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                     >
-                        {loading ? 'Đang tra cứu...' : 'TÌM KIẾM'}
+                        {loading ? (
+                            <>
+                                <RefreshCcw className="w-4 h-4 animate-spin" />
+                                Đang tra cứu...
+                            </>
+                        ) : 'TÌM KIẾM'}
                     </button>
                 </form>
             </div>
@@ -106,8 +118,18 @@ export default function VehicleRoutesMiniApp() {
             {/* Results */}
             <div className="px-4 mt-8 space-y-4">
                 {error && (
-                    <div className="p-4 bg-red-50 text-red-600 rounded-xl border border-red-100 text-sm font-medium">
-                        ⚠️ {error}
+                    <div className="p-4 bg-red-50 text-red-600 rounded-xl border border-red-100 relative pr-10">
+                        <p className="text-sm font-semibold flex items-center gap-2">
+                            <XCircle className="w-4 h-4" />
+                            Lỗi xử lý
+                        </p>
+                        <p className="text-xs mt-1 opacity-90">{error}</p>
+                        <button
+                            onClick={clearError}
+                            className="absolute top-4 right-4 text-red-400 hover:text-red-600"
+                        >
+                            <XCircle className="w-5 h-5" />
+                        </button>
                     </div>
                 )}
 
@@ -126,7 +148,7 @@ export default function VehicleRoutesMiniApp() {
                                     <div className="flex items-center gap-1 text-slate-400">
                                         <Calendar className="w-3 h-3" />
                                         <span className="text-xs font-medium">
-                                            {format(new Date(trip.ngay), 'dd/MM/yyyy')}
+                                            {new Date(trip.ngay).toLocaleDateString('vi-VN')}
                                         </span>
                                     </div>
                                 </div>
@@ -149,13 +171,17 @@ export default function VehicleRoutesMiniApp() {
                             </div>
                         ))}
                     </>
-                ) : !loading && licensePlate && (
+                ) : !loading && !error && (
                     <div className="text-center py-12">
                         <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
                             <Search className="w-8 h-8 text-slate-300" />
                         </div>
-                        <p className="text-slate-500 font-medium">Không tìm thấy lộ trình nào</p>
-                        <p className="text-slate-400 text-xs mt-1">Thử thay đổi khoảng thời gian tra cứu</p>
+                        <p className="text-slate-500 font-medium">
+                            {licensePlate ? 'Không tìm thấy lộ trình nào' : 'Nhập biển số để bắt đầu'}
+                        </p>
+                        {licensePlate && (
+                            <p className="text-slate-400 text-xs mt-1">Thử thay đổi khoảng thời gian tra cứu</p>
+                        )}
                     </div>
                 )}
             </div>

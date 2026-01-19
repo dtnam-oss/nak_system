@@ -1,7 +1,9 @@
-import { sql } from '@vercel/postgres'
+import { neon } from '@neondatabase/serverless'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
+
+const sql = neon(process.env.DATABASE_URL!)
 
 /**
  * GET /api/vehicles/route-history
@@ -14,21 +16,22 @@ export const dynamic = 'force-dynamic'
  * - endDate: string YYYY-MM-DD (Optional, defaults to today)
  */
 export async function GET(request: NextRequest) {
-    try {
-        const { searchParams } = new URL(request.url)
-        const licensePlate = searchParams.get('licensePlate')
-        const startDate = searchParams.get('startDate') || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-        const endDate = searchParams.get('endDate') || new Date().toISOString().split('T')[0]
+  try {
+    const { searchParams } = new URL(request.url)
+    const licensePlate = searchParams.get('licensePlate')
+    const startDate = searchParams.get('startDate') || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const endDate = searchParams.get('endDate') || new Date().toISOString().split('T')[0]
 
-        if (!licensePlate) {
-            return NextResponse.json({ error: 'licensePlate is required' }, { status: 400 })
-        }
+    if (!licensePlate) {
+      return NextResponse.json({ error: 'licensePlate is required' }, { status: 400 })
+    }
 
-        console.log(`🔍 Fetching route history for ${licensePlate} from ${startDate} to ${endDate}`)
+    const cleanLicensePlate = licensePlate.trim().toUpperCase()
+    console.log(`🔍 Fetching route history for ${cleanLicensePlate} from ${startDate} to ${endDate}`)
 
-        // Query reconciliation_orders for trips matching the license plate
-        // Using JSONB operator to find trips where the first step of the route used this vehicle
-        const result = await sql`
+    // Query reconciliation_orders for trips matching the license plate
+    // Using a robust JSONB search to find the license plate anywhere in the chiTietLoTrinh array
+    const records = await sql`
       SELECT 
         order_id as "maChuyenDi",
         date as "ngay",
@@ -39,30 +42,29 @@ export async function GET(request: NextRequest) {
         details->'chiTietLoTrinh' as "chiTiet"
       FROM reconciliation_orders
       WHERE 
-        (
-          details->'chiTietLoTrinh'->0->>'bienKiemSoat' = ${licensePlate}
-          OR details->'chiTietLoTrinh'->1->>'bienKiemSoat' = ${licensePlate}
-          OR details->'chiTietLoTrinh'->2->>'bienKiemSoat' = ${licensePlate}
+        EXISTS (
+          SELECT 1 FROM jsonb_array_elements(details->'chiTietLoTrinh') elem
+          WHERE elem->>'bienKiemSoat' = ${cleanLicensePlate}
         )
         AND date >= ${startDate}
         AND date <= ${endDate}
       ORDER BY date DESC, order_id DESC
     `
 
-        return NextResponse.json({
-            success: true,
-            licensePlate,
-            startDate,
-            endDate,
-            count: result.rows.length,
-            records: result.rows
-        })
+    return NextResponse.json({
+      success: true,
+      licensePlate: cleanLicensePlate,
+      startDate,
+      endDate,
+      count: records.length,
+      records: records
+    })
 
-    } catch (error: any) {
-        console.error('❌ Error fetching route history:', error)
-        return NextResponse.json({
-            error: 'Backend error',
-            message: error.message
-        }, { status: 500 })
-    }
+  } catch (error: any) {
+    console.error('❌ Error fetching route history:', error)
+    return NextResponse.json({
+      error: 'Backend error',
+      message: error.message || 'Unknown database error'
+    }, { status: 500 })
+  }
 }
