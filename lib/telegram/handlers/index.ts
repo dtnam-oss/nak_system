@@ -8,6 +8,7 @@
 
 export * from './dashboard';
 export * from './trips';
+export * from './employees';
 export * from './fuel';
 export * from './reports';
 export * from './vehicles';

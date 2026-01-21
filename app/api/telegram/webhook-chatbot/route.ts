@@ -43,6 +43,13 @@ import {
   handleTripsByCustomer,
   handleTripsByVehicle,
   handleTripRefresh,
+  handleEmployeesMenu,
+  handleEmployeesOverview,
+  handleEmployeesSearch,
+  handleEmployeeSearchCommand,
+  handleEmployeesByDepartment,
+  handleEmployeesByPosition,
+  handleEmployeesList,
   handleFuelMenu,
   handleFuelInventory,
   handleFuelEfficiency,
@@ -216,13 +223,15 @@ bot.command('help', async (ctx) => {
     `/start - Khởi tạo bot\n` +
     `/menu - Hiển thị menu chính\n` +
     `/search <mã> - Tra cứu chuyến đi\n` +
+    `/v <biển_số> - Tra cứu xe nhanh\n` +
+    `/nv <mã/tên> - Tra cứu nhân viên\n` +
     `/register <mã_NV> - Đăng ký tài khoản\n` +
     `/help - Hiển thị trợ giúp\n\n` +
     `**Menu chức năng:**\n` +
     `📊 Dashboard - Thống kê tổng quan\n` +
     `🚚 Chuyến đi - Quản lý chuyến đi\n` +
+    `👥 Nhân viên - Quản lý nhân viên\n` +
     `🚛 Phương tiện - Quản lý phương tiện\n` +
-    `/v <biển_số> - Tra cứu xe nhanh\n` +
     `⛽ Nhiên liệu - Quản lý nhiên liệu\n` +
     `📈 Báo cáo - Xem báo cáo\n\n` +
     `💡 **Mẹo:** Sử dụng các nút bấm để điều hướng nhanh hơn!`,
@@ -232,9 +241,12 @@ bot.command('help', async (ctx) => {
 
 /**
  * /search - Search trip by ID
+ * /v - Search vehicle by license plate
+ * /nv - Search employee by code or name
  */
 bot.command('search', requireAuth, rateLimit(5, 60000), handleSearchCommand);
 bot.command('v', requireAuth, rateLimit(10, 60000), handleVehicleSearchCommand);
+bot.command('nv', requireAuth, rateLimit(10, 60000), handleEmployeeSearchCommand);
 
 // =============================================================================
 // ADMIN COMMANDS
@@ -313,6 +325,14 @@ bot.action('trips_search', requireAuth, handleTripsSearch);
 bot.action('trips_today', requireAuth, handleTripsToday);
 bot.action('trips_by_customer', requireAuth, handleTripsByCustomer);
 bot.action('trips_by_vehicle', requireAuth, handleTripsByVehicle);
+
+// Employees callbacks
+bot.action('menu_employees', requireAuth, handleEmployeesMenu);
+bot.action('employees_overview', requireAuth, handleEmployeesOverview);
+bot.action('employees_search', requireAuth, handleEmployeesSearch);
+bot.action('employees_list', requireAuth, handleEmployeesList);
+bot.action('employees_by_department', requireAuth, handleEmployeesByDepartment);
+bot.action('employees_by_position', requireAuth, handleEmployeesByPosition);
 
 // Vehicles callbacks
 bot.action('menu_vehicles', requireAuth, handleVehiclesMenu);
