@@ -76,19 +76,19 @@ export async function GET(request: NextRequest) {
       loaiTuyen
     })
 
-    // Build WHERE clause dynamically
+    // Build WHERE clause dynamically using NEW schema column names
     const conditions: string[] = []
     const params: any[] = []
     let paramIndex = 1
 
     if (fromDate) {
-      conditions.push(`date >= $${paramIndex}`)
+      conditions.push(`cd.ngay_tao::date >= $${paramIndex}::date`)
       params.push(fromDate)
       paramIndex++
     }
 
     if (toDate) {
-      conditions.push(`date <= $${paramIndex}`)
+      conditions.push(`cd.ngay_tao::date <= $${paramIndex}::date`)
       params.push(toDate)
       paramIndex++
     }
@@ -99,44 +99,51 @@ export async function GET(request: NextRequest) {
       
       if (customerList.length === 1) {
         // Single customer: use ILIKE for partial match
-        conditions.push(`customer ILIKE $${paramIndex}`)
+        conditions.push(`cd.ten_khach_hang ILIKE $${paramIndex}`)
         params.push(`%${customerList[0]}%`)
         paramIndex++
       } else if (customerList.length > 1) {
         // Multiple customers: use ANY with array
-        conditions.push(`customer = ANY($${paramIndex})`)
+        conditions.push(`cd.ten_khach_hang = ANY($${paramIndex})`)
         params.push(customerList)
         paramIndex++
       }
     }
 
     if (status) {
-      conditions.push(`status = $${paramIndex}`)
-      params.push(status)
+      // Map status to Vietnamese status in database
+      const statusMap: Record<string, string[]> = {
+        'approved': ['Kết thúc'],
+        'pending': ['Đang thực hiện', 'Chờ giao hàng'],
+        'rejected': ['Hủy']
+      }
+      const dbStatuses = statusMap[status] || [status]
+      conditions.push(`cd.trang_thai_chuyen_di = ANY($${paramIndex})`)
+      params.push(dbStatuses)
       paramIndex++
     }
 
     if (donViVanChuyen) {
-      conditions.push(`provider = $${paramIndex}`)
+      conditions.push(`cd.don_vi_van_chuyen = $${paramIndex}`)
       params.push(donViVanChuyen)
       paramIndex++
     }
 
     if (loaiChuyen) {
-      conditions.push(`trip_type = $${paramIndex}`)
+      conditions.push(`cd.loai_chuyen = $${paramIndex}`)
       params.push(loaiChuyen)
       paramIndex++
     }
 
     if (loaiTuyen) {
-      conditions.push(`route_type = $${paramIndex}`)
+      conditions.push(`cd.loai_tuyen = $${paramIndex}`)
       params.push(loaiTuyen)
       paramIndex++
     }
 
     // Search by order_id only (exact match or contains)
     if (orderId) {
-      conditions.push(`order_id ILIKE $${paramIndex}`)
+      conditions.push(`cd.ma_chuyen_di ILIKE $${paramIndex}`)
       params.push(`%${orderId}%`)
       paramIndex++
     }
@@ -183,7 +190,7 @@ export async function GET(request: NextRequest) {
         ) FILTER (WHERE ct."Id" IS NOT NULL) as chi_tiet_lo_trinh
       FROM chuyen_di cd
       LEFT JOIN chi_tiet_chuyen_di ct ON ct.ma_chuyen_di = cd.ma_chuyen_di
-      ${whereClause.replace(/order_id/g, 'cd.ma_chuyen_di').replace(/customer/g, 'cd.ten_khach_hang').replace(/date/g, 'cd.ngay_tao').replace(/status/g, 'cd.trang_thai_chuyen_di').replace(/provider/g, 'cd.don_vi_van_chuyen').replace(/trip_type/g, 'cd.loai_chuyen').replace(/route_type/g, 'cd.loai_tuyen')}
+      ${whereClause}
       GROUP BY cd.ma_chuyen_di, cd.ngay_tao, cd.ten_khach_hang, cd.loai_chuyen, cd.loai_tuyen, cd.ten_tuyen, cd.ten_tai_xe, cd.don_vi_van_chuyen, cd.trang_thai_chuyen_di, cd.doanh_thu, cd.so_km_theo_odo, cd.thoi_gian_tao
       ORDER BY cd.ngay_tao DESC, cd.thoi_gian_tao DESC
       ${limitClause}
@@ -268,8 +275,8 @@ export async function GET(request: NextRequest) {
         COALESCE(SUM(CAST(cd.so_km_theo_odo AS NUMERIC)), 0) as total_distance,
         COUNT(CASE WHEN cd.trang_thai_chuyen_di = 'Kết thúc' THEN 1 END) as approved_orders,
         COUNT(CASE WHEN cd.trang_thai_chuyen_di IN ('Đang thực hiện', 'Chờ giao hàng') THEN 1 END) as pending_orders
-      FROM public.chuyen_di cd
-      ${whereClause.replace(/order_id/g, 'cd.ma_chuyen_di').replace(/customer/g, 'cd.ten_khach_hang').replace(/date/g, 'cd.ngay_tao').replace(/status/g, 'cd.trang_thai_chuyen_di').replace(/provider/g, 'cd.don_vi_van_chuyen').replace(/trip_type/g, 'cd.loai_chuyen').replace(/route_type/g, 'cd.loai_tuyen')}
+      FROM chuyen_di cd
+      ${whereClause}
     `
 
     console.log('📊 [Postgres API] Executing summary query...')
