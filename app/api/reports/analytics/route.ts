@@ -1,4 +1,4 @@
-import { sql } from '@/lib/db';
+import { sql, query } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       FROM reconciliation_orders
       ${whereClause}
     `;
-    const totalResult = await sql.query(totalQuery, params);
+    const totalResult = await query(totalQuery, params);
     const totalTrips = parseInt(totalResult.rows[0].total);
 
     // Breakdown by trip_type
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       GROUP BY trip_type
       ORDER BY count DESC
     `;
-    const tripTypeResult = await sql.query(tripTypeQuery, params);
+    const tripTypeResult = await query(tripTypeQuery, params);
     const tripTypeBreakdown = tripTypeResult.rows.reduce((acc: any, row: any) => {
       acc[row.trip_type || 'unknown'] = parseInt(row.count);
       return acc;
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
       GROUP BY status
       ORDER BY count DESC
     `;
-    const statusResult = await sql.query(statusQuery, params);
+    const statusResult = await query(statusQuery, params);
     const statusBreakdown = statusResult.rows.reduce((acc: any, row: any) => {
       acc[row.status || 'unknown'] = parseInt(row.count);
       return acc;
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
       ORDER BY count DESC
       LIMIT 10
     `;
-    const customerResult = await sql.query(customerQuery, params);
+    const customerResult = await query(customerQuery, params);
     const customerBreakdown = customerResult.rows.map((row: any) => ({
       customer: row.customer,
       count: parseInt(row.count)
@@ -128,7 +128,7 @@ export async function GET(request: NextRequest) {
       ${whereClause}
     `;
     
-    const integrityResult = await sql.query(dataIntegrityQuery, params);
+    const integrityResult = await query(dataIntegrityQuery, params);
     const dataErrors: DataIntegrityError[] = [];
 
     // Check each order for missing fields in chiTietLoTrinh

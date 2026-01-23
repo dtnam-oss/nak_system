@@ -1,4 +1,4 @@
-import { sql } from '@/lib/db';
+import { sql, query } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { format } from 'date-fns';
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
     console.log('🔍 Executing query with filters:', { whereClause, params });
     
     // Execute using Vercel Postgres with parameterized query
-    const result = await sql.query(queryString, params);
+    const result = await query(queryString, params);
     const results = result.rows as ReconciliationDatabaseRow[];
 
     console.log(`✓ Fetched ${results.length} records from database`);

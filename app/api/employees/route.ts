@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql } from '@/lib/db';
+import { sql, query } from '@/lib/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
 
     queryStr += ' ORDER BY ma_nhan_vien ASC';
 
-    const result = await sql.query(queryStr);
+    const result = await query(queryStr);
 
     return NextResponse.json({
       total: result.rows.length,
@@ -171,7 +171,7 @@ export async function PUT(req: NextRequest) {
       RETURNING *
     `;
 
-    const result = await sql.query(queryStr);
+    const result = await query(queryStr);
 
     if (result.rows.length === 0) {
       return NextResponse.json(

@@ -1,4 +1,4 @@
-import { sql } from '@/lib/db';
+import { sql, query } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       ORDER BY customer ASC, trip_type ASC, date DESC
     `;
 
-    const result = await sql.query(tripsQuery, params);
+    const result = await query(tripsQuery, params);
 
     console.log(`✅ Trips API Response: ${result.rows.length} trips`);
 

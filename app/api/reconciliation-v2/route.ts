@@ -3,7 +3,7 @@
  * Queries from chuyen_di + chi_tiet_chuyen_di instead of reconciliation_orders
  */
 
-import { sql } from '@/lib/db';
+import { sql, query } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
     const limitClause = `LIMIT $${paramIndex}`;
 
     // Main query: Get chuyen_di with aggregated details
-    const query = `
+    const queryStr = `
       SELECT
         cd.id,
         cd.ma_chuyen_di,
@@ -163,10 +163,10 @@ export async function GET(request: NextRequest) {
       ${limitClause}
     `;
 
-    console.log('📊 [API v2] Executing query:', query);
+    console.log('📊 [API v2] Executing query:', queryStr);
     console.log('📊 [API v2] Params:', params);
 
-    const result = await sql.query(query, params);
+    const result = await query(queryStr, params);
 
     console.log('✅ [API v2] Query successful');
     console.log('📊 [API v2] Rows returned:', result.rows.length);

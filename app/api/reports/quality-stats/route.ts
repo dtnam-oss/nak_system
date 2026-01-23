@@ -1,5 +1,5 @@
 
-import { sql } from '@/lib/db';
+import { sql, query } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
         // Optimized Single Query using Filtered Aggregation
         // We check JSONB 'details' for missing license plates in 'chiTietLoTrinh' array
-        const query = `
+        const queryStr = `
       SELECT 
         COUNT(*) as "totalOrders",
         -- Error: Missing Route Name
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       ${whereClause}
     `;
 
-        const result = await sql.query(query);
+        const result = await query(queryStr);
         const row = result.rows[0];
 
         // Calculate quality score

@@ -1,5 +1,5 @@
 
-import { sql } from '@/lib/db';
+import { sql, query } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
         // Count Query
-        const countResult = await sql.query(`
+        const countResult = await query(`
         SELECT COUNT(*) as total
         FROM reconciliation_orders
         ${whereClause}
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     `;
         params.push(pageSize, offset);
 
-        const result = await sql.query(dataQuery, params);
+        const result = await query(dataQuery, params);
 
         // Process rows to extract display friendly data
         const records = result.rows.map(row => {
