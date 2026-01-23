@@ -11,7 +11,7 @@ import { Pool, PoolClient, QueryResult } from 'pg';
 
 // Database configuration
 const DB_CONFIG = {
-  connectionString: process.env.POSTGRES_URL || 'postgresql://postgres:123@163.223.12.189:5432/nak_vn',
+  connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL || 'postgresql://postgres:123@163.223.12.189:5432/nak_vn',
   ssl: false, // Self-hosted PostgreSQL doesn't need SSL
   max: 20, // Maximum pool size
   min: 2, // Minimum pool size
