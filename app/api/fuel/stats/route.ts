@@ -73,10 +73,10 @@ export async function GET() {
       
       // Fallback: Get avg price from latest import
       const avgPriceResult = await sql`
-        SELECT COALESCE(CAST(don_gia_binh_quan AS NUMERIC), 0) as avg_price
+        SELECT COALESCE(CAST(don_gia_xuat_binh_quan AS NUMERIC), 0) as avg_price
         FROM public.nhap_nhien_lieu
-        WHERE don_gia_binh_quan IS NOT NULL
-        ORDER BY ngay_tao DESC
+        WHERE don_gia_xuat_binh_quan IS NOT NULL
+        ORDER BY ngay_nhap DESC
         LIMIT 1
       `;
       currentAvgPrice = parseFloat(avgPriceResult.rows[0]?.avg_price || '0');

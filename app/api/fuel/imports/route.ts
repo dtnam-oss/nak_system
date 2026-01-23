@@ -14,16 +14,16 @@ export async function GET(request: Request) {
     const result = await sql`
       SELECT 
         id,
-        ngay_tao as import_date,
+        ngay_nhap as import_date,
         nha_cung_cap as supplier,
-        loai_nhien_lieu as fuel_type,
+        ten_nhien_lieu as fuel_type,
         CAST(so_luong AS NUMERIC) as quantity,
-        CAST(don_gia AS NUMERIC) as unit_price,
+        CAST(don_gia_nhap AS NUMERIC) as unit_price,
         CAST(thanh_tien AS NUMERIC) as total_amount,
-        CAST(don_gia_binh_quan AS NUMERIC) as avg_price,
-        '' as created_by
+        CAST(don_gia_xuat_binh_quan AS NUMERIC) as avg_price,
+        nguoi_tao as created_by
       FROM public.nhap_nhien_lieu
-      ORDER BY ngay_tao DESC
+      ORDER BY ngay_nhap DESC
       LIMIT ${limit}
       OFFSET ${offset}
     `;
