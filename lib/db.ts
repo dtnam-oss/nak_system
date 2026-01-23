@@ -9,9 +9,14 @@
 
 import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 
+// CRITICAL: Force connection to self-hosted PostgreSQL
+// Vercel environment variables (POSTGRES_URL, DATABASE_URL) point to Neon (old database)
+// We MUST use self-hosted PostgreSQL which has the correct schema
+const SELF_HOSTED_POSTGRES_URL = 'postgresql://postgres:123@163.223.12.189:5432/nak_vn';
+
 // Database configuration
 const DB_CONFIG = {
-  connectionString: process.env.POSTGRES_URL || process.env.DATABASE_URL || 'postgresql://postgres:123@163.223.12.189:5432/nak_vn',
+  connectionString: SELF_HOSTED_POSTGRES_URL, // FORCE self-hosted, ignore env vars
   ssl: false, // Self-hosted PostgreSQL doesn't need SSL
   max: 20, // Maximum pool size
   min: 2, // Minimum pool size
@@ -22,10 +27,10 @@ const DB_CONFIG = {
 
 // Log which database we're connecting to (for debugging)
 console.log('🔌 [DB] Connection configured:');
-console.log('  - POSTGRES_URL:', process.env.POSTGRES_URL ? '✅ Set' : '❌ Not set');
-console.log('  - DATABASE_URL:', process.env.DATABASE_URL ? '✅ Set' : '❌ Not set');
+console.log('  - FORCED to self-hosted PostgreSQL (env vars ignored)');
 console.log('  - Using:', DB_CONFIG.connectionString?.substring(0, 40) + '...');
 console.log('  - Host:', DB_CONFIG.connectionString?.match(/\/\/.*@([^:]+)/)?.[1] || 'unknown');
+console.log('  - Note: POSTGRES_URL and DATABASE_URL on Vercel point to Neon (wrong!)');
 
 // Singleton pool instance
 let pool: Pool | null = null;
