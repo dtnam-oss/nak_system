@@ -214,20 +214,23 @@ export async function GET(request: NextRequest) {
       if (row.chi_tiet_lo_trinh) {
         try {
           chiTietLoTrinh = Array.isArray(row.chi_tiet_lo_trinh) 
-            ? row.chi_tiet_lo_trinh.map((ct: any) => ({
-                Id: ct.Id,
-                LoTrinh: ct.LoTrinh || '',
-                LoTrinhChiTiet: ct.LoTrinhChiTiet || '',
-                BienKiemSoat: ct.BienKiemSoat || '',
-                QuangDuong: parseFloat(ct.QuangDuong || 0),
-                TaiTrong: parseFloat(ct.TaiTrong || 0),
-                SoChieu: parseInt(ct.SoChieu || 0),
-                DonGia: parseFloat(ct.DonGia || 0),
-                ThanhTien: parseFloat(ct.ThanhTien || 0),
-                HinhThucTinhGia: ct.HinhThucTinhGia || '',
-                LoaiCa: ct.LoaiCa || '',
-                TenKhachHangCap1: ct.TenKhachHangCap1 || ''
+            ? row.chi_tiet_lo_trinh.map((ct: any, index: number) => ({
+                thuTu: index + 1,
+                id: ct.Id || '',
+                loaiTuyenKH: '', // Not available in current schema
+                maTuyen: '', // Not available in current schema  
+                bienKiemSoat: ct.BienKiemSoat || '',
+                loTrinh: ct.LoTrinh || '',
+                loTrinhChiTiet: ct.LoTrinhChiTiet || '',
+                quangDuong: parseFloat(ct.QuangDuong || 0),
+                taiTrong: parseFloat(ct.TaiTrong || 0),
+                taiTrongTinhPhi: parseFloat(ct.TaiTrong || 0), // Use same as taiTrong
+                hinhThucTinhGia: ct.HinhThucTinhGia || '',
+                soChieu: parseInt(ct.SoChieu || 0),
+                donGia: parseFloat(ct.DonGia || 0),
+                thanhTien: parseFloat(ct.ThanhTien || 0)
               }))
+            : []
             : []
           
           dataJson = JSON.stringify({ chiTietLoTrinh })
