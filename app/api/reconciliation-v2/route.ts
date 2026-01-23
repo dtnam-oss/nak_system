@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
               'quangDuong', ct.quang_duong,
               'soChieu', ct.so_chieu,
               'donGia', ct.don_gia,
-              'thanhTien', ct.thanh_tien,
+              'thanhTien', ct.ket_qua,
               'hinhThucTinhGia', ct.hinh_thuc_tinh_gia,
               'loaiCa', ct.loai_ca,
               'tenKhachHangCap1', ct.ten_khach_hang_cap_1,
