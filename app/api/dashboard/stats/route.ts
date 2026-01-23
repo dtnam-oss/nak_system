@@ -1,9 +1,7 @@
-import { neon } from '@neondatabase/serverless';
+import { sql, query } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
-
-const sql = neon(process.env.DATABASE_URL!);
 
 interface DashboardStats {
   revenue: {
@@ -62,49 +60,49 @@ export async function GET() {
     ] = await Promise.all([
       // 1. Revenue current month
       sql`
-        SELECT COALESCE(SUM(cost), 0) as total
-        FROM reconciliation_orders
-        WHERE DATE_TRUNC('month', date) = DATE_TRUNC('month', CURRENT_DATE)
+        SELECT COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as total
+        FROM chuyen_di
+        WHERE DATE_TRUNC('month', ngay_tao) = DATE_TRUNC('month', CURRENT_DATE)
       `,
       
       // 2. Revenue previous month
       sql`
-        SELECT COALESCE(SUM(cost), 0) as total
-        FROM reconciliation_orders
-        WHERE DATE_TRUNC('month', date) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
+        SELECT COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as total
+        FROM chuyen_di
+        WHERE DATE_TRUNC('month', ngay_tao) = DATE_TRUNC('month', CURRENT_DATE - INTERVAL '1 month')
       `,
       
       // 3. Pending orders count
       sql`
         SELECT COUNT(*) as count
-        FROM reconciliation_orders
-        WHERE LOWER(TRIM(status)) IN ('pending', 'chờ duyệt', 'new')
+        FROM chuyen_di
+        WHERE LOWER(TRIM(trang_thai_chuyen_di)) IN ('pending', 'chờ duyệt', 'new', 'đang thực hiện')
       `,
       
       // 4. Total vehicles
       sql`
         SELECT COUNT(*) as count
-        FROM vehicles
+        FROM phuong_tien
       `,
       
       // 5. Active vehicles
       sql`
         SELECT COUNT(*) as count
-        FROM vehicles
-        WHERE LOWER(TRIM(current_status)) IN ('đang hoạt động', 'active')
+        FROM phuong_tien
+        WHERE LOWER(TRIM(loai_hinh)) IN ('nak', 'nội bộ')
       `,
       
       // 6. Fuel imports total
       sql`
-        SELECT COALESCE(SUM(quantity), 0) as total
-        FROM fuel_imports
+        SELECT COALESCE(SUM(CAST(so_luong AS NUMERIC)), 0) as total
+        FROM nhap_nhien_lieu
       `,
       
       // 7. Fuel exports internal
       sql`
-        SELECT COALESCE(SUM(quantity), 0) as total
-        FROM fuel_transactions
-        WHERE LOWER(TRIM(fuel_source)) = 'trụ nội bộ'
+        SELECT COALESCE(SUM(CAST(so_luong AS NUMERIC)), 0) as total
+        FROM xuat_nhien_lieu
+        WHERE LOWER(TRIM(loai_hinh)) = 'trụ nội bộ'
       `,
       
       // 8. Revenue chart (7 days)
@@ -118,19 +116,19 @@ export async function GET() {
         ),
         revenue_data AS (
           SELECT 
-            date::date as date,
-            COALESCE(SUM(cost), 0) as revenue
-          FROM reconciliation_orders
-          WHERE date >= CURRENT_DATE - INTERVAL '6 days'
-          GROUP BY date::date
+            ngay_tao::date as date,
+            COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as revenue
+          FROM chuyen_di
+          WHERE ngay_tao >= CURRENT_DATE - INTERVAL '6 days'
+          GROUP BY ngay_tao::date
         ),
         fuel_data AS (
           SELECT 
-            transaction_date::date as date,
-            COALESCE(SUM(total_amount), 0) as fuel_cost
-          FROM fuel_transactions
-          WHERE transaction_date >= CURRENT_DATE - INTERVAL '6 days'
-          GROUP BY transaction_date::date
+            ngay_tao::date as date,
+            COALESCE(SUM(CAST(thanh_tien AS NUMERIC)), 0) as fuel_cost
+          FROM xuat_nhien_lieu
+          WHERE ngay_tao >= CURRENT_DATE - INTERVAL '6 days'
+          GROUP BY ngay_tao::date
         )
         SELECT 
           d.date,
@@ -145,67 +143,67 @@ export async function GET() {
       // 9. Provider breakdown - NAK
       sql`
         SELECT COUNT(*) as count
-        FROM reconciliation_orders
-        WHERE DATE_TRUNC('month', date) = DATE_TRUNC('month', CURRENT_DATE)
-        AND LOWER(TRIM(provider)) IN ('nak', 'nội bộ')
+        FROM chuyen_di
+        WHERE DATE_TRUNC('month', ngay_tao) = DATE_TRUNC('month', CURRENT_DATE)
+        AND LOWER(TRIM(don_vi_van_chuyen)) IN ('nak', 'nội bộ')
       `,
       
       // 10. Provider breakdown - VENDOR
       sql`
         SELECT COUNT(*) as count
-        FROM reconciliation_orders
-        WHERE DATE_TRUNC('month', date) = DATE_TRUNC('month', CURRENT_DATE)
-        AND LOWER(TRIM(provider)) IN ('vendor', 'thuê ngoài', 'thue ngoai')
+        FROM chuyen_di
+        WHERE DATE_TRUNC('month', ngay_tao) = DATE_TRUNC('month', CURRENT_DATE)
+        AND LOWER(TRIM(don_vi_van_chuyen)) IN ('vendor', 'thuê ngoài', 'thue ngoai')
       `,
       
       // 11. Recent activities
       sql`
         SELECT 
           id,
-          order_id,
-          customer,
-          status,
-          created_at
-        FROM reconciliation_orders
-        ORDER BY created_at DESC
+          ma_chuyen_di as order_id,
+          ten_khach_hang as customer,
+          trang_thai_chuyen_di as status,
+          thoi_gian_tao as created_at
+        FROM chuyen_di
+        ORDER BY thoi_gian_tao DESC
         LIMIT 5
       `,
     ]);
 
-    // Process revenue data (Neon returns array directly, not .rows)
-    const currentRevenue = parseFloat(revenueCurrentMonth[0]?.total || '0');
-    const previousRevenue = parseFloat(revenuePreviousMonth[0]?.total || '0');
+    // Process revenue data (pg returns .rows array)
+    const currentRevenue = parseFloat(revenueCurrentMonth.rows[0]?.total || '0');
+    const previousRevenue = parseFloat(revenuePreviousMonth.rows[0]?.total || '0');
     const percentageChange = previousRevenue > 0 
       ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
       : 0;
 
     // Process pending orders
-    const pendingOrders = parseInt(pendingOrdersResult[0]?.count || '0', 10);
+    const pendingOrders = parseInt(pendingOrdersResult.rows[0]?.count || '0', 10);
 
     // Process vehicles
-    const totalVehicles = parseInt(vehiclesTotal[0]?.count || '0', 10);
-    const activeVehicles = parseInt(vehiclesActive[0]?.count || '0', 10);
+    const totalVehicles = parseInt(vehiclesTotal.rows[0]?.count || '0', 10);
+    const activeVehicles = parseInt(vehiclesActive.rows[0]?.count || '0', 10);
 
     // Process fuel tank
-    const fuelImports = parseFloat(fuelImportsTotal[0]?.total || '0');
-    const fuelExports = parseFloat(fuelExportsInternal[0]?.total || '0');
+    const fuelImports = parseFloat(fuelImportsTotal.rows[0]?.total || '0');
+    const fuelExports = parseFloat(fuelExportsInternal.rows[0]?.total || '0');
     const currentFuelLevel = fuelImports - fuelExports;
     const fuelCapacity = 40590;
     const fuelPercentage = fuelCapacity > 0 ? (currentFuelLevel / fuelCapacity) * 100 : 0;
 
     // Process revenue chart
-    const revenueChart = revenueChartData.map(row => ({
+    const revenueChart = revenueChartData.rows.map(row => ({
       date: new Date(row.date).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }),
       revenue: parseFloat(row.revenue || '0'),
       fuelCost: parseFloat(row.fuel_cost || '0'),
     }));
 
     // Process provider breakdown
-    const nakCount = parseInt(providerNAK[0]?.count || '0', 10);
-    const vendorCount = parseInt(providerVendor[0]?.count || '0', 10);
+    const nakCount = parseInt(providerNAK.rows[0]?.count || '0', 10);
+    const vendorCount = parseInt(providerVendor.rows[0]?.count || '0', 10);
 
     // Process recent activities
-    const recentActivities = recentActivitiesData.map(row => ({
+    const recentActivities = recentActivitiesData.rows.map(row => ({
       id: row.id,
       orderCode: row.order_id,
       customer: row.customer,
