@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres'
+import { sql, query } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import type {
   ReconciliationDatabaseRow,
@@ -149,82 +149,103 @@ export async function GET(request: NextRequest) {
     params.push(limit)
     const limitClause = `LIMIT $${paramIndex}`
 
-    // Construct the SQL query
-    const query = `
+    // Construct the SQL query - JOIN chuyen_di with chi_tiet_chuyen_di
+    const sqlQuery = `
       SELECT
-        id,
-        order_id,
-        date,
-        route_name,
-        customer,
-        weight,
-        revenue,
-        cost,
-        status,
-        trip_type,
-        route_type,
-        driver_name,
-        provider,
-        total_distance,
-        details,
-        created_at
-      FROM reconciliation_orders
-      ${whereClause}
-      ORDER BY date DESC, created_at DESC
+        cd.ma_chuyen_di,
+        cd.ngay_tao,
+        cd.ten_khach_hang,
+        cd.loai_chuyen,
+        cd.loai_tuyen,
+        cd.ten_tuyen,
+        cd.ten_tai_xe,
+        cd.don_vi_van_chuyen,
+        cd.trang_thai_chuyen_di,
+        cd.doanh_thu,
+        cd.so_km_theo_odo,
+        cd.thoi_gian_tao,
+        -- Aggregate details as JSON
+        json_agg(
+          json_build_object(
+            'Id', ct."Id",
+            'DiemLayHang', ct.diem_lay_hang,
+            'DiemTraHang', ct.diem_tra_hang,
+            'QuangDuong', ct.quang_duong,
+            'DonGia', ct.don_gia,
+            'ThanhTien', ct.thanh_tien,
+            'KhoiLuong', ct.khoi_luong,
+            'GhiChu', ct.ghi_chu
+          ) ORDER BY ct."Id"
+        ) FILTER (WHERE ct."Id" IS NOT NULL) as chi_tiet_lo_trinh
+      FROM public.chuyen_di cd
+      LEFT JOIN public.chi_tiet_chuyen_di ct ON ct.ma_chuyen_di = cd.ma_chuyen_di
+      ${whereClause.replace(/order_id/g, 'cd.ma_chuyen_di').replace(/customer/g, 'cd.ten_khach_hang').replace(/date/g, 'cd.ngay_tao').replace(/status/g, 'cd.trang_thai_chuyen_di').replace(/provider/g, 'cd.don_vi_van_chuyen').replace(/trip_type/g, 'cd.loai_chuyen').replace(/route_type/g, 'cd.loai_tuyen')}
+      GROUP BY cd.ma_chuyen_di, cd.ngay_tao, cd.ten_khach_hang, cd.loai_chuyen, cd.loai_tuyen, cd.ten_tuyen, cd.ten_tai_xe, cd.don_vi_van_chuyen, cd.trang_thai_chuyen_di, cd.doanh_thu, cd.so_km_theo_odo, cd.thoi_gian_tao
+      ORDER BY cd.ngay_tao DESC, cd.thoi_gian_tao DESC
       ${limitClause}
     `
 
-    console.log('📊 [Postgres API] Executing query:', query)
+    console.log('📊 [Postgres API] Executing query:', sqlQuery)
     console.log('📊 [Postgres API] Query params:', params)
 
     // Execute the query
-    const result = await sql.query(query, params)
+    const result = await query(sqlQuery, params)
 
     console.log('✅ [Postgres API] Query successful')
     console.log('📊 [Postgres API] Rows returned:', result.rows.length)
 
     // Map database rows to frontend structure
-    const records: ReconciliationRecord[] = result.rows.map((row: ReconciliationDatabaseRow) => {
-      // Parse JSONB details if available
+    const records: ReconciliationRecord[] = result.rows.map((row: any) => {
+      // Parse chi_tiet_lo_trinh JSON array
       let chiTietLoTrinh: ChiTietLoTrinh[] = []
       let dataJson = ''
 
-      if (row.details) {
+      if (row.chi_tiet_lo_trinh) {
         try {
-          // Handle JSONB (can be object or string depending on driver)
-          const details: ReconciliationDetails = typeof row.details === 'string'
-            ? JSON.parse(row.details)
-            : row.details
-
-          // Extract chiTietLoTrinh array
-          if (details.chiTietLoTrinh && Array.isArray(details.chiTietLoTrinh)) {
-            chiTietLoTrinh = details.chiTietLoTrinh
-          }
-
-          // Store raw JSON for TripDetailsDialog fallback
-          dataJson = JSON.stringify(details)
+          chiTietLoTrinh = Array.isArray(row.chi_tiet_lo_trinh) 
+            ? row.chi_tiet_lo_trinh.map((ct: any) => ({
+                Id: ct.Id,
+                DiemLayHang: ct.DiemLayHang || '',
+                DiemTraHang: ct.DiemTraHang || '',
+                QuangDuong: parseFloat(ct.QuangDuong || 0),
+                DonGia: parseFloat(ct.DonGia || 0),
+                ThanhTien: parseFloat(ct.ThanhTien || 0),
+                KhoiLuong: parseFloat(ct.KhoiLuong || 0),
+                GhiChu: ct.GhiChu || ''
+              }))
+            : []
+          
+          dataJson = JSON.stringify({ chiTietLoTrinh })
         } catch (err) {
-          console.error('❌ [Postgres API] Error parsing details JSONB:', err)
-          console.error('❌ [Postgres API] Row ID:', row.id)
-          console.error('❌ [Postgres API] Details value:', row.details)
+          console.error('❌ [Postgres API] Error parsing chi_tiet_lo_trinh:', err)
+          console.error('❌ [Postgres API] Row ma_chuyen_di:', row.ma_chuyen_di)
         }
       }
 
+      // Map Vietnamese status to English
+      const statusMap: Record<string, string> = {
+        'Kết thúc': 'approved',
+        'Đang thực hiện': 'pending',
+        'Chờ giao hàng': 'pending',
+        'Hủy': 'rejected'
+      }
+      const status = statusMap[row.trang_thai_chuyen_di] || 'pending'
+
       return {
-        id: row.id.toString(),
-        maChuyenDi: row.order_id,
-        ngayTao: row.date instanceof Date ? row.date.toISOString().split('T')[0] : String(row.date).split('T')[0],
-        tenKhachHang: row.customer || '',
-        loaiChuyen: row.trip_type || '',
-        loaiTuyen: row.route_type || '',
-        tenTuyen: row.route_name || '',
-        tenTaiXe: row.driver_name || '',
-        donViVanChuyen: row.provider || '',
-        trangThai: mapStatus(row.status),
-        tongQuangDuong: parseFloat(String(row.total_distance || 0)),
-        tongDoanhThu: parseFloat(String(row.revenue || 0)),
-        tongChiPhi: parseFloat(String(row.cost || 0)),
-        soXe: '',  // Removed: license_plate column dropped from DB
+        id: row.ma_chuyen_di,
+        maChuyenDi: row.ma_chuyen_di,
+        ngayTao: row.ngay_tao instanceof Date ? row.ngay_tao.toISOString().split('T')[0] : String(row.ngay_tao).split('T')[0],
+        tenKhachHang: row.ten_khach_hang || '',
+        loaiChuyen: row.loai_chuyen || '',
+        loaiTuyen: row.loai_tuyen || '',
+        tenTuyen: row.ten_tuyen || '',
+        tenTaiXe: row.ten_tai_xe || '',
+        donViVanChuyen: row.don_vi_van_chuyen || '',
+        trangThai: mapStatus(status),
+        tongQuangDuong: parseFloat(String(row.so_km_theo_odo || 0)),
+        tongDoanhThu: parseFloat(String(row.doanh_thu || 0)),
+        tongChiPhi: 0, // Not available in current schema
+        soXe: '',  // Not available in chuyen_di table
         chiTietLoTrinh: chiTietLoTrinh,
         data_json: dataJson,
       }
@@ -235,16 +256,16 @@ export async function GET(request: NextRequest) {
     const summaryQuery = `
       SELECT
         COUNT(*) as total_orders,
-        COALESCE(SUM(revenue), 0) as total_amount,
-        COALESCE(SUM(total_distance), 0) as total_distance,
-        COUNT(CASE WHEN status = 'approved' THEN 1 END) as approved_orders,
-        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_orders
-      FROM reconciliation_orders
-      ${whereClause}
+        COALESCE(SUM(CAST(cd.doanh_thu AS NUMERIC)), 0) as total_amount,
+        COALESCE(SUM(CAST(cd.so_km_theo_odo AS NUMERIC)), 0) as total_distance,
+        COUNT(CASE WHEN cd.trang_thai_chuyen_di = 'Kết thúc' THEN 1 END) as approved_orders,
+        COUNT(CASE WHEN cd.trang_thai_chuyen_di IN ('Đang thực hiện', 'Chờ giao hàng') THEN 1 END) as pending_orders
+      FROM public.chuyen_di cd
+      ${whereClause.replace(/order_id/g, 'cd.ma_chuyen_di').replace(/customer/g, 'cd.ten_khach_hang').replace(/date/g, 'cd.ngay_tao').replace(/status/g, 'cd.trang_thai_chuyen_di').replace(/provider/g, 'cd.don_vi_van_chuyen').replace(/trip_type/g, 'cd.loai_chuyen').replace(/route_type/g, 'cd.loai_tuyen')}
     `
 
     console.log('📊 [Postgres API] Executing summary query...')
-    const summaryResult = await sql.query(summaryQuery, params.slice(0, -1)) // Remove limit param
+    const summaryResult = await query(summaryQuery, params.slice(0, -1)) // Remove limit param
     const summaryRow = summaryResult.rows[0]
 
     const summary = {
@@ -294,7 +315,7 @@ export async function GET(request: NextRequest) {
         errorMessage = 'Không thể kết nối đến database. Vui lòng kiểm tra cấu hình POSTGRES_URL.'
         statusCode = 503 // Service Unavailable
       } else if (error.message.includes('relation') || error.message.includes('table')) {
-        errorMessage = 'Bảng reconciliation_orders không tồn tại. Vui lòng chạy migration.'
+        errorMessage = 'Bảng chuyen_di hoặc chi_tiet_chuyen_di không tồn tại. Vui lòng kiểm tra database.'
         statusCode = 500
       } else if (error.message.includes('syntax')) {
         errorMessage = 'Lỗi cú pháp SQL. Vui lòng liên hệ admin.'

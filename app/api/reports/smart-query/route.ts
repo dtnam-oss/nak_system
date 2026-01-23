@@ -1,5 +1,5 @@
 
-import { sql } from '@vercel/postgres';
+import { sql } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';

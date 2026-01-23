@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { sql } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -24,25 +24,25 @@ export async function GET() {
 
     // 1. Tổng nhập kho
     const importResult = await sql`
-      SELECT COALESCE(SUM(quantity), 0) as total_import
-      FROM fuel_imports
+      SELECT COALESCE(SUM(CAST(so_luong AS NUMERIC)), 0) as total_import
+      FROM public.nhap_nhien_lieu
     `;
     const totalImport = parseFloat(importResult.rows[0]?.total_import || '0');
     console.log('✓ Total Import:', totalImport);
 
-    // 2. Tổng xuất tại Trụ nội bộ (fuel_source = 'Trụ nội bộ')
+    // 2. Tổng xuất tại Trụ nội bộ (loai_hinh = 'Trụ nội bộ')
     const exportInternalResult = await sql`
-      SELECT COALESCE(SUM(quantity), 0) as total_export
-      FROM fuel_transactions
-      WHERE LOWER(TRIM(fuel_source)) = 'trụ nội bộ'
+      SELECT COALESCE(SUM(CAST(so_luong AS NUMERIC)), 0) as total_export
+      FROM public.xuat_nhien_lieu
+      WHERE LOWER(TRIM(loai_hinh)) = 'trụ nội bộ'
     `;
     const totalExportInternal = parseFloat(exportInternalResult.rows[0]?.total_export || '0');
     console.log('✓ Total Export (Internal):', totalExportInternal);
 
     // 3. Tổng xuất tất cả (để tính tiêu thụ trong tháng)
     const exportAllResult = await sql`
-      SELECT COALESCE(SUM(quantity), 0) as total_export
-      FROM fuel_transactions
+      SELECT COALESCE(SUM(CAST(so_luong AS NUMERIC)), 0) as total_export
+      FROM public.xuat_nhien_lieu
     `;
     const totalExportAll = parseFloat(exportAllResult.rows[0]?.total_export || '0');
     console.log('✓ Total Export (All):', totalExportAll);
@@ -73,10 +73,10 @@ export async function GET() {
       
       // Fallback: Get avg price from latest import
       const avgPriceResult = await sql`
-        SELECT COALESCE(avg_price, 0) as avg_price
-        FROM fuel_imports
-        WHERE avg_price IS NOT NULL
-        ORDER BY import_date DESC, updated_at DESC
+        SELECT COALESCE(CAST(gia_trung_binh AS NUMERIC), 0) as avg_price
+        FROM public.nhap_nhien_lieu
+        WHERE gia_trung_binh IS NOT NULL
+        ORDER BY ngay_nhap DESC
         LIMIT 1
       `;
       currentAvgPrice = parseFloat(avgPriceResult.rows[0]?.avg_price || '0');
@@ -86,14 +86,11 @@ export async function GET() {
     console.log('✓ Final Current Inventory:', currentInventory);
     console.log('✓ Final Current Avg Price:', currentAvgPrice);
 
-    console.log('✓ Final Current Inventory:', currentInventory);
-    console.log('✓ Final Current Avg Price:', currentAvgPrice);
-
     // 5. Tiêu thụ trong tháng hiện tại
     const monthlyResult = await sql`
-      SELECT COALESCE(SUM(quantity), 0) as monthly_consumption
-      FROM fuel_transactions
-      WHERE DATE_TRUNC('month', transaction_date) = DATE_TRUNC('month', CURRENT_DATE)
+      SELECT COALESCE(SUM(CAST(so_luong AS NUMERIC)), 0) as monthly_consumption
+      FROM public.xuat_nhien_lieu
+      WHERE DATE_TRUNC('month', ngay_xuat) = DATE_TRUNC('month', CURRENT_DATE)
     `;
     const monthlyConsumption = parseFloat(monthlyResult.rows[0]?.monthly_consumption || '0');
     console.log('✓ Monthly Consumption:', monthlyConsumption);

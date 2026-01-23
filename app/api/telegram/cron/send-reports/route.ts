@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { telegramBot } from '@/lib/telegram-old/services/telegram-bot';
 import { TELEGRAM_TOPICS } from '@/lib/telegram-old/config/topics';
-import { sql } from '@vercel/postgres';
+import { sql } from '@/lib/db';
 
 // Force Node.js runtime (telegraf doesn't work in Edge runtime)
 export const runtime = 'nodejs';

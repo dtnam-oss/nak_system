@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { sql } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { format } from 'date-fns';

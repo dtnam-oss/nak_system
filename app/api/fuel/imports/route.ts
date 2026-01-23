@@ -1,4 +1,4 @@
-import { sql } from '@vercel/postgres';
+import { sql } from '@/lib/db';
 import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -14,16 +14,16 @@ export async function GET(request: Request) {
     const result = await sql`
       SELECT 
         id,
-        import_date,
-        supplier,
-        fuel_type,
-        quantity,
-        unit_price,
-        total_amount,
-        avg_price,
-        created_by
-      FROM fuel_imports
-      ORDER BY import_date DESC, updated_at DESC
+        ngay_nhap as import_date,
+        nha_cung_cap as supplier,
+        loai_nhien_lieu as fuel_type,
+        CAST(so_luong AS NUMERIC) as quantity,
+        CAST(don_gia AS NUMERIC) as unit_price,
+        CAST(thanh_tien AS NUMERIC) as total_amount,
+        CAST(gia_trung_binh AS NUMERIC) as avg_price,
+        nguoi_tao as created_by
+      FROM public.nhap_nhien_lieu
+      ORDER BY ngay_nhap DESC
       LIMIT ${limit}
       OFFSET ${offset}
     `;
