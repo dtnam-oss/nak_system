@@ -20,6 +20,13 @@ const DB_CONFIG = {
   allowExitOnIdle: false, // Keep pool alive
 };
 
+// Log which database we're connecting to (for debugging)
+console.log('🔌 [DB] Connection configured:');
+console.log('  - POSTGRES_URL:', process.env.POSTGRES_URL ? '✅ Set' : '❌ Not set');
+console.log('  - DATABASE_URL:', process.env.DATABASE_URL ? '✅ Set' : '❌ Not set');
+console.log('  - Using:', DB_CONFIG.connectionString?.substring(0, 40) + '...');
+console.log('  - Host:', DB_CONFIG.connectionString?.match(/\/\/.*@([^:]+)/)?.[1] || 'unknown');
+
 // Singleton pool instance
 let pool: Pool | null = null;
 
