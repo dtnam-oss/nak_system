@@ -57,11 +57,11 @@ export async function handleDashboardToday(ctx: BotContext) {
     const result = await sql`
       SELECT
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(revenue), 0) as "totalRevenue",
-        COALESCE(SUM(total_distance), 0) as "totalDistance",
-        COUNT(DISTINCT driver_name) as "totalDrivers"
-      FROM reconciliation_orders
-      WHERE date = ${today}
+        COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as "totalRevenue",
+        COALESCE(SUM(so_km_theo_odo), 0) as "totalDistance",
+        COUNT(DISTINCT ten_tai_xe) as "totalDrivers"
+      FROM chuyen_di
+      WHERE ngay_tao::date = ${today}::date
     `;
 
     const stats = result.rows[0] as DashboardStats;
@@ -101,12 +101,12 @@ export async function handleDashboardMonth(ctx: BotContext) {
     const result = await sql`
       SELECT
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(revenue), 0) as "totalRevenue",
-        COALESCE(SUM(total_distance), 0) as "totalDistance",
-        COUNT(DISTINCT driver_name) as "totalDrivers"
-      FROM reconciliation_orders
-      WHERE date >= ${startDate}
-        AND date <= ${endDate}
+        COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as "totalRevenue",
+        COALESCE(SUM(so_km_theo_odo), 0) as "totalDistance",
+        COUNT(DISTINCT ten_tai_xe) as "totalDrivers"
+      FROM chuyen_di
+      WHERE ngay_tao::date >= ${startDate}::date
+        AND ngay_tao::date <= ${endDate}::date
     `;
 
     const stats = result.rows[0] as DashboardStats;
