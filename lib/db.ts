@@ -7,7 +7,7 @@
  * @date 2026-01-22
  */
 
-import { Pool, PoolClient, QueryResult } from 'pg';
+import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 
 // Database configuration
 const DB_CONFIG = {
@@ -76,7 +76,7 @@ async function testConnection(): Promise<void> {
  * SQL template literal query (compatible with Vercel Postgres syntax)
  * Usage: await sql`SELECT * FROM table WHERE id = ${id}`
  */
-export async function sql<T = any>(
+export async function sql<T extends QueryResultRow = any>(
   strings: TemplateStringsArray,
   ...values: any[]
 ): Promise<QueryResult<T>> {
@@ -109,7 +109,7 @@ export async function sql<T = any>(
  * Direct query function
  * Usage: await query('SELECT * FROM table WHERE id = $1', [id])
  */
-export async function query<T = any>(
+export async function query<T extends QueryResultRow = any>(
   queryString: string,
   params: any[] = []
 ): Promise<QueryResult<T>> {
