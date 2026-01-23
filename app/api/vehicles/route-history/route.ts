@@ -1,9 +1,7 @@
-import { neon } from '@neondatabase/serverless'
+import { sql } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const dynamic = 'force-dynamic'
-
-const sql = neon(process.env.DATABASE_URL!)
 
 /**
  * GET /api/vehicles/route-history
@@ -29,26 +27,31 @@ export async function GET(request: NextRequest) {
     const cleanLicensePlate = licensePlate.trim().toUpperCase()
     console.log(`🔍 Fetching route history for ${cleanLicensePlate} from ${startDate} to ${endDate}`)
 
-    // Query reconciliation_orders for trips matching the license plate
-    // Using a robust JSONB search to find the license plate anywhere in the chiTietLoTrinh array
-    const records = await sql`
-      SELECT 
-        order_id as "maChuyenDi",
-        date as "ngay",
-        customer as "tenKhachHang",
-        route_name as "tenTuyen",
-        total_distance as "quangDuong",
-        revenue as "doanhThu",
-        details->'chiTietLoTrinh' as "chiTiet"
-      FROM reconciliation_orders
+    // Query chuyen_di JOIN chi_tiet_chuyen_di for trips matching the license plate
+    const result = await sql`
+      SELECT DISTINCT
+        cd.ma_chuyen_di as "maChuyenDi",
+        cd.ngay_tao as "ngay",
+        cd.ten_khach_hang as "tenKhachHang",
+        cd.ten_tuyen as "tenTuyen",
+        cd.so_km_theo_odo as "quangDuong",
+        CAST(cd.doanh_thu AS NUMERIC) as "doanhThu",
+        json_agg(
+          json_build_object(
+            'Id', ct."Id",
+            'bienKiemSoat', ct.bien_kiem_soat,
+            'loTrinh', ct.lo_trinh,
+            'ketQua', ct.ket_qua
+          )
+        ) as "chiTiet"
+      FROM chuyen_di cd
+      INNER JOIN chi_tiet_chuyen_di ct ON cd.ma_chuyen_di = ct.ma_chuyen_di
       WHERE 
-        EXISTS (
-          SELECT 1 FROM jsonb_array_elements(details->'chiTietLoTrinh') elem
-          WHERE elem->>'bienKiemSoat' = ${cleanLicensePlate}
-        )
-        AND date >= ${startDate}
-        AND date <= ${endDate}
-      ORDER BY date DESC, order_id DESC
+        ct.bien_kiem_soat = ${cleanLicensePlate}
+        AND cd.ngay_tao::date >= ${startDate}::date
+        AND cd.ngay_tao::date <= ${endDate}::date
+      GROUP BY cd.ma_chuyen_di, cd.ngay_tao, cd.ten_khach_hang, cd.ten_tuyen, cd.so_km_theo_odo, cd.doanh_thu
+      ORDER BY cd.ngay_tao DESC, cd.ma_chuyen_di DESC
     `
 
     return NextResponse.json({
@@ -56,8 +59,8 @@ export async function GET(request: NextRequest) {
       licensePlate: cleanLicensePlate,
       startDate,
       endDate,
-      count: records.length,
-      records: records
+      count: result.rows.length,
+      records: result.rows
     })
 
   } catch (error: any) {

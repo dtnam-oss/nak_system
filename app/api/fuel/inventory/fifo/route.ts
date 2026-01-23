@@ -57,12 +57,12 @@ export async function GET() {
     const importsResult = await sql`
       SELECT 
         id,
-        import_date,
-        quantity,
-        unit_price,
-        avg_price
-      FROM fuel_imports
-      ORDER BY import_date ASC, created_at ASC
+        ngay_tao as import_date,
+        so_luong as quantity,
+        don_gia as unit_price,
+        don_gia_binh_quan as avg_price
+      FROM nhap_nhien_lieu
+      ORDER BY ngay_tao ASC, thoi_gian_tao ASC
     `;
 
     const imports: FuelImport[] = importsResult.rows.map(row => ({
@@ -80,12 +80,12 @@ export async function GET() {
     const transactionsResult = await sql`
       SELECT 
         id,
-        transaction_date,
-        quantity,
-        fuel_source
-      FROM fuel_transactions
-      WHERE LOWER(TRIM(fuel_source)) = 'trụ nội bộ'
-      ORDER BY transaction_date ASC, updated_at ASC
+        ngay_tao as transaction_date,
+        so_luong as quantity,
+        nguon_nhien_lieu as fuel_source
+      FROM xuat_nhien_lieu
+      WHERE LOWER(TRIM(nguon_nhien_lieu)) = 'trụ nội bộ'
+      ORDER BY ngay_tao ASC, thoi_gian_tao ASC
     `;
 
     const transactions: FuelTransaction[] = transactionsResult.rows.map(row => ({

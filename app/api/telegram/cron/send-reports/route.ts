@@ -137,61 +137,61 @@ async function fetchReportData(reportType: 'morning' | 'evening') {
     const analyticsQuery = await sql`
       SELECT 
         COUNT(*) as total_trips,
-        COUNT(DISTINCT customer) as total_customers
-      FROM reconciliation_orders
-      WHERE date = ${reportDate}
+        COUNT(DISTINCT ten_khach_hang) as total_customers
+      FROM chuyen_di
+      WHERE ngay_tao::date = ${reportDate}::date
     `;
     
     // Query for comparison date (previous day)
     const comparisonQuery = await sql`
       SELECT 
         COUNT(*) as total_trips,
-        COUNT(DISTINCT customer) as total_customers
-      FROM reconciliation_orders
-      WHERE date = ${comparisonDate}
+        COUNT(DISTINCT ten_khach_hang) as total_customers
+      FROM chuyen_di
+      WHERE ngay_tao::date = ${comparisonDate}::date
     `;
     
     // Query for same day last week
     const lastWeekQuery = await sql`
       SELECT 
         COUNT(*) as total_trips,
-        COUNT(DISTINCT customer) as total_customers
-      FROM reconciliation_orders
-      WHERE date = ${lastWeekStr}
+        COUNT(DISTINCT ten_khach_hang) as total_customers
+      FROM chuyen_di
+      WHERE ngay_tao::date = ${lastWeekStr}::date
     `;
     
     // Query for same day last month
     const lastMonthQuery = await sql`
       SELECT 
         COUNT(*) as total_trips,
-        COUNT(DISTINCT customer) as total_customers
-      FROM reconciliation_orders
-      WHERE date = ${lastMonthStr}
+        COUNT(DISTINCT ten_khach_hang) as total_customers
+      FROM chuyen_di
+      WHERE ngay_tao::date = ${lastMonthStr}::date
     `;
 
     const statusQuery = await sql`
-      SELECT status, COUNT(*) as count
-      FROM reconciliation_orders
-      WHERE date = ${reportDate}
-      GROUP BY status
+      SELECT trang_thai_chuyen_di as status, COUNT(*) as count
+      FROM chuyen_di
+      WHERE ngay_tao::date = ${reportDate}::date
+      GROUP BY trang_thai_chuyen_di
     `;
 
     const tripsQuery = await sql`
       SELECT 
-        customer,
-        provider,
-        driver_name,
-        revenue,
-        status
-      FROM reconciliation_orders
-      WHERE date = ${reportDate}
-      ORDER BY revenue DESC
+        ten_khach_hang as customer,
+        don_vi_van_chuyen as provider,
+        ten_tai_xe as driver_name,
+        CAST(doanh_thu AS NUMERIC) as revenue,
+        trang_thai_chuyen_di as status
+      FROM chuyen_di
+      WHERE ngay_tao::date = ${reportDate}::date
+      ORDER BY doanh_thu DESC
     `;
 
     const customersQuery = await sql`
-      SELECT DISTINCT customer
-      FROM reconciliation_orders
-      WHERE customer IS NOT NULL AND customer != ''
+      SELECT DISTINCT ten_khach_hang as customer
+      FROM chuyen_di
+      WHERE ten_khach_hang IS NOT NULL AND ten_khach_hang != ''
     `;
 
     console.log('📊 Analytics from DB:', JSON.stringify(analyticsQuery.rows[0], null, 2));

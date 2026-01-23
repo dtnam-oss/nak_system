@@ -62,12 +62,12 @@ export async function GET(request: NextRequest) {
     let paramIndex = 1;
 
     if (fromDate) {
-      conditions.push(`date >= $${paramIndex}`);
+      conditions.push(`ngay_tao::date >= $${paramIndex}::date`);
       params.push(fromDate);
       paramIndex++;
     }
     if (toDate) {
-      conditions.push(`date <= $${paramIndex}`);
+      conditions.push(`ngay_tao::date <= $${paramIndex}::date`);
       params.push(toDate);
       paramIndex++;
     }
@@ -77,32 +77,32 @@ export async function GET(request: NextRequest) {
       
       if (customerList.length === 1) {
         // Single customer: use ILIKE for partial match
-        conditions.push(`LOWER(customer) LIKE $${paramIndex}`);
+        conditions.push(`LOWER(ten_khach_hang) LIKE $${paramIndex}`);
         params.push(`%${customerList[0].toLowerCase()}%`);
         paramIndex++;
       } else if (customerList.length > 1) {
         // Multiple customers: use ANY with array
-        conditions.push(`customer = ANY($${paramIndex})`);
+        conditions.push(`ten_khach_hang = ANY($${paramIndex})`);
         params.push(customerList);
         paramIndex++;
       }
     }
     if (donViVanChuyen) {
-      conditions.push(`LOWER(TRIM(provider)) = $${paramIndex}`);
+      conditions.push(`LOWER(TRIM(don_vi_van_chuyen)) = $${paramIndex}`);
       params.push(donViVanChuyen.toLowerCase());
       paramIndex++;
     }
     if (loaiChuyen) {
-      conditions.push(`LOWER(TRIM(trip_type)) LIKE $${paramIndex}`);
+      conditions.push(`LOWER(TRIM(loai_chuyen)) LIKE $${paramIndex}`);
       params.push(`%${loaiChuyen.toLowerCase()}%`);
       paramIndex++;
     }
     if (searchQuery) {
       conditions.push(`(
-        LOWER(order_id) LIKE $${paramIndex} OR
-        LOWER(customer) LIKE $${paramIndex} OR
-        LOWER(route_name) LIKE $${paramIndex} OR
-        LOWER(driver_name) LIKE $${paramIndex}
+        LOWER(ma_chuyen_di) LIKE $${paramIndex} OR
+        LOWER(ten_khach_hang) LIKE $${paramIndex} OR
+        LOWER(ten_tuyen) LIKE $${paramIndex} OR
+        LOWER(ten_tai_xe) LIKE $${paramIndex}
       )`);
       params.push(`%${searchQuery.toLowerCase()}%`);
       paramIndex++;
@@ -110,15 +110,28 @@ export async function GET(request: NextRequest) {
     
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     
-    // Build the full query string
+    // Build the full query string - Note: Query chuyen_di table now
     const queryString = `
       SELECT 
-        id, order_id, date, customer, route_name, driver_name,
-        provider, status, cost, revenue,
-        trip_type, route_type, weight, total_distance, details, created_at
-      FROM reconciliation_orders
+        id, 
+        ma_chuyen_di as order_id, 
+        ngay_tao as date, 
+        ten_khach_hang as customer, 
+        ten_tuyen as route_name, 
+        ten_tai_xe as driver_name,
+        don_vi_van_chuyen as provider, 
+        trang_thai_chuyen_di as status, 
+        CAST(chi_phi AS NUMERIC) as cost, 
+        CAST(doanh_thu AS NUMERIC) as revenue,
+        loai_chuyen as trip_type, 
+        loai_tuyen as route_type, 
+        so_km_theo_odo as weight, 
+        so_km_theo_odo as total_distance, 
+        NULL as details,
+        thoi_gian_tao as created_at
+      FROM chuyen_di
       ${whereClause}
-      ORDER BY date DESC, created_at DESC
+      ORDER BY ngay_tao DESC, thoi_gian_tao DESC
     `;
     
     console.log('🔍 Executing query with filters:', { whereClause, params });
