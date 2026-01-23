@@ -22,31 +22,7 @@ export async function GET(req: NextRequest) {
     const phanQuyen = searchParams.get('phan_quyen');
     const chatId = searchParams.get('chat_id');
 
-    let query = sql`
-      SELECT 
-        id,
-        ma_nhan_vien,
-        ho_va_ten,
-        phong_ban,
-        chuc_vu,
-        hinh_anh,
-        so_dien_thoai,
-        email,
-        chat_id,
-        tinh_trang_cong_tac,
-        ngay_vao_lam,
-        phan_quyen,
-        xem,
-        them,
-        sua,
-        xoa,
-        is_active,
-        last_login
-      FROM nhan_vien
-      WHERE 1=1
-    `;
-
-    // Build dynamic query based on filters
+    // Handle specific queries
     if (maNhanVien) {
       const result = await sql`
         SELECT * FROM nhan_vien WHERE ma_nhan_vien = ${maNhanVien}
