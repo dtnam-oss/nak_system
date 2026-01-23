@@ -231,7 +231,6 @@ export async function GET(request: NextRequest) {
                 thanhTien: parseFloat(ct.ThanhTien || 0)
               }))
             : []
-            : []
           
           dataJson = JSON.stringify({ chiTietLoTrinh })
         } catch (err) {
