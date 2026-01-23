@@ -30,11 +30,11 @@ export async function GET() {
     const totalImport = parseFloat(importResult.rows[0]?.total_import || '0');
     console.log('✓ Total Import:', totalImport);
 
-    // 2. Tổng xuất tại Trụ nội bộ (loai_hinh = 'Trụ nội bộ')
+    // 2. Tổng xuất tại Trụ nội bộ (nguon_nhien_lieu = 'Trụ nội bộ')
     const exportInternalResult = await sql`
       SELECT COALESCE(SUM(CAST(so_luong AS NUMERIC)), 0) as total_export
       FROM public.xuat_nhien_lieu
-      WHERE LOWER(TRIM(loai_hinh)) = 'trụ nội bộ'
+      WHERE LOWER(TRIM(nguon_nhien_lieu)) = 'trụ nội bộ'
     `;
     const totalExportInternal = parseFloat(exportInternalResult.rows[0]?.total_export || '0');
     console.log('✓ Total Export (Internal):', totalExportInternal);
@@ -73,10 +73,10 @@ export async function GET() {
       
       // Fallback: Get avg price from latest import
       const avgPriceResult = await sql`
-        SELECT COALESCE(CAST(gia_trung_binh AS NUMERIC), 0) as avg_price
+        SELECT COALESCE(CAST(don_gia_binh_quan AS NUMERIC), 0) as avg_price
         FROM public.nhap_nhien_lieu
-        WHERE gia_trung_binh IS NOT NULL
-        ORDER BY ngay_nhap DESC
+        WHERE don_gia_binh_quan IS NOT NULL
+        ORDER BY ngay_tao DESC
         LIMIT 1
       `;
       currentAvgPrice = parseFloat(avgPriceResult.rows[0]?.avg_price || '0');
@@ -90,7 +90,7 @@ export async function GET() {
     const monthlyResult = await sql`
       SELECT COALESCE(SUM(CAST(so_luong AS NUMERIC)), 0) as monthly_consumption
       FROM public.xuat_nhien_lieu
-      WHERE DATE_TRUNC('month', ngay_xuat) = DATE_TRUNC('month', CURRENT_DATE)
+      WHERE DATE_TRUNC('month', ngay_tao::date) = DATE_TRUNC('month', CURRENT_DATE)
     `;
     const monthlyConsumption = parseFloat(monthlyResult.rows[0]?.monthly_consumption || '0');
     console.log('✓ Monthly Consumption:', monthlyConsumption);
