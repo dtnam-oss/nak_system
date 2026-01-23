@@ -34,43 +34,43 @@ export async function GET(req: NextRequest) {
         const analyticsQuery = await sql`
       SELECT 
         COUNT(*) as total_trips,
-        COUNT(DISTINCT customer) as total_customers,
-        COALESCE(SUM(cost), 0) as total_revenue
-      FROM reconciliation_orders
-      WHERE date = ${todayStr}
+        COUNT(DISTINCT ten_khach_hang) as total_customers,
+        COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as total_revenue
+      FROM chuyen_di
+      WHERE ngay_tao = ${todayStr}
     `;
 
         // 2. Status Breakdown
         const statusQuery = await sql`
-      SELECT status, COUNT(*) as count
-      FROM reconciliation_orders
-      WHERE date = ${todayStr}
-      GROUP BY status
+      SELECT trang_thai_chuyen_di as status, COUNT(*) as count
+      FROM chuyen_di
+      WHERE ngay_tao = ${todayStr}
+      GROUP BY trang_thai_chuyen_di
     `;
 
         // 3. Partner Performance
         // provider: NAK or VENDOR
         const partnerQuery = await sql`
       SELECT 
-        provider,
-        driver_name,
-        status,
+        don_vi_van_chuyen as provider,
+        ten_tai_xe as driver_name,
+        trang_thai_chuyen_di as status,
         COUNT(*) as total_trips,
-        COALESCE(SUM(cost), 0) as revenue
-      FROM reconciliation_orders
-      WHERE date = ${todayStr}
-      GROUP BY provider, driver_name, status
+        COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as revenue
+      FROM chuyen_di
+      WHERE ngay_tao = ${todayStr}
+      GROUP BY don_vi_van_chuyen, ten_tai_xe, trang_thai_chuyen_di
     `;
 
         // 4. Customer Performance
         const customerQuery = await sql`
       SELECT 
-        customer,
+        ten_khach_hang as customer,
         COUNT(*) as total_trips,
-        COALESCE(SUM(cost), 0) as revenue
-      FROM reconciliation_orders
-      WHERE date = ${todayStr}
-      GROUP BY customer
+        COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as revenue
+      FROM chuyen_di
+      WHERE ngay_tao = ${todayStr}
+      GROUP BY ten_khach_hang
       ORDER BY revenue DESC
       LIMIT 5
     `;
