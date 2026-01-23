@@ -110,7 +110,7 @@ export async function GET(request: NextRequest) {
                 route_name: row.route_name,
                 weight: row.weight,
                 revenue: row.revenue,
-                license_plate: licensePlate, // Derived column
+                license_plate: row.license_plate || '---',
                 trip_type: row.trip_type,
                 provider: row.provider
             };
