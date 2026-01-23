@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
       FROM chuyen_di cd
       INNER JOIN chi_tiet_chuyen_di ct ON cd.ma_chuyen_di = ct.ma_chuyen_di
       WHERE 
-        ct.bien_kiem_soat = ${cleanLicensePlate}
+        CAST(ct.bien_kiem_soat AS TEXT) = ${cleanLicensePlate}
         AND cd.ngay_tao::date >= ${startDate}::date
         AND cd.ngay_tao::date <= ${endDate}::date
       GROUP BY cd.ma_chuyen_di, cd.ngay_tao, cd.ten_khach_hang, cd.ten_tuyen, cd.so_km_theo_odo, cd.doanh_thu
