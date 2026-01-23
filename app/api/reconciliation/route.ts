@@ -167,7 +167,7 @@ export async function GET(request: NextRequest) {
         -- Aggregate details as JSON
         json_agg(
           json_build_object(
-            'Id', ct."Id",
+            'Id', ct.id,
             'DiemLayHang', ct.diem_lay_hang,
             'DiemTraHang', ct.diem_tra_hang,
             'QuangDuong', ct.quang_duong,
@@ -175,10 +175,10 @@ export async function GET(request: NextRequest) {
             'ThanhTien', ct.thanh_tien,
             'KhoiLuong', ct.khoi_luong,
             'GhiChu', ct.ghi_chu
-          ) ORDER BY ct."Id"
-        ) FILTER (WHERE ct."Id" IS NOT NULL) as chi_tiet_lo_trinh
-      FROM public.chuyen_di cd
-      LEFT JOIN public.chi_tiet_chuyen_di ct ON ct.ma_chuyen_di = cd.ma_chuyen_di
+          ) ORDER BY ct.id
+        ) FILTER (WHERE ct.id IS NOT NULL) as chi_tiet_lo_trinh
+      FROM chuyen_di cd
+      LEFT JOIN chi_tiet_chuyen_di ct ON ct.ma_chuyen_di = cd.ma_chuyen_di
       ${whereClause.replace(/order_id/g, 'cd.ma_chuyen_di').replace(/customer/g, 'cd.ten_khach_hang').replace(/date/g, 'cd.ngay_tao').replace(/status/g, 'cd.trang_thai_chuyen_di').replace(/provider/g, 'cd.don_vi_van_chuyen').replace(/trip_type/g, 'cd.loai_chuyen').replace(/route_type/g, 'cd.loai_tuyen')}
       GROUP BY cd.ma_chuyen_di, cd.ngay_tao, cd.ten_khach_hang, cd.loai_chuyen, cd.loai_tuyen, cd.ten_tuyen, cd.ten_tai_xe, cd.don_vi_van_chuyen, cd.trang_thai_chuyen_di, cd.doanh_thu, cd.so_km_theo_odo, cd.thoi_gian_tao
       ORDER BY cd.ngay_tao DESC, cd.thoi_gian_tao DESC
