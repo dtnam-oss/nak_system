@@ -48,7 +48,7 @@ export function JnTRouteTable({ data }: JnTRouteTableProps) {
                   // Extract data from chiTietLoTrinh (details column)
                   const licensePlate = chiTietLoTrinh[0]?.bienKiemSoat || ''
 
-                  // Use loTrinh from chiTietLoTrinh (not tenTuyen from record)
+                  // Use loTrinh from chiTietLoTrinh first item
                   const routeName = chiTietLoTrinh[0]?.loTrinh || ''
 
                   // Tem chiều đi: first maTuyen
@@ -59,10 +59,10 @@ export function JnTRouteTable({ data }: JnTRouteTableProps) {
                     ? chiTietLoTrinh[chiTietLoTrinh.length - 1]?.maTuyen || ''
                     : ''
 
-                  // Volume: join all taiTrongTinhPhi with comma
+                  // Volume: join all taiTrongTinhPhi with comma (filter out 0 and null)
                   const volumes = chiTietLoTrinh
                     .map(item => item.taiTrongTinhPhi)
-                    .filter(value => value !== null && value !== undefined)
+                    .filter(value => value !== null && value !== undefined && value !== 0)
                   const volume = volumes.length > 0 ? volumes.join(', ') : ''
 
                   return (

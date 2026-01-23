@@ -178,13 +178,17 @@ export async function GET(request: NextRequest) {
             'LoTrinh', ct.lo_trinh,
             'LoTrinhChiTiet', ct.lo_trinh_chi_tiet_theo_diem,
             'BienKiemSoat', CAST(ct.bien_kiem_soat AS TEXT),
-            'QuangDuong', CAST(ct.quang_duong AS NUMERIC),
-            'TaiTrong', CAST(ct.tai_trong AS NUMERIC),
-            'SoChieu', CAST(ct.so_chieu AS INTEGER),
-            'DonGia', CAST(ct.don_gia AS NUMERIC),
-            'ThanhTien', CAST(ct.ket_qua AS NUMERIC),
+            'QuangDuong', CASE WHEN ct.quang_duong ~ '^[0-9]*\.?[0-9]+$' THEN CAST(ct.quang_duong AS NUMERIC) ELSE 0 END,
+            'TaiTrong', CASE WHEN ct.tai_trong ~ '^[0-9]*\.?[0-9]+$' THEN CAST(ct.tai_trong AS NUMERIC) ELSE 0 END,
+            'TaiTrongTinhPhi', CASE WHEN ct.tai_trong_tinh_phi ~ '^[0-9]*\.?[0-9]+$' THEN CAST(ct.tai_trong_tinh_phi AS NUMERIC) ELSE 0 END,
+            'SoChieu', CASE WHEN ct.so_chieu ~ '^[0-9]+$' THEN CAST(ct.so_chieu AS INTEGER) ELSE 0 END,
+            'DonGia', CASE WHEN ct.don_gia ~ '^[0-9]*\.?[0-9]+$' THEN CAST(ct.don_gia AS NUMERIC) ELSE 0 END,
+            'ThanhTien', CASE WHEN ct.ket_qua ~ '^[0-9]*\.?[0-9]+$' THEN CAST(ct.ket_qua AS NUMERIC) ELSE 0 END,
             'HinhThucTinhGia', ct.hinh_thuc_tinh_gia,
             'LoaiCa', ct.loai_ca,
+            'MaTuyen', ct.ma_chuyen_di_kh,
+            'LoaiTuyenKH', ct.loai_tuyen_khach_hang,
+            'NgayTrenTem', ct.ngay_tren_tem,
             'TenKhachHangCap1', ct.ten_khach_hang_cap_1
           ) ORDER BY ct."Id"
         ) FILTER (WHERE ct."Id" IS NOT NULL) as chi_tiet_lo_trinh
@@ -217,18 +221,19 @@ export async function GET(request: NextRequest) {
             ? row.chi_tiet_lo_trinh.map((ct: any, index: number) => ({
                 thuTu: index + 1,
                 id: ct.Id || '',
-                loaiTuyenKH: '', // Not available in current schema
-                maTuyen: '', // Not available in current schema  
+                loaiTuyenKH: ct.LoaiTuyenKH || '',
+                maTuyen: ct.MaTuyen || '',
                 bienKiemSoat: ct.BienKiemSoat || '',
                 loTrinh: ct.LoTrinh || '',
                 loTrinhChiTiet: ct.LoTrinhChiTiet || '',
                 quangDuong: parseFloat(ct.QuangDuong || 0),
                 taiTrong: parseFloat(ct.TaiTrong || 0),
-                taiTrongTinhPhi: parseFloat(ct.TaiTrong || 0), // Use same as taiTrong
+                taiTrongTinhPhi: parseFloat(ct.TaiTrongTinhPhi || 0),
                 hinhThucTinhGia: ct.HinhThucTinhGia || '',
                 soChieu: parseInt(ct.SoChieu || 0),
                 donGia: parseFloat(ct.DonGia || 0),
-                thanhTien: parseFloat(ct.ThanhTien || 0)
+                thanhTien: parseFloat(ct.ThanhTien || 0),
+                ngayTrenTem: ct.NgayTrenTem || ''
               }))
             : []
           

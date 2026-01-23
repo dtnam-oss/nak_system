@@ -109,8 +109,8 @@ export async function generateJnTRouteExcel(data: ReconciliationDatabaseRow[]): 
     // Cột C: Biển số xe (Lấy từ phần tử đầu tiên)
     const licensePlate = chiTietLoTrinh[0]?.bienKiemSoat || '';
 
-    // Cột D: Điểm đi - Điểm đến (Lấy trực tiếp từ order.route_name)
-    const routeName = order.route_name || '';
+    // Cột D: Điểm đi - Điểm đến (Lấy từ chi tiết lộ trình đầu tiên)
+    const routeName = chiTietLoTrinh[0]?.loTrinh || order.route_name || '';
 
     // Cột E: Tem chiều đi (maTuyen đầu tiên - index 0)
     const stampOut = chiTietLoTrinh[0]?.maTuyen || '';
@@ -120,10 +120,10 @@ export async function generateJnTRouteExcel(data: ReconciliationDatabaseRow[]): 
       ? chiTietLoTrinh[chiTietLoTrinh.length - 1]?.maTuyen || ''
       : '';
 
-    // Cột G: Thể tích (Nối bằng dấu phẩy nếu có nhiều giá trị)
+    // Cột G: Thể tích (Lấy từ taiTrongTinhPhi, nối bằng dấu phẩy nếu có nhiều)
     const volumes = chiTietLoTrinh
       .map((item: any) => item.taiTrongTinhPhi)
-      .filter((value: any) => value !== null && value !== undefined);
+      .filter((value: any) => value !== null && value !== undefined && value !== 0);
     const volume = volumes.length > 0 ? volumes.join(', ') : '';
 
     // =====================

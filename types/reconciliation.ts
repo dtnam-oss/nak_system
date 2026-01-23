@@ -68,6 +68,7 @@ export interface ChiTietLoTrinh {
   soChieu: number
   donGia: number
   thanhTien: number
+  ngayTrenTem?: string  // Date on stamp (YYYY-MM-DD)
 }
 
 export interface ReconciliationFilters {
