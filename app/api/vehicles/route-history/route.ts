@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     // Query chuyen_di JOIN chi_tiet_chuyen_di for trips matching the license plate
     const result = await sql`
-      SELECT DISTINCT
+      SELECT
         cd.ma_chuyen_di as "maChuyenDi",
         cd.ngay_tao as "ngay",
         cd.ten_khach_hang as "tenKhachHang",
