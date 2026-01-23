@@ -104,16 +104,21 @@ export async function handleSearchCommand(ctx: BotContext) {
   try {
     const result = await sql`
       SELECT
-        order_id as "maChuyenDi",
-        date as "ngayTao",
-        customer as "tenKhachHang",
-        route_name as "tenTuyen",
-        driver_name as "tenTaiXe",
-        details->'chiTietLoTrinh'->0->>'bienKiemSoat' as "bienKiemSoat",
-        revenue as "tongDoanhThu",
-        total_distance as "tongQuangDuong"
-      FROM reconciliation_orders
-      WHERE order_id = ${tripId}
+        cd.ma_chuyen_di as "maChuyenDi",
+        cd.ngay_tao as "ngayTao",
+        cd.ten_khach_hang as "tenKhachHang",
+        cd.ten_tuyen as "tenTuyen",
+        cd.ten_tai_xe as "tenTaiXe",
+        (
+          SELECT bien_kiem_soat 
+          FROM chi_tiet_chuyen_di 
+          WHERE ma_chuyen_di = cd.ma_chuyen_di 
+          LIMIT 1
+        ) as "bienKiemSoat",
+        CAST(cd.doanh_thu AS NUMERIC) as "tongDoanhThu",
+        cd.so_km_theo_odo as "tongQuangDuong"
+      FROM chuyen_di cd
+      WHERE cd.ma_chuyen_di = ${tripId}
       LIMIT 1
     `;
 
@@ -161,16 +166,21 @@ export async function handleTripsToday(ctx: BotContext) {
 
     const result = await sql`
       SELECT
-        order_id as "maChuyenDi",
-        customer as "tenKhachHang",
-        route_name as "tenTuyen",
-        driver_name as "tenTaiXe",
-        details->'chiTietLoTrinh'->0->>'bienKiemSoat' as "bienKiemSoat",
-        revenue as "tongDoanhThu",
-        total_distance as "tongQuangDuong"
-      FROM reconciliation_orders
-      WHERE date = ${today}
-      ORDER BY order_id DESC
+        cd.ma_chuyen_di as "maChuyenDi",
+        cd.ten_khach_hang as "tenKhachHang",
+        cd.ten_tuyen as "tenTuyen",
+        cd.ten_tai_xe as "tenTaiXe",
+        (
+          SELECT bien_kiem_soat 
+          FROM chi_tiet_chuyen_di 
+          WHERE ma_chuyen_di = cd.ma_chuyen_di 
+          LIMIT 1
+        ) as "bienKiemSoat",
+        CAST(cd.doanh_thu AS NUMERIC) as "tongDoanhThu",
+        cd.so_km_theo_odo as "tongQuangDuong"
+      FROM chuyen_di cd
+      WHERE cd.ngay_tao::date = ${today}::date
+      ORDER BY cd.ma_chuyen_di DESC
       LIMIT 10
     `;
 
@@ -226,13 +236,13 @@ export async function handleTripsByCustomer(ctx: BotContext) {
     // Get top 10 customers by trip count
     const result = await sql`
       SELECT
-        customer as "tenKhachHang",
+        ten_khach_hang as "tenKhachHang",
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(revenue), 0) as "totalRevenue"
-      FROM reconciliation_orders
-      WHERE customer IS NOT NULL
-        AND customer != ''
-      GROUP BY customer
+        COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as "totalRevenue"
+      FROM chuyen_di
+      WHERE ten_khach_hang IS NOT NULL
+        AND ten_khach_hang != ''
+      GROUP BY ten_khach_hang
       ORDER BY "totalTrips" DESC
       LIMIT 10
     `;
@@ -278,14 +288,15 @@ export async function handleTripsByVehicle(ctx: BotContext) {
     // Get top 10 vehicles by trip count
     const result = await sql`
       SELECT
-        details->'chiTietLoTrinh'->0->>'bienKiemSoat' as "bienKiemSoat",
+        ct.bien_kiem_soat as "bienKiemSoat",
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(revenue), 0) as "totalRevenue",
-        COALESCE(SUM(total_distance), 0) as "totalDistance"
-      FROM reconciliation_orders
-      WHERE details->'chiTietLoTrinh'->0->>'bienKiemSoat' IS NOT NULL
-        AND details->'chiTietLoTrinh'->0->>'bienKiemSoat' != ''
-      GROUP BY details->'chiTietLoTrinh'->0->>'bienKiemSoat'
+        COALESCE(SUM(CAST(cd.doanh_thu AS NUMERIC)), 0) as "totalRevenue",
+        COALESCE(SUM(cd.so_km_theo_odo), 0) as "totalDistance"
+      FROM chi_tiet_chuyen_di ct
+      INNER JOIN chuyen_di cd ON ct.ma_chuyen_di = cd.ma_chuyen_di
+      WHERE ct.bien_kiem_soat IS NOT NULL
+        AND ct.bien_kiem_soat != ''
+      GROUP BY ct.bien_kiem_soat
       ORDER BY "totalTrips" DESC
       LIMIT 10
     `;
@@ -331,16 +342,21 @@ export async function handleTripRefresh(ctx: BotContext, tripId: string) {
 
     const result = await sql`
       SELECT
-        order_id as "maChuyenDi",
-        date as "ngayTao",
-        customer as "tenKhachHang",
-        route_name as "tenTuyen",
-        driver_name as "tenTaiXe",
-        details->'chiTietLoTrinh'->0->>'bienKiemSoat' as "bienKiemSoat",
-        revenue as "tongDoanhThu",
-        total_distance as "tongQuangDuong"
-      FROM reconciliation_orders
-      WHERE order_id = ${tripId}
+        cd.ma_chuyen_di as "maChuyenDi",
+        cd.ngay_tao as "ngayTao",
+        cd.ten_khach_hang as "tenKhachHang",
+        cd.ten_tuyen as "tenTuyen",
+        cd.ten_tai_xe as "tenTaiXe",
+        (
+          SELECT bien_kiem_soat 
+          FROM chi_tiet_chuyen_di 
+          WHERE ma_chuyen_di = cd.ma_chuyen_di 
+          LIMIT 1
+        ) as "bienKiemSoat",
+        CAST(cd.doanh_thu AS NUMERIC) as "tongDoanhThu",
+        cd.so_km_theo_odo as "tongQuangDuong"
+      FROM chuyen_di cd
+      WHERE cd.ma_chuyen_di = ${tripId}
       LIMIT 1
     `;
 
