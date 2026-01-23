@@ -30,11 +30,11 @@ export async function GET() {
     const totalImport = parseFloat(importResult.rows[0]?.total_import || '0');
     console.log('✓ Total Import:', totalImport);
 
-    // 2. Tổng xuất tại Trụ nội bộ (nguon_nhien_lieu = 'Trụ nội bộ')
+    // 2. Tổng xuất tại Trụ nội bộ (loai_hinh = 'Trụ nội bộ')
     const exportInternalResult = await sql`
       SELECT COALESCE(SUM(CAST(so_luong AS NUMERIC)), 0) as total_export
       FROM public.xuat_nhien_lieu
-      WHERE LOWER(TRIM(nguon_nhien_lieu)) = 'trụ nội bộ'
+      WHERE LOWER(TRIM(loai_hinh)) = 'trụ nội bộ'
     `;
     const totalExportInternal = parseFloat(exportInternalResult.rows[0]?.total_export || '0');
     console.log('✓ Total Export (Internal):', totalExportInternal);
