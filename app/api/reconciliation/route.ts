@@ -168,13 +168,17 @@ export async function GET(request: NextRequest) {
         json_agg(
           json_build_object(
             'Id', ct."Id",
-            'DiemLayHang', ct.diem_lay_hang,
-            'DiemTraHang', ct.diem_tra_hang,
+            'LoTrinh', ct.lo_trinh,
+            'LoTrinhChiTiet', ct.lo_trinh_chi_tiet_theo_diem,
+            'BienKiemSoat', ct.bien_kiem_soat,
             'QuangDuong', ct.quang_duong,
+            'TaiTrong', ct.tai_trong,
+            'SoChieu', ct.so_chieu,
             'DonGia', ct.don_gia,
-            'ThanhTien', ct.thanh_tien,
-            'KhoiLuong', ct.khoi_luong,
-            'GhiChu', ct.ghi_chu
+            'ThanhTien', ct.ket_qua,
+            'HinhThucTinhGia', ct.hinh_thuc_tinh_gia,
+            'LoaiCa', ct.loai_ca,
+            'TenKhachHangCap1', ct.ten_khach_hang_cap_1
           ) ORDER BY ct."Id"
         ) FILTER (WHERE ct."Id" IS NOT NULL) as chi_tiet_lo_trinh
       FROM chuyen_di cd
@@ -205,13 +209,17 @@ export async function GET(request: NextRequest) {
           chiTietLoTrinh = Array.isArray(row.chi_tiet_lo_trinh) 
             ? row.chi_tiet_lo_trinh.map((ct: any) => ({
                 Id: ct.Id,
-                DiemLayHang: ct.DiemLayHang || '',
-                DiemTraHang: ct.DiemTraHang || '',
+                LoTrinh: ct.LoTrinh || '',
+                LoTrinhChiTiet: ct.LoTrinhChiTiet || '',
+                BienKiemSoat: ct.BienKiemSoat || '',
                 QuangDuong: parseFloat(ct.QuangDuong || 0),
+                TaiTrong: parseFloat(ct.TaiTrong || 0),
+                SoChieu: parseInt(ct.SoChieu || 0),
                 DonGia: parseFloat(ct.DonGia || 0),
                 ThanhTien: parseFloat(ct.ThanhTien || 0),
-                KhoiLuong: parseFloat(ct.KhoiLuong || 0),
-                GhiChu: ct.GhiChu || ''
+                HinhThucTinhGia: ct.HinhThucTinhGia || '',
+                LoaiCa: ct.LoaiCa || '',
+                TenKhachHangCap1: ct.TenKhachHangCap1 || ''
               }))
             : []
           
