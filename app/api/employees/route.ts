@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sql, query } from '@/lib/db';
+import { query } from '@/lib/db';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
  * Get employees list
+ * API endpoint for employee management
  * 
  * GET /api/employees?active=true
  * GET /api/employees?ma_nhan_vien=NAK001
