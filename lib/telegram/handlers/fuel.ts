@@ -54,17 +54,17 @@ export async function handleFuelInventory(ctx: BotContext) {
     // Call existing fuel stats API or query database directly
     const result = await sql`
       WITH imports AS (
-        SELECT COALESCE(SUM(quantity), 0) as total_imports
-        FROM fuel_imports
+        SELECT COALESCE(SUM(so_luong), 0) as total_imports
+        FROM nhap_nhien_lieu
       ),
       exports AS (
-        SELECT COALESCE(SUM(quantity), 0) as total_exports
-        FROM fuel_transactions
+        SELECT COALESCE(SUM(so_luong), 0) as total_exports
+        FROM xuat_nhien_lieu
       ),
       latest_import AS (
-        SELECT avg_price as current_avg_price
-        FROM fuel_imports
-        ORDER BY import_date DESC
+        SELECT don_gia_binh_quan as current_avg_price
+        FROM nhap_nhien_lieu
+        ORDER BY ngay_tao DESC
         LIMIT 1
       )
       SELECT
@@ -116,14 +116,14 @@ export async function handleFuelEfficiency(ctx: BotContext) {
     const result = await sql`
       SELECT
         COUNT(*) as total_transactions,
-        COALESCE(AVG(efficiency), 0) as avg_efficiency,
-        COALESCE(MIN(efficiency), 0) as min_efficiency,
-        COALESCE(MAX(efficiency), 0) as max_efficiency,
-        COALESCE(SUM(quantity), 0) as total_fuel,
-        COALESCE(SUM(km_traveled), 0) as total_km
-      FROM fuel_transactions
-      WHERE efficiency IS NOT NULL
-        AND is_full_tank = true
+        COALESCE(AVG(hieu_suat), 0) as avg_efficiency,
+        COALESCE(MIN(hieu_suat), 0) as min_efficiency,
+        COALESCE(MAX(hieu_suat), 0) as max_efficiency,
+        COALESCE(SUM(so_luong), 0) as total_fuel,
+        COALESCE(SUM(km_di_duoc), 0) as total_km
+      FROM xuat_nhien_lieu
+      WHERE hieu_suat IS NOT NULL
+        AND do_day_binh = true
     `;
 
     const stats = result.rows[0];
@@ -166,15 +166,15 @@ export async function handleFuelByVehicle(ctx: BotContext, page: number = 1) {
     // Get vehicle efficiency data
     const result = await sql<VehicleEfficiency>`
       SELECT
-        license_plate as "licensePlate",
-        AVG(efficiency) as "avgEfficiency",
-        SUM(quantity) as "totalFuel",
-        SUM(km_traveled) as "totalKm",
+        bien_kiem_soat as "licensePlate",
+        AVG(hieu_suat) as "avgEfficiency",
+        SUM(so_luong) as "totalFuel",
+        SUM(km_di_duoc) as "totalKm",
         COUNT(*) as "totalTransactions"
-      FROM fuel_transactions
-      WHERE efficiency IS NOT NULL
-        AND is_full_tank = true
-      GROUP BY license_plate
+      FROM xuat_nhien_lieu
+      WHERE hieu_suat IS NOT NULL
+        AND do_day_binh = true
+      GROUP BY bien_kiem_soat
       ORDER BY "avgEfficiency" ASC
       LIMIT ${pageSize}
       OFFSET ${offset}
@@ -182,9 +182,9 @@ export async function handleFuelByVehicle(ctx: BotContext, page: number = 1) {
 
     // Get total count for pagination
     const countResult = await sql`
-      SELECT COUNT(DISTINCT license_plate) as total
-      FROM fuel_transactions
-      WHERE efficiency IS NOT NULL AND is_full_tank = true
+      SELECT COUNT(DISTINCT bien_kiem_soat) as total
+      FROM xuat_nhien_lieu
+      WHERE hieu_suat IS NOT NULL AND do_day_binh = true
     `;
 
     const totalVehicles = parseInt(countResult.rows[0].total);
@@ -243,14 +243,14 @@ export async function handleFuelByDate(ctx: BotContext) {
     // Get fuel transactions for last 7 days
     const result = await sql`
       SELECT
-        transaction_date::date as "date",
+        ngay_tao::date as "date",
         COUNT(*) as "totalTransactions",
-        SUM(quantity) as "totalQuantity",
-        AVG(unit_price) as "avgPrice"
-      FROM fuel_transactions
-      WHERE transaction_date >= CURRENT_DATE - INTERVAL '7 days'
-      GROUP BY transaction_date::date
-      ORDER BY transaction_date::date DESC
+        SUM(so_luong) as "totalQuantity",
+        AVG(don_gia) as "avgPrice"
+      FROM xuat_nhien_lieu
+      WHERE ngay_tao >= CURRENT_DATE - INTERVAL '7 days'
+      GROUP BY ngay_tao::date
+      ORDER BY ngay_tao::date DESC
     `;
 
     if (result.rows.length === 0) {

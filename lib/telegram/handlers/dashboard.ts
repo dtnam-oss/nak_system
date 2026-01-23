@@ -149,16 +149,16 @@ export async function handleDashboardTopRoutes(ctx: BotContext) {
 
     const result = await sql`
       SELECT
-        route_name as "tenTuyen",
+        ten_tuyen as "tenTuyen",
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(revenue), 0) as "totalRevenue",
-        COALESCE(SUM(total_distance), 0) as "totalDistance"
-      FROM reconciliation_orders
-      WHERE date >= ${startDate}
-        AND date <= ${endDate}
-        AND route_name IS NOT NULL
-        AND route_name != ''
-      GROUP BY route_name
+        COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as "totalRevenue",
+        COALESCE(SUM(so_km_theo_odo), 0) as "totalDistance"
+      FROM chuyen_di
+      WHERE ngay_tao::date >= ${startDate}::date
+        AND ngay_tao::date <= ${endDate}::date
+        AND ten_tuyen IS NOT NULL
+        AND ten_tuyen != ''
+      GROUP BY ten_tuyen
       ORDER BY "totalRevenue" DESC
       LIMIT 10
     `;
@@ -216,16 +216,16 @@ export async function handleDashboardTopDrivers(ctx: BotContext) {
 
     const result = await sql`
       SELECT
-        driver_name as "tenTaiXe",
+        ten_tai_xe as "tenTaiXe",
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(revenue), 0) as "totalRevenue",
-        COALESCE(SUM(total_distance), 0) as "totalDistance"
-      FROM reconciliation_orders
-      WHERE date >= ${startDate}
-        AND date <= ${endDate}
-        AND driver_name IS NOT NULL
-        AND driver_name != ''
-      GROUP BY driver_name
+        COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as "totalRevenue",
+        COALESCE(SUM(so_km_theo_odo), 0) as "totalDistance"
+      FROM chuyen_di
+      WHERE ngay_tao::date >= ${startDate}::date
+        AND ngay_tao::date <= ${endDate}::date
+        AND ten_tai_xe IS NOT NULL
+        AND ten_tai_xe != ''
+      GROUP BY ten_tai_xe
       ORDER BY "totalTrips" DESC
       LIMIT 10
     `;
@@ -287,14 +287,14 @@ export async function handleDashboardRevenue(ctx: BotContext) {
     // Get revenue by date
     const result = await sql`
       SELECT
-        date as "date",
+        ngay_tao::date as "date",
         COUNT(*) as "trips",
-        COALESCE(SUM(revenue), 0) as "revenue"
-      FROM reconciliation_orders
-      WHERE date >= ${startDate}
-        AND date <= ${endDate}
-      GROUP BY date
-      ORDER BY date DESC
+        COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as "revenue"
+      FROM chuyen_di
+      WHERE ngay_tao::date >= ${startDate}::date
+        AND ngay_tao::date <= ${endDate}::date
+      GROUP BY ngay_tao::date
+      ORDER BY ngay_tao::date DESC
       LIMIT 7
     `;
 
@@ -346,14 +346,14 @@ export async function handleDashboardDistance(ctx: BotContext) {
     const result = await sql`
       SELECT
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(total_distance), 0) as "totalDistance",
-        COALESCE(AVG(total_distance), 0) as "avgDistance",
-        COALESCE(MAX(total_distance), 0) as "maxDistance",
-        COALESCE(MIN(total_distance), 0) as "minDistance"
-      FROM reconciliation_orders
-      WHERE date >= ${startDate}
-        AND date <= ${endDate}
-        AND total_distance > 0
+        COALESCE(SUM(so_km_theo_odo), 0) as "totalDistance",
+        COALESCE(AVG(so_km_theo_odo), 0) as "avgDistance",
+        COALESCE(MAX(so_km_theo_odo), 0) as "maxDistance",
+        COALESCE(MIN(so_km_theo_odo), 0) as "minDistance"
+      FROM chuyen_di
+      WHERE ngay_tao::date >= ${startDate}::date
+        AND ngay_tao::date <= ${endDate}::date
+        AND so_km_theo_odo > 0
     `;
 
     const stats = result.rows[0];

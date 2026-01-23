@@ -95,13 +95,13 @@ export async function handleVehiclesFuel(ctx: BotContext) {
         // Get 5 vehicles with highest fuel consumption this month
         const result = await sql`
       SELECT 
-        license_plate as "bienSo",
-        SUM(quantity) as "tongDau",
-        AVG(efficiency) as "hieuSuatTB",
+        bien_kiem_soat as "bienSo",
+        SUM(so_luong) as "tongDau",
+        AVG(hieu_suat) as "hieuSuatTB",
         COUNT(*) as "soLanDo"
-      FROM fuel_transactions
-      WHERE transaction_date >= date_trunc('month', CURRENT_DATE)
-      GROUP BY license_plate
+      FROM xuat_nhien_lieu
+      WHERE ngay_tao >= date_trunc('month', CURRENT_DATE)
+      GROUP BY bien_kiem_soat
       ORDER BY "tongDau" DESC
       LIMIT 10
     `;
