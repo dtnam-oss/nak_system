@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       ${whereClause}
     `;
 
-        const result = await query(queryStr);
+        const result = await query(queryStr, []);
         const row = result.rows[0];
 
         // Calculate quality score
