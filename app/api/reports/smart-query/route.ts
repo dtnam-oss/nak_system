@@ -22,17 +22,17 @@ export async function GET(request: NextRequest) {
 
         // 1. Date Filter
         if (fromDate) {
-            conditions.push(`date >= $${pIdx++}`);
+            conditions.push(`ngay_tao >= $${pIdx++}`);
             params.push(fromDate);
         }
         if (toDate) {
-            conditions.push(`date <= $${pIdx++}`);
+            conditions.push(`ngay_tao <= $${pIdx++}`);
             params.push(toDate);
         }
 
         // 2. Search Filter (Order ID or Customer)
         if (search) {
-            conditions.push(`(order_id ILIKE $${pIdx} OR customer ILIKE $${pIdx})`);
+            conditions.push(`(ma_chuyen_di ILIKE $${pIdx} OR ten_khach_hang ILIKE $${pIdx})`);
             params.push(`%${search}%`);
             pIdx++;
         }
@@ -40,26 +40,20 @@ export async function GET(request: NextRequest) {
         // 3. Smart Error Filter
         switch (filter) {
             case 'missing_route':
-                conditions.push(`(route_name IS NULL OR route_name = '')`);
+                conditions.push(`(ten_tuyen IS NULL OR ten_tuyen = '')`);
                 break;
             case 'missing_weight':
-                conditions.push(`(weight = 0 OR weight IS NULL)`);
+                conditions.push(`(so_km_theo_odo = 0 OR so_km_theo_odo IS NULL)`);
                 break;
             case 'missing_money':
-                conditions.push(`((revenue = 0 OR revenue IS NULL) AND (cost = 0 OR cost IS NULL))`);
+                conditions.push(`(doanh_thu = 0 OR doanh_thu IS NULL)`);
                 break;
             case 'missing_plate':
-                // Same logic as stats
-                conditions.push(`(
-                details IS NULL 
-                OR NOT (details ? 'chiTietLoTrinh')
-                OR jsonb_array_length(details->'chiTietLoTrinh') = 0
-                OR EXISTS (
-                    SELECT 1 
-                    FROM jsonb_array_elements(details->'chiTietLoTrinh') as trip 
-                    WHERE (trip->>'bienKiemSoat') IS NULL OR (trip->>'bienKiemSoat') = ''
-                )
-             )`);
+                conditions.push(`EXISTS (
+                    SELECT 1 FROM chi_tiet_chuyen_di ct 
+                    WHERE ct.ma_chuyen_di = chuyen_di.ma_chuyen_di 
+                    AND (ct.bien_kiem_soat IS NULL OR ct.bien_kiem_soat = '')
+                )`);
                 break;
             case 'all':
             default:
@@ -72,7 +66,7 @@ export async function GET(request: NextRequest) {
         // Count Query
         const countResult = await query(`
         SELECT COUNT(*) as total
-        FROM reconciliation_orders
+        FROM chuyen_di
         ${whereClause}
     `, params);
         const totalCount = parseInt(countResult.rows[0].total);
@@ -81,20 +75,25 @@ export async function GET(request: NextRequest) {
         // We select only needed columns for the table
         const dataQuery = `
         SELECT 
-            id, 
-            order_id, 
-            date, 
-            customer, 
-            route_name, 
-            weight, 
-            revenue, 
-            cost, 
-            details,
-            trip_type,
-            provider
-        FROM reconciliation_orders
+            cd.id, 
+            cd.ma_chuyen_di as order_id, 
+            cd.ngay_tao as date, 
+            cd.ten_khach_hang as customer, 
+            cd.ten_tuyen as route_name, 
+            cd.so_km_theo_odo as weight, 
+            CAST(cd.doanh_thu AS NUMERIC) as revenue, 
+            0 as cost,
+            cd.loai_chuyen as trip_type,
+            cd.don_vi_van_chuyen as provider,
+            (
+                SELECT bien_kiem_soat 
+                FROM chi_tiet_chuyen_di 
+                WHERE ma_chuyen_di = cd.ma_chuyen_di 
+                LIMIT 1
+            ) as license_plate
+        FROM chuyen_di cd
         ${whereClause}
-        ORDER BY date DESC, created_at DESC
+        ORDER BY cd.ngay_tao DESC, cd.thoi_gian_tao DESC
         LIMIT $${pIdx++} OFFSET $${pIdx++}
     `;
         params.push(pageSize, offset);
@@ -103,16 +102,6 @@ export async function GET(request: NextRequest) {
 
         // Process rows to extract display friendly data
         const records = result.rows.map(row => {
-            let licensePlate = '---';
-            try {
-                const details = typeof row.details === 'string' ? JSON.parse(row.details) : row.details;
-                if (details?.chiTietLoTrinh?.[0]?.bienKiemSoat) {
-                    licensePlate = details.chiTietLoTrinh[0].bienKiemSoat;
-                }
-            } catch (e) {
-                // ignore parse error
-            }
-
             return {
                 id: row.id,
                 order_id: row.order_id,

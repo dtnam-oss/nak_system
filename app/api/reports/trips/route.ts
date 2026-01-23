@@ -24,17 +24,17 @@ export async function GET(request: NextRequest) {
     let paramIndex = 1;
 
     if (fromDate) {
-      conditions.push(`date >= $${paramIndex}`);
+      conditions.push(`ngay_tao >= $${paramIndex}`);
       params.push(fromDate);
       paramIndex++;
     }
     if (toDate) {
-      conditions.push(`date <= $${paramIndex}`);
+      conditions.push(`ngay_tao <= $${paramIndex}`);
       params.push(toDate);
       paramIndex++;
     }
     if (customer) {
-      conditions.push(`customer = $${paramIndex}`);
+      conditions.push(`ten_khach_hang = $${paramIndex}`);
       params.push(customer);
       paramIndex++;
     }
@@ -45,23 +45,22 @@ export async function GET(request: NextRequest) {
     const tripsQuery = `
       SELECT
         id,
-        order_id,
-        date,
-        route_name,
-        customer,
-        weight,
-        revenue,
-        cost,
-        status,
-        trip_type,
-        route_type,
-        driver_name,
-        provider,
-        total_distance,
-        details
-      FROM reconciliation_orders
+        ma_chuyen_di as order_id,
+        ngay_tao as date,
+        ten_tuyen as route_name,
+        ten_khach_hang as customer,
+        so_km_theo_odo as weight,
+        CAST(doanh_thu AS NUMERIC) as revenue,
+        0 as cost,
+        trang_thai_chuyen_di as status,
+        loai_chuyen as trip_type,
+        loai_tuyen as route_type,
+        ten_tai_xe as driver_name,
+        don_vi_van_chuyen as provider,
+        CAST(so_km_theo_odo AS NUMERIC) as total_distance
+      FROM chuyen_di
       ${whereClause}
-      ORDER BY customer ASC, trip_type ASC, date DESC
+      ORDER BY ten_khach_hang ASC, loai_chuyen ASC, ngay_tao DESC
     `;
 
     const result = await query(tripsQuery, params);

@@ -35,17 +35,17 @@ export async function GET(request: NextRequest) {
     let paramIndex = 1;
 
     if (fromDate) {
-      conditions.push(`date >= $${paramIndex}`);
+      conditions.push(`ngay_tao >= $${paramIndex}`);
       params.push(fromDate);
       paramIndex++;
     }
     if (toDate) {
-      conditions.push(`date <= $${paramIndex}`);
+      conditions.push(`ngay_tao <= $${paramIndex}`);
       params.push(toDate);
       paramIndex++;
     }
     if (customer) {
-      conditions.push(`customer = $${paramIndex}`);
+      conditions.push(`ten_khach_hang = $${paramIndex}`);
       params.push(customer);
       paramIndex++;
     }
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     // Total trips
     const totalQuery = `
       SELECT COUNT(*) as total
-      FROM reconciliation_orders
+      FROM chuyen_di
       ${whereClause}
     `;
     const totalResult = await query(totalQuery, params);
@@ -68,11 +68,11 @@ export async function GET(request: NextRequest) {
     // Breakdown by trip_type
     const tripTypeQuery = `
       SELECT 
-        trip_type,
+        loai_chuyen as trip_type,
         COUNT(*) as count
-      FROM reconciliation_orders
+      FROM chuyen_di
       ${whereClause}
-      GROUP BY trip_type
+      GROUP BY loai_chuyen
       ORDER BY count DESC
     `;
     const tripTypeResult = await query(tripTypeQuery, params);
@@ -84,11 +84,11 @@ export async function GET(request: NextRequest) {
     // Breakdown by status
     const statusQuery = `
       SELECT 
-        status,
+        trang_thai_chuyen_di as status,
         COUNT(*) as count
-      FROM reconciliation_orders
+      FROM chuyen_di
       ${whereClause}
-      GROUP BY status
+      GROUP BY trang_thai_chuyen_di
       ORDER BY count DESC
     `;
     const statusResult = await query(statusQuery, params);
@@ -100,11 +100,11 @@ export async function GET(request: NextRequest) {
     // Breakdown by customer (for chart)
     const customerQuery = `
       SELECT 
-        customer,
+        ten_khach_hang as customer,
         COUNT(*) as count
-      FROM reconciliation_orders
+      FROM chuyen_di
       ${whereClause}
-      GROUP BY customer
+      GROUP BY ten_khach_hang
       ORDER BY count DESC
       LIMIT 10
     `;
@@ -120,35 +120,44 @@ export async function GET(request: NextRequest) {
     
     const dataIntegrityQuery = `
       SELECT 
-        order_id,
-        date,
-        customer,
-        details
-      FROM reconciliation_orders
+        cd.ma_chuyen_di as order_id,
+        cd.ngay_tao as date,
+        cd.ten_khach_hang as customer,
+        json_agg(
+          json_build_object(
+            'bienKiemSoat', ct.bien_kiem_soat,
+            'loTrinh', ct.lo_trinh,
+            'loTrinhChiTiet', ct.lo_trinh_chi_tiet_theo_diem,
+            'taiTrongTinhPhi', ct.tai_trong_tinh_phi
+          )
+        ) as details
+      FROM chuyen_di cd
+      LEFT JOIN chi_tiet_chuyen_di ct ON ct.ma_chuyen_di = cd.ma_chuyen_di
       ${whereClause}
+      GROUP BY cd.ma_chuyen_di, cd.ngay_tao, cd.ten_khach_hang
     `;
     
     const integrityResult = await query(dataIntegrityQuery, params);
     const dataErrors: DataIntegrityError[] = [];
 
-    // Check each order for missing fields in chiTietLoTrinh
+    // Check each order for missing fields in chi_tiet
     integrityResult.rows.forEach((order: any) => {
       const details = order.details;
       
-      if (!details || !details.chiTietLoTrinh || !Array.isArray(details.chiTietLoTrinh)) {
+      if (!details || !Array.isArray(details) || details.length === 0) {
         // Missing entire array
         dataErrors.push({
           order_id: order.order_id,
           date: order.date,
           customer: order.customer,
-          missing_fields: ['chiTietLoTrinh (missing array)'],
+          missing_fields: ['Chi tiết lộ trình (missing)'],
           detail_index: -1
         });
         return;
       }
 
       // Check each item in the array
-      details.chiTietLoTrinh.forEach((item: any, index: number) => {
+      details.forEach((item: any, index: number) => {
         const missingFields: string[] = [];
         
         // Required fields to check

@@ -14,36 +14,35 @@ export async function GET(request: NextRequest) {
 
         // Build Time Filter
         const conditions: string[] = [];
-        if (fromDate) conditions.push(`date >= '${fromDate}'`);
-        if (toDate) conditions.push(`date <= '${toDate}'`);
+        if (fromDate) conditions.push(`ngay_tao >= '${fromDate}'`);
+        if (toDate) conditions.push(`ngay_tao <= '${toDate}'`);
 
         const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
-        // Optimized Single Query using Filtered Aggregation
-        // We check JSONB 'details' for missing license plates in 'chiTietLoTrinh' array
+        // Optimized Query using chuyen_di + chi_tiet_chuyen_di
+        // Check for missing critical fields
         const queryStr = `
+      WITH trip_quality AS (
+        SELECT 
+          cd.ma_chuyen_di,
+          cd.ten_tuyen,
+          cd.doanh_thu,
+          cd.so_km_theo_odo,
+          BOOL_OR(
+            ct.bien_kiem_soat IS NULL OR ct.bien_kiem_soat = ''
+          ) as has_missing_plate
+        FROM chuyen_di cd
+        LEFT JOIN chi_tiet_chuyen_di ct ON ct.ma_chuyen_di = cd.ma_chuyen_di
+        ${whereClause}
+        GROUP BY cd.ma_chuyen_di, cd.ten_tuyen, cd.doanh_thu, cd.so_km_theo_odo
+      )
       SELECT 
         COUNT(*) as "totalOrders",
-        -- Error: Missing Route Name
-        COUNT(*) FILTER (WHERE route_name IS NULL OR route_name = '') as "missingRoute",
-        -- Error: Missing Weight
-        COUNT(*) FILTER (WHERE weight = 0 OR weight IS NULL) as "missingWeight",
-        -- Error: Missing Revenue (Cost)
-        COUNT(*) FILTER (WHERE (revenue = 0 OR revenue IS NULL) AND (cost = 0 OR cost IS NULL)) as "missingMoney",
-        -- Error: Missing License Plate (Complex JSONB check)
-        -- Checks if details->chiTietLoTrinh exists AND contains at least one element with empty bienKiemSoat
-        COUNT(*) FILTER (
-            WHERE details IS NULL 
-            OR NOT (details ? 'chiTietLoTrinh')
-            OR jsonb_array_length(details->'chiTietLoTrinh') = 0
-            OR EXISTS (
-                SELECT 1 
-                FROM jsonb_array_elements(details->'chiTietLoTrinh') as trip 
-                WHERE (trip->>'bienKiemSoat') IS NULL OR (trip->>'bienKiemSoat') = ''
-            )
-        ) as "missingPlate"
-      FROM reconciliation_orders
-      ${whereClause}
+        COUNT(*) FILTER (WHERE ten_tuyen IS NULL OR ten_tuyen = '') as "missingRoute",
+        COUNT(*) FILTER (WHERE so_km_theo_odo = 0 OR so_km_theo_odo IS NULL) as "missingWeight",
+        COUNT(*) FILTER (WHERE doanh_thu = 0 OR doanh_thu IS NULL) as "missingMoney",
+        COUNT(*) FILTER (WHERE has_missing_plate = true) as "missingPlate"
+      FROM trip_quality
     `;
 
         const result = await query(queryStr, []);
