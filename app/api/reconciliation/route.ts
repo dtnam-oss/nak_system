@@ -185,42 +185,36 @@ export async function GET(request: NextRequest) {
             'Id', ct."Id",
             'LoTrinh', ct.lo_trinh,
             'LoTrinhChiTiet', ct.lo_trinh_chi_tiet_theo_diem,
-            'BienKiemSoat', CAST(ct.bien_kiem_soat AS TEXT),
+            'BienKiemSoat', ct.bien_kiem_soat,
             'QuangDuong', 
               CASE 
-                WHEN ct.quang_duong IS NULL THEN NULL
-                WHEN ct.quang_duong !~ '^[0-9]*\.?[0-9]+$' THEN NULL
-                ELSE CAST(ct.quang_duong AS NUMERIC)
+                WHEN ct.quang_duong IS NULL OR ct.quang_duong = '' OR ct.quang_duong !~ '^-?[0-9]*\.?[0-9]+$' THEN NULL
+                ELSE ct.quang_duong::NUMERIC
               END,
             'TaiTrong',
               CASE 
-                WHEN ct.tai_trong IS NULL THEN NULL
-                WHEN ct.tai_trong !~ '^[0-9]*\.?[0-9]+$' THEN NULL
-                ELSE CAST(ct.tai_trong AS NUMERIC)
+                WHEN ct.tai_trong IS NULL OR ct.tai_trong = '' OR ct.tai_trong !~ '^-?[0-9]*\.?[0-9]+$' THEN NULL
+                ELSE ct.tai_trong::NUMERIC
               END,
             'TaiTrongTinhPhi',
               CASE 
-                WHEN ct.tai_trong_tinh_phi IS NULL THEN NULL
-                WHEN ct.tai_trong_tinh_phi !~ '^[0-9]*\.?[0-9]+$' THEN NULL
-                ELSE CAST(ct.tai_trong_tinh_phi AS NUMERIC)
+                WHEN ct.tai_trong_tinh_phi IS NULL OR ct.tai_trong_tinh_phi = '' OR ct.tai_trong_tinh_phi !~ '^-?[0-9]*\.?[0-9]+$' THEN NULL
+                ELSE ct.tai_trong_tinh_phi::NUMERIC
               END,
             'SoChieu',
               CASE 
-                WHEN ct.so_chieu IS NULL THEN NULL
-                WHEN ct.so_chieu !~ '^[0-9]+$' THEN NULL
-                ELSE CAST(ct.so_chieu AS INTEGER)
+                WHEN ct.so_chieu IS NULL OR ct.so_chieu = '' OR ct.so_chieu !~ '^-?[0-9]+$' THEN NULL
+                ELSE ct.so_chieu::INTEGER
               END,
             'DonGia',
               CASE 
-                WHEN ct.don_gia IS NULL THEN NULL
-                WHEN ct.don_gia !~ '^[0-9]*\.?[0-9]+$' THEN NULL
-                ELSE CAST(ct.don_gia AS NUMERIC)
+                WHEN ct.don_gia IS NULL OR ct.don_gia = '' OR ct.don_gia !~ '^-?[0-9]*\.?[0-9]+$' THEN NULL
+                ELSE ct.don_gia::NUMERIC
               END,
             'ThanhTien',
               CASE 
-                WHEN ct.ket_qua IS NULL THEN NULL
-                WHEN ct.ket_qua !~ '^[0-9]*\.?[0-9]+$' THEN NULL
-                ELSE CAST(ct.ket_qua AS NUMERIC)
+                WHEN ct.ket_qua IS NULL OR ct.ket_qua = '' OR ct.ket_qua !~ '^-?[0-9]*\.?[0-9]+$' THEN NULL
+                ELSE ct.ket_qua::NUMERIC
               END,
             'HinhThucTinhGia', ct.hinh_thuc_tinh_gia,
             'LoaiCa', ct.loai_ca,
