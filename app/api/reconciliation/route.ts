@@ -308,8 +308,24 @@ export async function GET(request: NextRequest) {
     const summaryQuery = `
       SELECT
         COUNT(*) as total_orders,
-        COALESCE(SUM(CAST(cd.doanh_thu AS NUMERIC)), 0) as total_amount,
-        COALESCE(SUM(CAST(cd.so_km_theo_odo AS NUMERIC)), 0) as total_distance,
+        COALESCE(
+          SUM(
+            CASE 
+              WHEN cd.doanh_thu IS NULL THEN 0
+              WHEN CAST(cd.doanh_thu AS TEXT) !~ '^[0-9]*\.?[0-9]+$' THEN 0
+              ELSE CAST(cd.doanh_thu AS NUMERIC)
+            END
+          ), 0
+        ) as total_amount,
+        COALESCE(
+          SUM(
+            CASE 
+              WHEN cd.so_km_theo_odo IS NULL THEN 0
+              WHEN CAST(cd.so_km_theo_odo AS TEXT) !~ '^[0-9]*\.?[0-9]+$' THEN 0
+              ELSE CAST(cd.so_km_theo_odo AS NUMERIC)
+            END
+          ), 0
+        ) as total_distance,
         COUNT(CASE WHEN cd.trang_thai_chuyen_di = 'Kết thúc' THEN 1 END) as approved_orders,
         COUNT(CASE WHEN cd.trang_thai_chuyen_di IN ('Đang thực hiện', 'Chờ giao hàng') THEN 1 END) as pending_orders
       FROM chuyen_di cd
