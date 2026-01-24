@@ -169,14 +169,14 @@ export async function GET(request: NextRequest) {
         cd.don_vi_van_chuyen,
         cd.trang_thai_chuyen_di,
         CASE 
-          WHEN cd.doanh_thu IS NULL THEN NULL
-          WHEN CAST(cd.doanh_thu AS TEXT) !~ '^[0-9]*\.?[0-9]+$' THEN NULL
-          ELSE CAST(cd.doanh_thu AS NUMERIC)
+          WHEN cd.doanh_thu::TEXT IS NULL OR cd.doanh_thu::TEXT = '' THEN NULL
+          WHEN cd.doanh_thu::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN NULL
+          ELSE cd.doanh_thu::NUMERIC
         END as doanh_thu,
         CASE 
-          WHEN cd.so_km_theo_odo IS NULL THEN NULL
-          WHEN CAST(cd.so_km_theo_odo AS TEXT) !~ '^[0-9]*\.?[0-9]+$' THEN NULL
-          ELSE CAST(cd.so_km_theo_odo AS NUMERIC)
+          WHEN cd.so_km_theo_odo::TEXT IS NULL OR cd.so_km_theo_odo::TEXT = '' THEN NULL
+          WHEN cd.so_km_theo_odo::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN NULL
+          ELSE cd.so_km_theo_odo::NUMERIC
         END as so_km_theo_odo,
         cd.thoi_gian_tao,
         -- Aggregate details as JSON
@@ -319,18 +319,18 @@ export async function GET(request: NextRequest) {
         COALESCE(
           SUM(
             CASE 
-              WHEN cd.doanh_thu IS NULL THEN 0
-              WHEN CAST(cd.doanh_thu AS TEXT) !~ '^[0-9]*\.?[0-9]+$' THEN 0
-              ELSE CAST(cd.doanh_thu AS NUMERIC)
+              WHEN cd.doanh_thu::TEXT IS NULL OR cd.doanh_thu::TEXT = '' THEN 0
+              WHEN cd.doanh_thu::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+              ELSE cd.doanh_thu::NUMERIC
             END
           ), 0
         ) as total_amount,
         COALESCE(
           SUM(
             CASE 
-              WHEN cd.so_km_theo_odo IS NULL THEN 0
-              WHEN CAST(cd.so_km_theo_odo AS TEXT) !~ '^[0-9]*\.?[0-9]+$' THEN 0
-              ELSE CAST(cd.so_km_theo_odo AS NUMERIC)
+              WHEN cd.so_km_theo_odo::TEXT IS NULL OR cd.so_km_theo_odo::TEXT = '' THEN 0
+              WHEN cd.so_km_theo_odo::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+              ELSE cd.so_km_theo_odo::NUMERIC
             END
           ), 0
         ) as total_distance,
