@@ -178,12 +178,42 @@ export async function GET(request: NextRequest) {
             'LoTrinh', ct.lo_trinh,
             'LoTrinhChiTiet', ct.lo_trinh_chi_tiet_theo_diem,
             'BienKiemSoat', CAST(ct.bien_kiem_soat AS TEXT),
-            'QuangDuong', CASE WHEN ct.quang_duong IS NOT NULL AND ct.quang_duong ~ '^[0-9]*\.?[0-9]+$' THEN CAST(ct.quang_duong AS NUMERIC) ELSE NULL END,
-            'TaiTrong', CASE WHEN ct.tai_trong IS NOT NULL AND ct.tai_trong ~ '^[0-9]*\.?[0-9]+$' THEN CAST(ct.tai_trong AS NUMERIC) ELSE NULL END,
-            'TaiTrongTinhPhi', CASE WHEN ct.tai_trong_tinh_phi IS NOT NULL AND ct.tai_trong_tinh_phi ~ '^[0-9]*\.?[0-9]+$' THEN CAST(ct.tai_trong_tinh_phi AS NUMERIC) ELSE NULL END,
-            'SoChieu', CASE WHEN ct.so_chieu IS NOT NULL AND ct.so_chieu ~ '^[0-9]+$' THEN CAST(ct.so_chieu AS INTEGER) ELSE NULL END,
-            'DonGia', CASE WHEN ct.don_gia IS NOT NULL AND ct.don_gia ~ '^[0-9]*\.?[0-9]+$' THEN CAST(ct.don_gia AS NUMERIC) ELSE NULL END,
-            'ThanhTien', CASE WHEN ct.ket_qua IS NOT NULL AND ct.ket_qua ~ '^[0-9]*\.?[0-9]+$' THEN CAST(ct.ket_qua AS NUMERIC) ELSE NULL END,
+            'QuangDuong', 
+              CASE 
+                WHEN ct.quang_duong IS NULL THEN NULL
+                WHEN ct.quang_duong !~ '^[0-9]*\.?[0-9]+$' THEN NULL
+                ELSE CAST(ct.quang_duong AS NUMERIC)
+              END,
+            'TaiTrong',
+              CASE 
+                WHEN ct.tai_trong IS NULL THEN NULL
+                WHEN ct.tai_trong !~ '^[0-9]*\.?[0-9]+$' THEN NULL
+                ELSE CAST(ct.tai_trong AS NUMERIC)
+              END,
+            'TaiTrongTinhPhi',
+              CASE 
+                WHEN ct.tai_trong_tinh_phi IS NULL THEN NULL
+                WHEN ct.tai_trong_tinh_phi !~ '^[0-9]*\.?[0-9]+$' THEN NULL
+                ELSE CAST(ct.tai_trong_tinh_phi AS NUMERIC)
+              END,
+            'SoChieu',
+              CASE 
+                WHEN ct.so_chieu IS NULL THEN NULL
+                WHEN ct.so_chieu !~ '^[0-9]+$' THEN NULL
+                ELSE CAST(ct.so_chieu AS INTEGER)
+              END,
+            'DonGia',
+              CASE 
+                WHEN ct.don_gia IS NULL THEN NULL
+                WHEN ct.don_gia !~ '^[0-9]*\.?[0-9]+$' THEN NULL
+                ELSE CAST(ct.don_gia AS NUMERIC)
+              END,
+            'ThanhTien',
+              CASE 
+                WHEN ct.ket_qua IS NULL THEN NULL
+                WHEN ct.ket_qua !~ '^[0-9]*\.?[0-9]+$' THEN NULL
+                ELSE CAST(ct.ket_qua AS NUMERIC)
+              END,
             'HinhThucTinhGia', ct.hinh_thuc_tinh_gia,
             'LoaiCa', ct.loai_ca,
             'MaTuyen', ct.ma_chuyen_di_kh,
