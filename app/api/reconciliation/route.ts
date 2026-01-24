@@ -168,8 +168,16 @@ export async function GET(request: NextRequest) {
         cd.ten_tai_xe,
         cd.don_vi_van_chuyen,
         cd.trang_thai_chuyen_di,
-        cd.doanh_thu,
-        cd.so_km_theo_odo,
+        CASE 
+          WHEN cd.doanh_thu IS NULL THEN NULL
+          WHEN CAST(cd.doanh_thu AS TEXT) !~ '^[0-9]*\.?[0-9]+$' THEN NULL
+          ELSE CAST(cd.doanh_thu AS NUMERIC)
+        END as doanh_thu,
+        CASE 
+          WHEN cd.so_km_theo_odo IS NULL THEN NULL
+          WHEN CAST(cd.so_km_theo_odo AS TEXT) !~ '^[0-9]*\.?[0-9]+$' THEN NULL
+          ELSE CAST(cd.so_km_theo_odo AS NUMERIC)
+        END as so_km_theo_odo,
         cd.thoi_gian_tao,
         -- Aggregate details as JSON
         json_agg(
