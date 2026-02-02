@@ -190,7 +190,7 @@ async function importEmployee(employee: any) {
       them,
       sua,
       xoa,
-      is_active
+      trang_thai
     ) VALUES (
       ${employee.ma_nhan_vien},
       ${employee.ho_va_ten},
@@ -214,7 +214,7 @@ async function importEmployee(employee: any) {
       ${parseBoolean(employee.them)},
       ${parseBoolean(employee.sua)},
       ${parseBoolean(employee.xoa)},
-      ${employee.tinh_trang_cong_tac !== 'Nghỉ việc'}
+      ${employee.tinh_trang_cong_tac === 'Nghỉ việc' ? 'Đã nghỉ việc' : null}
     )
     ON CONFLICT (ma_nhan_vien) 
     DO UPDATE SET
@@ -239,7 +239,6 @@ async function importEmployee(employee: any) {
       them = EXCLUDED.them,
       sua = EXCLUDED.sua,
       xoa = EXCLUDED.xoa,
-      is_active = EXCLUDED.is_active,
-      updated_at = NOW()
+      trang_thai = EXCLUDED.trang_thai
   `;
 }

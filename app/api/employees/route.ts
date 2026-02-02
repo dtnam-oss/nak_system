@@ -51,8 +51,12 @@ export async function GET(req: NextRequest) {
     const conditions: string[] = [];
     const params: any[] = [];
 
-    if (active !== null) {
-      conditions.push(`is_active = ${active === 'true'}`);
+    if (active !== null && active === 'true') {
+      // Filter active employees (not "Đã nghỉ việc")
+      conditions.push(`(trang_thai IS NULL OR trang_thai NOT ILIKE '%nghỉ việc%')`);
+    } else if (active !== null && active === 'false') {
+      // Filter inactive employees
+      conditions.push(`trang_thai ILIKE '%nghỉ việc%'`);
     }
 
     if (phongBan) {
@@ -65,7 +69,6 @@ export async function GET(req: NextRequest) {
 
     let queryStr = `
       SELECT 
-        id,
         ma_nhan_vien,
         ho_va_ten,
         phong_ban,
@@ -81,8 +84,9 @@ export async function GET(req: NextRequest) {
         them,
         sua,
         xoa,
-        is_active,
-        last_login
+        trang_thai,
+        ngay_sinh,
+        so_can_cuoc
       FROM nhan_vien
     `;
 

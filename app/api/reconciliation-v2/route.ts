@@ -134,11 +134,9 @@ export async function GET(request: NextRequest) {
           json_agg(
             json_build_object(
               'id', ct.id,
-              'thuTu', ct.thu_tu,
-              'loaiTuyenKH', ct.loai_tuyen_kh,
-              'maTuyen', ct.ma_tuyen,
+              'loaiTuyenKH', ct.loai_tuyen_khach_hang,
               'loTrinh', ct.lo_trinh,
-              'loTrinhChiTiet', ct.lo_trinh_chi_tiet,
+              'loTrinhChiTiet', ct.lo_trinh_chi_tiet_theo_diem,
               'bienKiemSoat', ct.bien_kiem_soat,
               'taiTrong', ct.tai_trong,
               'taiTrongTinhPhi', ct.tai_trong_tinh_phi,
@@ -149,8 +147,9 @@ export async function GET(request: NextRequest) {
               'hinhThucTinhGia', ct.hinh_thuc_tinh_gia,
               'loaiCa', ct.loai_ca,
               'tenKhachHangCap1', ct.ten_khach_hang_cap_1,
-              'ngayTrenTem', ct.ngay_tren_tem
-            ) ORDER BY ct.thu_tu
+              'ngayTrenTem', ct.ngay_tren_tem,
+              'ngayChuyenDi', ct.ngay_chuyen_di
+            ) ORDER BY ct.id
           ) FILTER (WHERE ct.id IS NOT NULL),
           '[]'::json
         ) as chi_tiet_lo_trinh
