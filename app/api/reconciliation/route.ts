@@ -179,49 +179,25 @@ export async function GET(request: NextRequest) {
           ELSE cd.so_km_theo_odo::NUMERIC
         END as so_km_theo_odo,
         cd.thoi_gian_tao,
-        -- Aggregate details as JSON
+        -- Aggregate details as JSON (return text values, parse on frontend)
         json_agg(
           json_build_object(
-            'Id', ct.id,
-            'LoTrinh', ct.lo_trinh,
-            'LoTrinhChiTiet', ct.lo_trinh_chi_tiet_theo_diem,
-            'BienKiemSoat', ct.bien_kiem_soat,
-            'QuangDuong', 
-              CASE 
-                WHEN ct.quang_duong ~ '^-?[0-9]*\.?[0-9]+$' THEN ct.quang_duong::NUMERIC
-                ELSE NULL
-              END,
-            'TaiTrong',
-              CASE 
-                WHEN ct.tai_trong ~ '^-?[0-9]*\.?[0-9]+$' THEN ct.tai_trong::NUMERIC
-                ELSE NULL
-              END,
-            'TaiTrongTinhPhi',
-              CASE 
-                WHEN ct.tai_trong_tinh_phi ~ '^-?[0-9]*\.?[0-9]+$' THEN ct.tai_trong_tinh_phi::NUMERIC
-                ELSE NULL
-              END,
-            'SoChieu',
-              CASE 
-                WHEN ct.so_chieu ~ '^-?[0-9]+$' THEN ct.so_chieu::INTEGER
-                ELSE NULL
-              END,
-            'DonGia',
-              CASE 
-                WHEN ct.don_gia ~ '^-?[0-9]*\.?[0-9]+$' THEN ct.don_gia::NUMERIC
-                ELSE NULL
-              END,
-            'ThanhTien',
-              CASE 
-                WHEN ct.ket_qua ~ '^-?[0-9]*\.?[0-9]+$' THEN ct.ket_qua::NUMERIC
-                ELSE NULL
-              END,
-            'HinhThucTinhGia', ct.hinh_thuc_tinh_gia,
-            'LoaiCa', ct.loai_ca,
-            'MaTuyen', ct.ma_chuyen_di_kh,
-            'LoaiTuyenKH', ct.loai_tuyen_khach_hang,
-            'NgayTrenTem', ct.ngay_tren_tem,
-            'TenKhachHangCap1', ct.ten_khach_hang_cap_1
+            'id', ct.id,
+            'loTrinh', ct.lo_trinh,
+            'loTrinhChiTiet', ct.lo_trinh_chi_tiet_theo_diem,
+            'bienKiemSoat', ct.bien_kiem_soat,
+            'quangDuong', ct.quang_duong,
+            'taiTrong', ct.tai_trong,
+            'taiTrongTinhPhi', ct.tai_trong_tinh_phi,
+            'soChieu', ct.so_chieu,
+            'donGia', ct.don_gia,
+            'thanhTien', ct.ket_qua,
+            'hinhThucTinhGia', ct.hinh_thuc_tinh_gia,
+            'loaiCa', ct.loai_ca,
+            'maTuyen', ct.ma_chuyen_di_kh,
+            'loaiTuyenKH', ct.loai_tuyen_khach_hang,
+            'ngayTrenTem', ct.ngay_tren_tem,
+            'tenKhachHangCap1', ct.ten_khach_hang_cap_1
           ) ORDER BY ct.id
         ) FILTER (WHERE ct.id IS NOT NULL) as chi_tiet_lo_trinh
       FROM chuyen_di cd
@@ -253,19 +229,21 @@ export async function GET(request: NextRequest) {
             ? row.chi_tiet_lo_trinh.map((ct: any, index: number) => ({
                 thuTu: index + 1,
                 id: ct.id || '',
-                loaiTuyenKH: ct.LoaiTuyenKH || '',
-                maTuyen: ct.MaTuyen || '',
-                bienKiemSoat: ct.BienKiemSoat || '',
-                loTrinh: ct.LoTrinh || '',
-                loTrinhChiTiet: ct.LoTrinhChiTiet || '',
-                quangDuong: parseFloat(ct.QuangDuong || 0),
-                taiTrong: parseFloat(ct.TaiTrong || 0),
-                taiTrongTinhPhi: parseFloat(ct.TaiTrongTinhPhi || 0),
-                hinhThucTinhGia: ct.HinhThucTinhGia || '',
-                soChieu: parseInt(ct.SoChieu || 0),
-                donGia: parseFloat(ct.DonGia || 0),
-                thanhTien: parseFloat(ct.ThanhTien || 0),
-                ngayTrenTem: ct.NgayTrenTem || ''
+                loaiTuyenKH: ct.loaiTuyenKH || '',
+                maTuyen: ct.maTuyen || '',
+                bienKiemSoat: ct.bienKiemSoat || '',
+                loTrinh: ct.loTrinh || '',
+                loTrinhChiTiet: ct.loTrinhChiTiet || '',
+                quangDuong: ct.quangDuong || '',
+                taiTrong: ct.taiTrong || '',
+                taiTrongTinhPhi: ct.taiTrongTinhPhi || '',
+                hinhThucTinhGia: ct.hinhThucTinhGia || '',
+                soChieu: ct.soChieu || '',
+                donGia: ct.donGia || '',
+                thanhTien: ct.thanhTien || '',
+                ngayTrenTem: ct.ngayTrenTem || '',
+                tenKhachHangCap1: ct.tenKhachHangCap1 || '',
+                loaiCa: ct.loaiCa || ''
               }))
             : []
           
