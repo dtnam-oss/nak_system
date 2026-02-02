@@ -113,21 +113,20 @@ export async function GET(request: NextRequest) {
     // Main query: Get chuyen_di with aggregated details
     const queryStr = `
       SELECT
-        cd.id,
         cd.ma_chuyen_di,
         cd.ngay_tao,
         cd.ten_tuyen,
         cd.ten_khach_hang,
-        cd.tong_doanh_thu,
-        cd.tong_chi_phi,
-        cd.trang_thai,
+        cd.doanh_thu as tong_doanh_thu,
+        0 as tong_chi_phi,
+        cd.trang_thai_chuyen_di as trang_thai,
         cd.loai_chuyen,
         cd.loai_tuyen,
         cd.ten_tai_xe,
         cd.don_vi_van_chuyen,
-        cd.tong_quang_duong,
+        cd.so_km_theo_odo as tong_quang_duong,
         cd.ghi_chu,
-        cd.created_at,
+        cd.thoi_gian_tao,
         
         -- Aggregate details as JSON
         COALESCE(
@@ -157,8 +156,8 @@ export async function GET(request: NextRequest) {
       FROM chuyen_di cd
       LEFT JOIN chi_tiet_chuyen_di ct ON ct.ma_chuyen_di = cd.ma_chuyen_di
       ${whereClause}
-      GROUP BY cd.id, cd.ma_chuyen_di, cd.ngay_tao, cd.created_at
-      ORDER BY cd.ngay_tao DESC, cd.created_at DESC
+      GROUP BY cd.ma_chuyen_di, cd.ngay_tao, cd.thoi_gian_tao, cd.ten_tuyen, cd.ten_khach_hang, cd.doanh_thu, cd.trang_thai_chuyen_di, cd.loai_chuyen, cd.loai_tuyen, cd.ten_tai_xe, cd.don_vi_van_chuyen, cd.so_km_theo_odo, cd.ghi_chu
+      ORDER BY cd.ngay_tao DESC, cd.thoi_gian_tao DESC
       ${limitClause}
     `;
 
@@ -172,7 +171,7 @@ export async function GET(request: NextRequest) {
 
     // Map to frontend format
     const records = result.rows.map((row: any) => ({
-      id: row.id.toString(),
+      id: row.ma_chuyen_di,
       maChuyenDi: row.ma_chuyen_di,
       ngayTao: row.ngay_tao,
       tenKhachHang: row.ten_khach_hang,
