@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
         ho_va_ten as "hoVaTen",
         email,
         phan_quyen as "phanQuyen",
-        is_active as "isActive"
+        trang_thai as "trangThai"
       FROM nhan_vien
       WHERE LOWER(email) = LOWER(${email})
       LIMIT 1
@@ -46,13 +46,13 @@ export async function POST(req: NextRequest) {
             email: user.email,
             maNhanVien: user.maNhanVien,
             phanQuyen: user.phanQuyen,
-            isActive: user.isActive
+            trangThai: user.trangThai
         });
 
-        // Check if user is active
-        if (!user.isActive) {
+        // Check if user is active (trangThai should not be "Đã nghỉ việc" or "Khóa")
+        if (user.trangThai && (user.trangThai.toLowerCase().includes('nghỉ việc') || user.trangThai.toLowerCase().includes('khóa'))) {
             return NextResponse.json(
-                { message: 'Tài khoản của bạn hiện đang bị khóa' },
+                { message: 'Tài khoản của bạn hiện đang bị khóa hoặc đã nghỉ việc' },
                 { status: 403 }
             );
         }
