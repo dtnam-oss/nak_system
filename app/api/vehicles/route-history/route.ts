@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
         CAST(cd.doanh_thu AS NUMERIC) as "doanhThu",
         json_agg(
           json_build_object(
-            'Id', ct."Id",
+            'Id', ct.id,
             'bienKiemSoat', ct.bien_kiem_soat,
             'loTrinh', ct.lo_trinh,
             'ketQua', ct.ket_qua

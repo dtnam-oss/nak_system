@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
         -- Aggregate details as JSON
         json_agg(
           json_build_object(
-            'Id', ct."Id",
+            'Id', ct.id,
             'LoTrinh', ct.lo_trinh,
             'LoTrinhChiTiet', ct.lo_trinh_chi_tiet_theo_diem,
             'BienKiemSoat', ct.bien_kiem_soat,
@@ -222,8 +222,8 @@ export async function GET(request: NextRequest) {
             'LoaiTuyenKH', ct.loai_tuyen_khach_hang,
             'NgayTrenTem', ct.ngay_tren_tem,
             'TenKhachHangCap1', ct.ten_khach_hang_cap_1
-          ) ORDER BY ct."Id"
-        ) FILTER (WHERE ct."Id" IS NOT NULL) as chi_tiet_lo_trinh
+          ) ORDER BY ct.id
+        ) FILTER (WHERE ct.id IS NOT NULL) as chi_tiet_lo_trinh
       FROM chuyen_di cd
       LEFT JOIN chi_tiet_chuyen_di ct ON ct.ma_chuyen_di = cd.ma_chuyen_di
       ${whereClause}
@@ -252,7 +252,7 @@ export async function GET(request: NextRequest) {
           chiTietLoTrinh = Array.isArray(row.chi_tiet_lo_trinh) 
             ? row.chi_tiet_lo_trinh.map((ct: any, index: number) => ({
                 thuTu: index + 1,
-                id: ct.Id || '',
+                id: ct.id || '',
                 loaiTuyenKH: ct.LoaiTuyenKH || '',
                 maTuyen: ct.MaTuyen || '',
                 bienKiemSoat: ct.BienKiemSoat || '',
