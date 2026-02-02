@@ -5,7 +5,7 @@
 
 import { Client } from 'pg';
 
-const DATABASE_URL = 'postgresql://nak_user:123@163.223.12.189:5432/nak_vn';
+const DATABASE_URL = 'postgresql://nak_user:123@163.223.12.189:6432/nak_vn';
 
 async function checkFuelTables() {
   const client = new Client({ connectionString: DATABASE_URL });

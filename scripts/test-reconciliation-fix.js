@@ -1,7 +1,7 @@
 const { Client } = require('pg');
 
 const client = new Client({ 
-  connectionString: 'postgresql://nak_user:123@163.223.12.189:5432/nak_vn' 
+  connectionString: 'postgresql://nak_user:123@163.223.12.189:6432/nak_vn' 
 });
 
 async function testReconciliationQuery() {

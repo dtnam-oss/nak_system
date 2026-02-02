@@ -12,7 +12,7 @@ import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 // CRITICAL: Force connection to self-hosted PostgreSQL
 // Vercel environment variables (POSTGRES_URL, DATABASE_URL) point to Neon (old database)
 // We MUST use self-hosted PostgreSQL which has the correct schema
-const SELF_HOSTED_POSTGRES_URL = process.env.POSTGRES_URL || 'postgresql://nak_user:123@163.223.12.189:5432/nak_vn';
+const SELF_HOSTED_POSTGRES_URL = process.env.POSTGRES_URL || 'postgresql://nak_user:123@163.223.12.189:6432/nak_vn';
 
 // Database configuration
 const DB_CONFIG = {

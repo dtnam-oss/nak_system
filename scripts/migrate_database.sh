@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 
 # Configuration
 OLD_DB_URL="${POSTGRES_URL}"  # Neon/Vercel Postgres
-NEW_DB_URL="postgresql://nak_user:123@163.223.12.189:5432/nak_vn"
+NEW_DB_URL="postgresql://nak_user:123@163.223.12.189:6432/nak_vn"
 BACKUP_DIR="./backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
