@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * Update employee (e.g., update chat_id, last_login)
+ * Update employee (e.g., update chat_id)
  * 
  * PUT /api/employees
  * Body: { ma_nhan_vien: 'NAK001', chat_id: '123456789' }
@@ -123,7 +123,7 @@ export async function GET(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { ma_nhan_vien, chat_id, last_login } = body;
+    const { ma_nhan_vien, chat_id } = body;
 
     if (!ma_nhan_vien) {
       return NextResponse.json(
@@ -135,8 +135,6 @@ export async function PUT(req: NextRequest) {
     // Build update query
     const updates: string[] = [];
     if (chat_id !== undefined) updates.push(`chat_id = '${chat_id}'`);
-    if (last_login) updates.push(`last_login = NOW()`);
-    updates.push(`updated_at = NOW()`);
 
     if (updates.length === 0) {
       return NextResponse.json(
