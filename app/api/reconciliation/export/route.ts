@@ -1,4 +1,4 @@
-import { sql, query } from '@/lib/db';
+import { query } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 import ExcelJS from 'exceljs';
 import { format } from 'date-fns';
@@ -110,28 +110,67 @@ export async function GET(request: NextRequest) {
     
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     
-    // Build the full query string - Note: Query chuyen_di table now
+    // Build the full query string - JOIN with chi_tiet_chuyen_di for details
     const queryString = `
-      SELECT 
-        id, 
-        ma_chuyen_di as order_id, 
-        ngay_tao as date, 
-        ten_khach_hang as customer, 
-        ten_tuyen as route_name, 
-        ten_tai_xe as driver_name,
-        don_vi_van_chuyen as provider, 
-        trang_thai_chuyen_di as status, 
-        CAST(chi_phi AS NUMERIC) as cost, 
-        CAST(doanh_thu AS NUMERIC) as revenue,
-        loai_chuyen as trip_type, 
-        loai_tuyen as route_type, 
-        so_km_theo_odo as weight, 
-        so_km_theo_odo as total_distance, 
-        NULL as details,
-        thoi_gian_tao as created_at
-      FROM chuyen_di
+      SELECT
+        cd.id,
+        cd.ma_chuyen_di as order_id,
+        cd.ngay_tao as date,
+        cd.ten_khach_hang as customer,
+        cd.ten_tuyen as route_name,
+        cd.ten_tai_xe as driver_name,
+        cd.don_vi_van_chuyen as provider,
+        cd.trang_thai_chuyen_di as status,
+        0 as cost,
+        CASE
+          WHEN cd.doanh_thu::TEXT IS NULL OR cd.doanh_thu::TEXT = '' THEN 0
+          WHEN cd.doanh_thu::TEXT !~ '^-?[0-9]*\\.?[0-9]+$' THEN 0
+          ELSE cd.doanh_thu::NUMERIC
+        END as revenue,
+        cd.loai_chuyen as trip_type,
+        cd.loai_tuyen as route_type,
+        CASE
+          WHEN cd.so_km_theo_odo::TEXT IS NULL OR cd.so_km_theo_odo::TEXT = '' THEN 0
+          WHEN cd.so_km_theo_odo::TEXT !~ '^-?[0-9]*\\.?[0-9]+$' THEN 0
+          ELSE cd.so_km_theo_odo::NUMERIC
+        END as weight,
+        CASE
+          WHEN cd.so_km_theo_odo::TEXT IS NULL OR cd.so_km_theo_odo::TEXT = '' THEN 0
+          WHEN cd.so_km_theo_odo::TEXT !~ '^-?[0-9]*\\.?[0-9]+$' THEN 0
+          ELSE cd.so_km_theo_odo::NUMERIC
+        END as total_distance,
+        json_build_object(
+          'chiTietLoTrinh',
+          COALESCE(
+            json_agg(
+              json_build_object(
+                'id', ct.id,
+                'loTrinh', ct.lo_trinh,
+                'loTrinhChiTiet', ct.lo_trinh_chi_tiet_theo_diem,
+                'bienKiemSoat', ct.bien_kiem_soat,
+                'quangDuong', ct.quang_duong,
+                'taiTrong', ct.tai_trong,
+                'taiTrongTinhPhi', ct.tai_trong_tinh_phi,
+                'soChieu', ct.so_chieu,
+                'donGia', ct.don_gia,
+                'thanhTien', ct.ket_qua,
+                'hinhThucTinhGia', ct.hinh_thuc_tinh_gia,
+                'loaiCa', ct.loai_ca,
+                'maTuyen', ct.ma_chuyen_di_kh,
+                'loaiTuyenKH', ct.loai_tuyen_khach_hang,
+                'ngayTrenTem', ct.ngay_tren_tem,
+                'tenKhachHangCap1', ct.ten_khach_hang_cap_1
+              ) ORDER BY ct.id
+            ) FILTER (WHERE ct.id IS NOT NULL),
+            '[]'::json
+          )
+        ) as details,
+        cd.thoi_gian_tao as created_at
+      FROM chuyen_di cd
+      LEFT JOIN chi_tiet_chuyen_di ct ON ct.ma_chuyen_di = cd.ma_chuyen_di
       ${whereClause}
-      ORDER BY ngay_tao DESC, thoi_gian_tao DESC
+      GROUP BY cd.id, cd.ma_chuyen_di, cd.ngay_tao, cd.ten_khach_hang, cd.ten_tuyen, cd.ten_tai_xe, cd.don_vi_van_chuyen, cd.trang_thai_chuyen_di, cd.doanh_thu, cd.loai_chuyen, cd.loai_tuyen, cd.so_km_theo_odo, cd.thoi_gian_tao
+      ORDER BY cd.ngay_tao DESC, cd.thoi_gian_tao DESC
     `;
     
     console.log('🔍 Executing query with filters:', { whereClause, params });
@@ -316,7 +355,7 @@ async function generateGeneralExcel(data: ReconciliationDatabaseRow[]): Promise<
     try {
       const details = typeof record.details === 'string' ? JSON.parse(record.details) : record.details;
       const chiTietLoTrinh = details?.chiTietLoTrinh || [];
-      licensePlate = chiTietLoTrinh[0]?.bienKiemSoat || '';
+      licensePlate = Array.isArray(chiTietLoTrinh) && chiTietLoTrinh[0]?.bienKiemSoat || '';
     } catch (error) {
       console.error('Failed to parse details for order:', record.id, error);
     }
@@ -331,7 +370,7 @@ async function generateGeneralExcel(data: ReconciliationDatabaseRow[]): Promise<
       provider: record.provider,
       trip_type: record.trip_type || '',
       route_type: record.route_type || '',
-      cost: record.cost || 0,
+      cost: 0, // Cost column không có trong schema mới
       revenue: record.revenue || 0,
       status: record.status,
     });
