@@ -113,8 +113,8 @@ export async function GET(request: NextRequest) {
     // Build the full query string - JOIN with chi_tiet_chuyen_di for details
     const queryString = `
       SELECT
-        cd.id,
         cd.ma_chuyen_di as order_id,
+        cd.ma_chuyen_di as id,
         cd.ngay_tao as date,
         cd.ten_khach_hang as customer,
         cd.ten_tuyen as route_name,
@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
       FROM chuyen_di cd
       LEFT JOIN chi_tiet_chuyen_di ct ON ct.ma_chuyen_di = cd.ma_chuyen_di
       ${whereClause}
-      GROUP BY cd.id, cd.ma_chuyen_di, cd.ngay_tao, cd.ten_khach_hang, cd.ten_tuyen, cd.ten_tai_xe, cd.don_vi_van_chuyen, cd.trang_thai_chuyen_di, cd.doanh_thu, cd.loai_chuyen, cd.loai_tuyen, cd.so_km_theo_odo, cd.thoi_gian_tao
+      GROUP BY cd.ma_chuyen_di, cd.ngay_tao, cd.ten_khach_hang, cd.ten_tuyen, cd.ten_tai_xe, cd.don_vi_van_chuyen, cd.trang_thai_chuyen_di, cd.doanh_thu, cd.loai_chuyen, cd.loai_tuyen, cd.so_km_theo_odo, cd.thoi_gian_tao
       ORDER BY cd.ngay_tao DESC, cd.thoi_gian_tao DESC
     `;
     
