@@ -10,7 +10,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Badge } from "@/components/ui/badge"
-import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface MultiSelectProps {
   options: { label: string; value: string }[]
@@ -90,7 +89,7 @@ export function MultiSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[280px] p-0" align="start">
-        <ScrollArea className="max-h-[300px]">
+        <div className="max-h-[300px] overflow-y-auto">
           <div className="p-1">
             {options.map((option) => {
               const isSelected = selected.includes(option.value)
@@ -118,7 +117,7 @@ export function MultiSelect({
               )
             })}
           </div>
-        </ScrollArea>
+        </div>
         {selected.length > 0 && (
           <div className="border-t p-1">
             <Button
