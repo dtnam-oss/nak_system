@@ -54,9 +54,9 @@ export function DataTable({ data }: DataTableProps) {
     <>
       <div className="rounded-lg border border-border bg-white">
         {/* Table */}
-        <div className="overflow-auto max-h-[600px]">
+        <div className="overflow-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
           <table className="w-full">
-            <thead className="sticky top-0 bg-muted/50 z-10">
+            <thead className="sticky top-0 bg-white z-10 shadow-sm">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (

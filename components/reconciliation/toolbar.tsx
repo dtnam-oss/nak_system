@@ -235,9 +235,9 @@ export function ReconciliationToolbar({
   }
 
   return (
-    <div className="mb-4 space-y-3">
+    <div className="sticky top-0 z-20 bg-background mb-4 space-y-3 pb-3 border-b border-border shadow-sm">
         {/* Single Row Compact Toolbar with Horizontal Scroll */}
-        <div className="w-full overflow-x-auto">
+        <div className="w-full overflow-x-auto pt-3">
           <div className="flex flex-row items-center gap-2 w-full flex-nowrap min-w-max">
             {/* Live Search - ONLY order_id */}
             <div className="relative flex-1 min-w-[200px]">
