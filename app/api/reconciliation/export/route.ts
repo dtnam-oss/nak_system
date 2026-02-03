@@ -62,47 +62,47 @@ export async function GET(request: NextRequest) {
     let paramIndex = 1;
 
     if (fromDate) {
-      conditions.push(`ngay_tao::date >= $${paramIndex}::date`);
+      conditions.push(`cd.ngay_tao::date >= $${paramIndex}::date`);
       params.push(fromDate);
       paramIndex++;
     }
     if (toDate) {
-      conditions.push(`ngay_tao::date <= $${paramIndex}::date`);
+      conditions.push(`cd.ngay_tao::date <= $${paramIndex}::date`);
       params.push(toDate);
       paramIndex++;
     }
     if (khachHang) {
       // Support multi-select: comma-separated values "J&T,GHN,VIETTEL"
       const customerList = khachHang.split(',').map(c => c.trim()).filter(Boolean);
-      
+
       if (customerList.length === 1) {
         // Single customer: use ILIKE for partial match
-        conditions.push(`LOWER(ten_khach_hang) LIKE $${paramIndex}`);
+        conditions.push(`LOWER(cd.ten_khach_hang) LIKE $${paramIndex}`);
         params.push(`%${customerList[0].toLowerCase()}%`);
         paramIndex++;
       } else if (customerList.length > 1) {
         // Multiple customers: use ANY with array
-        conditions.push(`ten_khach_hang = ANY($${paramIndex})`);
+        conditions.push(`cd.ten_khach_hang = ANY($${paramIndex})`);
         params.push(customerList);
         paramIndex++;
       }
     }
     if (donViVanChuyen) {
-      conditions.push(`LOWER(TRIM(don_vi_van_chuyen)) = $${paramIndex}`);
+      conditions.push(`LOWER(TRIM(cd.don_vi_van_chuyen)) = $${paramIndex}`);
       params.push(donViVanChuyen.toLowerCase());
       paramIndex++;
     }
     if (loaiChuyen) {
-      conditions.push(`LOWER(TRIM(loai_chuyen)) LIKE $${paramIndex}`);
+      conditions.push(`LOWER(TRIM(cd.loai_chuyen)) LIKE $${paramIndex}`);
       params.push(`%${loaiChuyen.toLowerCase()}%`);
       paramIndex++;
     }
     if (searchQuery) {
       conditions.push(`(
-        LOWER(ma_chuyen_di) LIKE $${paramIndex} OR
-        LOWER(ten_khach_hang) LIKE $${paramIndex} OR
-        LOWER(ten_tuyen) LIKE $${paramIndex} OR
-        LOWER(ten_tai_xe) LIKE $${paramIndex}
+        LOWER(cd.ma_chuyen_di) LIKE $${paramIndex} OR
+        LOWER(cd.ten_khach_hang) LIKE $${paramIndex} OR
+        LOWER(cd.ten_tuyen) LIKE $${paramIndex} OR
+        LOWER(cd.ten_tai_xe) LIKE $${paramIndex}
       )`);
       params.push(`%${searchQuery.toLowerCase()}%`);
       paramIndex++;
