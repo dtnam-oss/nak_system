@@ -247,7 +247,7 @@ export function ReconciliationToolbar({
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               )}
               <Input
-                placeholder="Tìm kiếm mã chuyến..."
+                placeholder="Tìm mã chuyến (NAK hoặc KH)..."
                 className="pl-9 h-8 text-xs"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

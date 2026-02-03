@@ -141,9 +141,16 @@ export async function GET(request: NextRequest) {
       paramIndex++
     }
 
-    // Search by order_id only (exact match or contains)
+    // Search by order_id or customer order code (ma_chuyen_di OR ma_chuyen_di_kh)
     if (orderId) {
-      conditions.push(`cd.ma_chuyen_di ILIKE $${paramIndex}`)
+      conditions.push(`(
+        cd.ma_chuyen_di ILIKE $${paramIndex} OR
+        EXISTS (
+          SELECT 1 FROM chi_tiet_chuyen_di ct_search
+          WHERE ct_search.ma_chuyen_di = cd.ma_chuyen_di
+          AND ct_search.ma_chuyen_di_kh ILIKE $${paramIndex}
+        )
+      )`)
       params.push(`%${orderId}%`)
       paramIndex++
     }
