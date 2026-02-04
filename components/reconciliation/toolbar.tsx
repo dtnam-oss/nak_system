@@ -164,7 +164,7 @@ export function ReconciliationToolbar({
     }))
   }
 
-  const handleExport = async (templateType: 'general' | 'jnt_route' | 'jnt_shift' | 'ghn') => {
+  const handleExport = async (templateType: 'general' | 'jnt_route' | 'jnt_shift' | 'ghn' | 'yunyi') => {
     try {
       console.log('🚀 Starting export...', { templateType, filters })
       
@@ -363,6 +363,10 @@ export function ReconciliationToolbar({
                 <DropdownMenuItem onClick={() => handleExport('ghn')}>
                   <Download className="h-4 w-4 mr-2" />
                   Mẫu GHN
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('yunyi')}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Mẫu YUNYI
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

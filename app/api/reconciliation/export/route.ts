@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { generateJnTShiftExcel as generateJnTShiftStrategy } from './strategies/JnT_Shift_Template';
 import { generateJnTRouteExcel as generateJnTRouteStrategy } from './strategies/JnT_Route_Template';
 import { generateGHNExcel as generateGHNStrategy } from './strategies/GHN_Template';
+import { generateYUNYIExcel as generateYUNYIStrategy } from './strategies/YUNYI_Template';
 
 export const dynamic = 'force-dynamic';
 
@@ -239,13 +240,28 @@ export async function GET(request: NextRequest) {
         const bufferGHN = await generateGHNStrategy(results);
         fileName = `Doisoat_GHN_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
         console.log(`✓ Excel generated successfully: ${fileName}`);
-        
+
         return new NextResponse(bufferGHN, {
           status: 200,
           headers: {
             'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
             'Content-Length': bufferGHN.byteLength.toString(),
+          },
+        });
+
+      case 'yunyi':
+        // Use strategy for YUNYI report (Row Flattening with driver split)
+        const bufferYUNYI = await generateYUNYIStrategy(results);
+        fileName = `Doisoat_YUNYI_${format(new Date(), 'yyyyMMdd_HHmmss')}.xlsx`;
+        console.log(`✓ Excel generated successfully: ${fileName}`);
+
+        return new NextResponse(bufferYUNYI, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition': `attachment; filename="${encodeURIComponent(fileName)}"`,
+            'Content-Length': bufferYUNYI.byteLength.toString(),
           },
         });
 
