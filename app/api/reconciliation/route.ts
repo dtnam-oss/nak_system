@@ -204,7 +204,8 @@ export async function GET(request: NextRequest) {
             'maTuyen', ct.ma_chuyen_di_kh,
             'loaiTuyenKH', ct.loai_tuyen_khach_hang,
             'ngayTrenTem', ct.ngay_tren_tem,
-            'tenKhachHangCap1', ct.ten_khach_hang_cap_1
+            'tenKhachHangCap1', ct.ten_khach_hang_cap_1,
+            'hinhAnh', ct.hinh_anh
           ) ORDER BY ct.id
         ) FILTER (WHERE ct.id IS NOT NULL) as chi_tiet_lo_trinh
       FROM chuyen_di cd
