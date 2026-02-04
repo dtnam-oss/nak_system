@@ -61,6 +61,13 @@ export default function FuelPage() {
 
   useEffect(() => {
     fetchData();
+    
+    // Auto-refresh every 30 seconds for real-time fuel data
+    const interval = setInterval(() => {
+      fetchData();
+    }, 30 * 1000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchData = async () => {

@@ -47,8 +47,8 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboardData(isEveningMode ? "evening" : "morning")
 
-    // Refresh every 5 minutes
-    const interval = setInterval(() => fetchDashboardData(isEveningMode ? "evening" : "morning"), 5 * 60 * 1000)
+    // Refresh every 1 minute (improved from 5 minutes)
+    const interval = setInterval(() => fetchDashboardData(isEveningMode ? "evening" : "morning"), 60 * 1000)
     return () => clearInterval(interval)
   }, [isEveningMode])
 

@@ -3,11 +3,22 @@
 ## Overview
 Đã chuyển từ `force-dynamic` (always fresh) sang **Incremental Static Regeneration (ISR)** với `unstable_cache` để tránh Google API rate limits và optimize performance.
 
+**Latest Update (Feb 4, 2026):** ✅ Expanded caching to Fuel APIs and Dashboard Stats + Enhanced client-side sync with React Query.
+
 ## Changes Made
 
 ### 1. API Routes Updated
 - ✅ `app/api/reconciliation/route.ts`
 - ✅ `app/api/reports/dashboard/route.ts`
+- ✅ `app/api/fuel/stats/route.ts` **(NEW)**
+- ✅ `app/api/fuel/transactions/route.ts` **(NEW)**
+- ✅ `app/api/fuel/imports/route.ts` **(NEW)**
+- ✅ `app/api/dashboard/stats/route.ts` **(NEW)**
+
+### 2. Client-Side Improvements **(NEW)**
+- ✅ `components/providers.tsx` - Enhanced React Query config
+- ✅ `app/fuel/page.tsx` - Auto-refresh every 30s
+- ✅ `app/dashboard/page.tsx` - Faster refresh (1 min instead of 5 min)
 
 ### 2. Key Improvements
 
@@ -186,5 +197,8 @@ Deploy to Vercel - caching automatic ✅
 
 ---
 
-**Implementation Date:** December 24, 2025
+**Implementation Date:** December 24, 2025  
+**Last Updated:** February 4, 2026 - Added Fuel APIs, Dashboard Stats caching + Client-side sync improvements  
 **Status:** ✅ Active
+
+**See also:** [DATA_SYNC_IMPROVEMENT.md](DATA_SYNC_IMPROVEMENT.md) for details on data synchronization improvements.

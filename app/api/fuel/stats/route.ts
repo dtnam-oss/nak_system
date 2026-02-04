@@ -1,7 +1,9 @@
 import { sql } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 
-export const dynamic = 'force-dynamic';
+// Remove force-dynamic to enable caching
+// export const dynamic = 'force-dynamic';
 
 interface FuelStats {
   total_import: number;
@@ -16,11 +18,13 @@ interface FuelStats {
 }
 
 export async function GET() {
-  try {
-    console.log('========================================');
-    console.log('📊 FUEL STATS API REQUEST');
-    console.log('🕐 Timestamp:', new Date().toISOString());
-    console.log('========================================');
+  const getCachedStats = unstable_cache(
+    async () => {
+      try {
+        console.log('========================================');
+        console.log('📋 FUEL STATS API REQUEST');
+        console.log('🕐 Timestamp:', new Date().toISOString());
+        console.log('========================================');
 
     // 1. Tổng nhập kho
     const importResult = await sql`
@@ -99,36 +103,54 @@ export async function GET() {
     const tankCapacity = 40590; // Lít
     const tankPercentage = tankCapacity > 0 ? (currentInventory / tankCapacity) * 100 : 0;
 
-    console.log('📊 Calculated Stats:');
-    console.log('  - Current Inventory:', currentInventory, 'liters');
-    console.log('  - Inventory Value:', inventoryValue, 'VND');
-    console.log('  - Tank Percentage:', tankPercentage.toFixed(2), '%');
-    console.log('========================================');
+        console.log('📊 Calculated Stats:');
+        console.log('  - Current Inventory:', currentInventory, 'liters');
+        console.log('  - Inventory Value:', inventoryValue, 'VND');
+        console.log('  - Tank Percentage:', tankPercentage.toFixed(2), '%');
+        console.log('========================================');
 
-    const stats: FuelStats = {
-      total_import: totalImport,
-      total_export_internal: totalExportInternal,
-      total_export_all: totalExportAll,
-      current_avg_price: currentAvgPrice,
-      current_inventory: Math.max(0, currentInventory), // Không âm
-      inventory_value: Math.max(0, inventoryValue),
-      monthly_consumption: monthlyConsumption,
-      tank_capacity: tankCapacity,
-      tank_percentage: Math.max(0, Math.min(100, tankPercentage)) // 0-100%
-    };
+        const stats: FuelStats = {
+          total_import: totalImport,
+          total_export_internal: totalExportInternal,
+          total_export_all: totalExportAll,
+          current_avg_price: currentAvgPrice,
+          current_inventory: Math.max(0, currentInventory), // Không âm
+          inventory_value: Math.max(0, inventoryValue),
+          monthly_consumption: monthlyConsumption,
+          tank_capacity: tankCapacity,
+          tank_percentage: Math.max(0, Math.min(100, tankPercentage)) // 0-100%
+        };
 
+        return stats;
+
+      } catch (error: any) {
+        console.error('========================================');
+        console.error('❌ FUEL STATS ERROR');
+        console.error('Error:', error.message);
+        console.error('Stack:', error.stack);
+        console.error('========================================');
+        throw error;
+      }
+    },
+    ['fuel-stats'],
+    {
+      revalidate: 30, // Cache for 30 seconds
+      tags: ['fuel-stats'],
+    }
+  );
+
+  try {
+    const stats = await getCachedStats();
+    
     return NextResponse.json({
       success: true,
       data: stats
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+      },
     });
-
   } catch (error: any) {
-    console.error('========================================');
-    console.error('❌ FUEL STATS ERROR');
-    console.error('Error:', error.message);
-    console.error('Stack:', error.stack);
-    console.error('========================================');
-
     return NextResponse.json({
       success: false,
       error: 'Failed to fetch fuel stats',

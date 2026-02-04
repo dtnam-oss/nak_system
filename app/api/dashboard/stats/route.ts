@@ -1,7 +1,9 @@
 import { sql, query } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 
-export const dynamic = 'force-dynamic';
+// Remove force-dynamic to enable caching
+// export const dynamic = 'force-dynamic';
 
 interface DashboardStats {
   revenue: {
@@ -38,11 +40,13 @@ interface DashboardStats {
 }
 
 export async function GET() {
-  try {
-    console.log('========================================');
-    console.log('📊 DASHBOARD STATS API REQUEST');
-    console.log('🕐 Timestamp:', new Date().toISOString());
-    console.log('========================================');
+  const getCachedStats = unstable_cache(
+    async () => {
+      try {
+        console.log('========================================');
+        console.log('📊 DASHBOARD STATS API REQUEST');
+        console.log('🕐 Timestamp:', new Date().toISOString());
+        console.log('========================================');
 
     // Run all queries in parallel for performance
     const [
@@ -232,15 +236,33 @@ export async function GET() {
         nak: nakCount,
         vendor: vendorCount,
       },
-      recentActivities,
-    };
+        recentActivities,
+      };
 
-    console.log('✓ Dashboard stats compiled successfully');
-    console.log('========================================');
+      console.log('✓ Dashboard stats compiled successfully');
+      console.log('========================================');
 
-    return NextResponse.json(stats);
-  } catch (error) {
-    console.error('❌ Dashboard Stats Error:', error);
+      return stats;
+    } catch (error) {
+      console.error('❌ Dashboard Stats Error:', error);
+      throw error;
+    }
+  },
+  ['dashboard-stats'],
+  {
+    revalidate: 60, // Cache for 60 seconds
+    tags: ['dashboard-stats'],
+  }
+);
+
+try {
+  const stats = await getCachedStats();
+  return NextResponse.json(stats, {
+    headers: {
+      'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=120',
+    },
+  });
+} catch (error) {
     return NextResponse.json(
       { error: 'Failed to fetch dashboard stats' },
       { status: 500 }

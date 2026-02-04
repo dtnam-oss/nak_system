@@ -1,7 +1,9 @@
 import { sql } from '@/lib/db';
 import { NextResponse } from 'next/server';
+import { unstable_cache } from 'next/cache';
 
-export const dynamic = 'force-dynamic';
+// Remove force-dynamic to enable caching
+// export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
@@ -9,31 +11,50 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    console.log(`📊 Fetching fuel imports (limit: ${limit}, offset: ${offset})`);
+    // Create cache key based on query params
+    const cacheKey = `fuel-imports-${limit}-${offset}`;
 
-    const result = await sql`
-      SELECT 
-        id,
-        ngay_nhap as import_date,
-        nha_cung_cap as supplier,
-        ten_nhien_lieu as fuel_type,
-        CAST(so_luong AS NUMERIC) as quantity,
-        CAST(don_gia_nhap AS NUMERIC) as unit_price,
-        CAST(thanh_tien AS NUMERIC) as total_amount,
-        CAST(don_gia_xuat_binh_quan AS NUMERIC) as avg_price,
-        nguoi_tao as created_by
-      FROM public.nhap_nhien_lieu
-      ORDER BY ngay_nhap DESC
-      LIMIT ${limit}
-      OFFSET ${offset}
-    `;
+    const getCachedData = unstable_cache(
+      async () => {
+        console.log(`📊 Fetching fuel imports (limit: ${limit}, offset: ${offset})`);
 
-    console.log(`✓ Found ${result.rows.length} fuel imports`);
+        const result = await sql`
+          SELECT 
+            id,
+            ngay_nhap as import_date,
+            nha_cung_cap as supplier,
+            ten_nhien_lieu as fuel_type,
+            CAST(so_luong AS NUMERIC) as quantity,
+            CAST(don_gia_nhap AS NUMERIC) as unit_price,
+            CAST(thanh_tien AS NUMERIC) as total_amount,
+            CAST(don_gia_xuat_binh_quan AS NUMERIC) as avg_price,
+            nguoi_tao as created_by
+          FROM public.nhap_nhien_lieu
+          ORDER BY ngay_nhap DESC
+          LIMIT ${limit}
+          OFFSET ${offset}
+        `;
+
+        console.log(`✓ Found ${result.rows.length} fuel imports`);
+        return result.rows;
+      },
+      [cacheKey],
+      {
+        revalidate: 30, // Cache for 30 seconds
+        tags: ['fuel-imports'],
+      }
+    );
+
+    const data = await getCachedData();
 
     return NextResponse.json({
       success: true,
-      data: result.rows,
-      count: result.rows.length
+      data: data,
+      count: data.length
+    }, {
+      headers: {
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+      },
     });
 
   } catch (error: any) {
