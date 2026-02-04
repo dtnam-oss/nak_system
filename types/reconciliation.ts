@@ -18,6 +18,7 @@ export interface ReconciliationRecord {
   tongQuangDuong: number
   tongDoanhThu: number
   tongChiPhi: number
+  soDiemDung?: number // Count of chi_tiet records (lazy loaded)
   soXe?: string
   chiTietLoTrinh?: ChiTietLoTrinh[]
   data_json?: string // Raw JSON string from Google Sheets

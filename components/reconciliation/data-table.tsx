@@ -14,7 +14,7 @@ import { ReconciliationRecord } from "@/types/reconciliation"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react"
 import { createColumns } from "./columns"
-import { TripDetailsDialog } from "./TripDetailsDialog"
+import { TripDetailsDialogNew } from "./TripDetailsDialogNew"
 
 interface DataTableProps {
   data: ReconciliationRecord[]
@@ -22,11 +22,11 @@ interface DataTableProps {
 
 export function DataTable({ data }: DataTableProps) {
   const [sorting, setSorting] = useState<SortingState>([])
-  const [selectedRecord, setSelectedRecord] = useState<ReconciliationRecord | null>(null)
+  const [selectedMaChuyenDi, setSelectedMaChuyenDi] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
-  const handleViewDetails = (record: ReconciliationRecord) => {
-    setSelectedRecord(record)
+  const handleViewDetails = (maChuyenDi: string) => {
+    setSelectedMaChuyenDi(maChuyenDi)
     setIsDialogOpen(true)
   }
 
@@ -159,10 +159,10 @@ export function DataTable({ data }: DataTableProps) {
       </div>
 
       {/* Trip Details Dialog */}
-      <TripDetailsDialog
+      <TripDetailsDialogNew
+        maChuyenDi={selectedMaChuyenDi}
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
-        record={selectedRecord}
       />
     </>
   )

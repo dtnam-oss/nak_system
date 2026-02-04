@@ -7,32 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Eye } from "lucide-react"
 
 interface ColumnsProps {
-  onViewDetails: (record: ReconciliationRecord) => void
+  onViewDetails: (maChuyenDi: string) => void
 }
 
 export const createColumns = ({
   onViewDetails,
 }: ColumnsProps): ColumnDef<ReconciliationRecord>[] => {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(amount)
-  }
-
-  const formatDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString)
-      return date.toLocaleDateString("vi-VN", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })
-    } catch {
-      return dateString
-    }
-  }
-
   return [
     {
       accessorKey: "maChuyenDi",
@@ -161,15 +141,8 @@ export const createColumns = ({
               variant="outline"
               size="sm"
               onClick={() => {
-                // 🔍 STEP 1: Debug - Log raw record data
-                console.log('🔍 [STEP 1] Clicked Row Data:', record)
-                console.log('🔍 [STEP 1] Has data_json field:', 'data_json' in record)
-                console.log('🔍 [STEP 1] data_json value:', record.data_json)
-                console.log('🔍 [STEP 1] data_json type:', typeof record.data_json)
-                console.log('🔍 [STEP 1] data_json length:', record.data_json?.length || 0)
-                console.log('🔍 [STEP 1] All record keys:', Object.keys(record))
-
-                onViewDetails(record)
+                console.log('🔍 Opening detail for:', record.maChuyenDi)
+                onViewDetails(record.maChuyenDi)
               }}
               className="gap-1.5 h-7 px-2 text-xs"
             >

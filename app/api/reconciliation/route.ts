@@ -1,10 +1,7 @@
 import { sql, query } from '@/lib/db'
 import { NextRequest, NextResponse } from 'next/server'
 import type {
-  ReconciliationDatabaseRow,
-  ReconciliationDetails,
   ReconciliationRecord,
-  ChiTietLoTrinh,
 } from '@/types/reconciliation'
 
 // Force dynamic rendering to avoid stale cached data
@@ -58,10 +55,10 @@ export async function GET(request: NextRequest) {
     const loaiChuyen = searchParams.get('loaiChuyen')
     const loaiTuyen = searchParams.get('loaiTuyen')
 
-    // Parse and validate limit (increase default to 500 for better UX)
+    // Parse and validate limit (default: 100 for performance)
     const limit = Math.min(
-      Math.max(1, parseInt(limitParam || '500')),
-      5000 // Increase max to 5000
+      Math.max(1, parseInt(limitParam || '100')),
+      500 // Max 500 for performance
     )
 
     console.log('🔍 [Postgres API] Query params:', {
@@ -163,7 +160,8 @@ export async function GET(request: NextRequest) {
     params.push(limit)
     const limitClause = `LIMIT $${paramIndex}`
 
-    // Construct the SQL query - JOIN chuyen_di with chi_tiet_chuyen_di
+    // OPTIMIZED: Query without chi_tiet aggregation for faster performance
+    // Chi tiết will be loaded lazily when user opens detail popup
     const sqlQuery = `
       SELECT
         cd.ma_chuyen_di,
@@ -175,43 +173,22 @@ export async function GET(request: NextRequest) {
         cd.ten_tai_xe,
         cd.don_vi_van_chuyen,
         cd.trang_thai_chuyen_di,
-        CASE 
+        CASE
           WHEN cd.doanh_thu::TEXT IS NULL OR cd.doanh_thu::TEXT = '' THEN NULL
           WHEN cd.doanh_thu::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN NULL
           ELSE cd.doanh_thu::NUMERIC
         END as doanh_thu,
-        CASE 
+        CASE
           WHEN cd.so_km_theo_odo::TEXT IS NULL OR cd.so_km_theo_odo::TEXT = '' THEN NULL
           WHEN cd.so_km_theo_odo::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN NULL
           ELSE cd.so_km_theo_odo::NUMERIC
         END as so_km_theo_odo,
         cd.thoi_gian_tao,
-        -- Aggregate details as JSON (return text values, parse on frontend)
-        json_agg(
-          json_build_object(
-            'id', ct.id,
-            'loTrinh', ct.lo_trinh,
-            'loTrinhChiTiet', ct.lo_trinh_chi_tiet_theo_diem,
-            'bienKiemSoat', ct.bien_kiem_soat,
-            'quangDuong', ct.quang_duong,
-            'taiTrong', ct.tai_trong,
-            'taiTrongTinhPhi', ct.tai_trong_tinh_phi,
-            'soChieu', ct.so_chieu,
-            'donGia', ct.don_gia,
-            'thanhTien', ct.ket_qua,
-            'hinhThucTinhGia', ct.hinh_thuc_tinh_gia,
-            'loaiCa', ct.loai_ca,
-            'maTuyen', ct.ma_chuyen_di_kh,
-            'loaiTuyenKH', ct.loai_tuyen_khach_hang,
-            'ngayTrenTem', ct.ngay_tren_tem,
-            'tenKhachHangCap1', ct.ten_khach_hang_cap_1,
-            'hinhAnh', ct.hinh_anh
-          ) ORDER BY ct.id
-        ) FILTER (WHERE ct.id IS NOT NULL) as chi_tiet_lo_trinh
+        -- Count chi tiet instead of loading all data
+        (SELECT COUNT(*) FROM chi_tiet_chuyen_di ct
+         WHERE ct.ma_chuyen_di = cd.ma_chuyen_di) as so_diem_dung
       FROM chuyen_di cd
-      LEFT JOIN chi_tiet_chuyen_di ct ON ct.ma_chuyen_di = cd.ma_chuyen_di
       ${whereClause}
-      GROUP BY cd.ma_chuyen_di, cd.ngay_tao, cd.ten_khach_hang, cd.loai_chuyen, cd.loai_tuyen, cd.ten_tuyen, cd.ten_tai_xe, cd.don_vi_van_chuyen, cd.trang_thai_chuyen_di, cd.doanh_thu, cd.so_km_theo_odo, cd.thoi_gian_tao
       ORDER BY cd.ngay_tao DESC, cd.thoi_gian_tao DESC
       ${limitClause}
     `
@@ -225,43 +202,8 @@ export async function GET(request: NextRequest) {
     console.log('✅ [Postgres API] Query successful')
     console.log('📊 [Postgres API] Rows returned:', result.rows.length)
 
-    // Map database rows to frontend structure
+    // Map database rows to frontend structure (OPTIMIZED - no chi_tiet parsing)
     const records: ReconciliationRecord[] = result.rows.map((row: any) => {
-      // Parse chi_tiet_lo_trinh JSON array
-      let chiTietLoTrinh: ChiTietLoTrinh[] = []
-      let dataJson = ''
-
-      if (row.chi_tiet_lo_trinh) {
-        try {
-          chiTietLoTrinh = Array.isArray(row.chi_tiet_lo_trinh) 
-            ? row.chi_tiet_lo_trinh.map((ct: any, index: number) => ({
-                thuTu: index + 1,
-                id: ct.id || '',
-                loaiTuyenKH: ct.loaiTuyenKH || '',
-                maTuyen: ct.maTuyen || '',
-                bienKiemSoat: ct.bienKiemSoat || '',
-                loTrinh: ct.loTrinh || '',
-                loTrinhChiTiet: ct.loTrinhChiTiet || '',
-                quangDuong: ct.quangDuong || '',
-                taiTrong: ct.taiTrong || '',
-                taiTrongTinhPhi: ct.taiTrongTinhPhi || '',
-                hinhThucTinhGia: ct.hinhThucTinhGia || '',
-                soChieu: ct.soChieu || '',
-                donGia: ct.donGia || '',
-                thanhTien: ct.thanhTien || '',
-                ngayTrenTem: ct.ngayTrenTem || '',
-                tenKhachHangCap1: ct.tenKhachHangCap1 || '',
-                loaiCa: ct.loaiCa || ''
-              }))
-            : []
-          
-          dataJson = JSON.stringify({ chiTietLoTrinh })
-        } catch (err) {
-          console.error('❌ [Postgres API] Error parsing chi_tiet_lo_trinh:', err)
-          console.error('❌ [Postgres API] Row ma_chuyen_di:', row.ma_chuyen_di)
-        }
-      }
-
       // Map Vietnamese status to English
       const statusMap: Record<string, string> = {
         'Kết thúc': 'approved',
@@ -285,9 +227,8 @@ export async function GET(request: NextRequest) {
         tongQuangDuong: parseFloat(String(row.so_km_theo_odo || 0)),
         tongDoanhThu: parseFloat(String(row.doanh_thu || 0)),
         tongChiPhi: 0, // Not available in current schema
-        soXe: '',  // Not available in chuyen_di table
-        chiTietLoTrinh: chiTietLoTrinh,
-        data_json: dataJson,
+        soDiemDung: parseInt(String(row.so_diem_dung || 0)), // Count of chi tiet records
+        // Remove chiTietLoTrinh and data_json - will be loaded lazily on demand
       }
     })
 

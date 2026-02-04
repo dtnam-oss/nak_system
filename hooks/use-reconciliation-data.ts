@@ -33,6 +33,9 @@ export function useReconciliationData(
       // Build query string
       const params = new URLSearchParams()
 
+      // OPTIMIZATION: Default to 100 records for fast initial load
+      params.append('limit', '100')
+
       if (filters?.fromDate) params.append('fromDate', filters.fromDate)
       if (filters?.toDate) params.append('toDate', filters.toDate)
       if (filters?.khachHang) params.append('khachHang', filters.khachHang)
@@ -56,25 +59,13 @@ export function useReconciliationData(
 
       const data = await response.json()
 
-      // 🔍 STEP 0: Debug - Log raw API response
-      console.log('🔍 [STEP 0] Raw API Response received')
-      console.log('🔍 [STEP 0] Total records:', data.records?.length || 0)
-      if (data.records && data.records.length > 0) {
-        const firstRecord = data.records[0]
-        console.log('🔍 [STEP 0] First record:', firstRecord)
-        console.log('🔍 [STEP 0] First record keys:', Object.keys(firstRecord))
-        console.log('🔍 [STEP 0] First record has data_json:', 'data_json' in firstRecord)
-        console.log('🔍 [STEP 0] First record data_json value:', firstRecord.data_json)
-        console.log('🔍 [STEP 0] First record data_json type:', typeof firstRecord.data_json)
-        console.log('🔍 [STEP 0] First record data_json length:', firstRecord.data_json?.length || 0)
-      } else {
-        console.warn('🔍 [STEP 0] No records in API response')
-      }
+      console.log('✅ [Reconciliation] Loaded', data.records?.length || 0, 'records')
 
       return data
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes (shorter than dashboard)
-    refetchInterval: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    refetchOnWindowFocus: false, // Disable auto-refetch on window focus
+    refetchOnMount: false, // Only fetch on first mount
     enabled,
   })
 }
