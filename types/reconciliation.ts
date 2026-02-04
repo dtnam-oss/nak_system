@@ -70,6 +70,8 @@ export interface ChiTietLoTrinh {
   donGia: number
   thanhTien: number
   ngayTrenTem?: string  // Date on stamp (YYYY-MM-DD)
+  loaiCa?: string  // Shift type
+  hinhAnh?: string  // Image filename for AppSheet URL
 }
 
 export interface ReconciliationFilters {
