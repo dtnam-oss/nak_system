@@ -238,7 +238,13 @@ export async function handleTripsByCustomer(ctx: BotContext) {
       SELECT
         ten_khach_hang as "tenKhachHang",
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as "totalRevenue"
+        COALESCE(SUM(
+          CASE
+            WHEN doanh_thu::TEXT IS NULL OR doanh_thu::TEXT = '' THEN 0
+            WHEN doanh_thu::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+            ELSE doanh_thu::NUMERIC
+          END
+        ), 0) as "totalRevenue"
       FROM chuyen_di
       WHERE ten_khach_hang IS NOT NULL
         AND ten_khach_hang != ''

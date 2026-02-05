@@ -18,6 +18,7 @@ import {
   formatError
 } from '../formatters';
 import { getDashboardMenuKeyboard, getRefreshBackKeyboard } from '../keyboards';
+import { SQL_PARSE_DOANH_THU, SQL_PARSE_SO_KM } from '../sql-helpers';
 
 // =============================================================================
 // DASHBOARD MENU
@@ -57,8 +58,20 @@ export async function handleDashboardToday(ctx: BotContext) {
     const result = await sql`
       SELECT
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as "totalRevenue",
-        COALESCE(SUM(so_km_theo_odo), 0) as "totalDistance",
+        COALESCE(SUM(
+          CASE
+            WHEN doanh_thu::TEXT IS NULL OR doanh_thu::TEXT = '' THEN 0
+            WHEN doanh_thu::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+            ELSE doanh_thu::NUMERIC
+          END
+        ), 0) as "totalRevenue",
+        COALESCE(SUM(
+          CASE
+            WHEN so_km_theo_odo::TEXT IS NULL OR so_km_theo_odo::TEXT = '' THEN 0
+            WHEN so_km_theo_odo::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+            ELSE so_km_theo_odo::NUMERIC
+          END
+        ), 0) as "totalDistance",
         COUNT(DISTINCT ten_tai_xe) as "totalDrivers"
       FROM chuyen_di
       WHERE ngay_tao::date = ${today}::date
@@ -101,8 +114,20 @@ export async function handleDashboardMonth(ctx: BotContext) {
     const result = await sql`
       SELECT
         COUNT(*) as "totalTrips",
-        COALESCE(SUM(CAST(doanh_thu AS NUMERIC)), 0) as "totalRevenue",
-        COALESCE(SUM(so_km_theo_odo), 0) as "totalDistance",
+        COALESCE(SUM(
+          CASE
+            WHEN doanh_thu::TEXT IS NULL OR doanh_thu::TEXT = '' THEN 0
+            WHEN doanh_thu::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+            ELSE doanh_thu::NUMERIC
+          END
+        ), 0) as "totalRevenue",
+        COALESCE(SUM(
+          CASE
+            WHEN so_km_theo_odo::TEXT IS NULL OR so_km_theo_odo::TEXT = '' THEN 0
+            WHEN so_km_theo_odo::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+            ELSE so_km_theo_odo::NUMERIC
+          END
+        ), 0) as "totalDistance",
         COUNT(DISTINCT ten_tai_xe) as "totalDrivers"
       FROM chuyen_di
       WHERE ngay_tao::date >= ${startDate}::date
