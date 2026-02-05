@@ -138,24 +138,32 @@ export function formatDateTime(date: Date | string | null | undefined): string {
 
 /**
  * Get current date in YYYY-MM-DD format (for SQL queries)
+ * Uses Vietnam timezone (UTC+7)
  *
  * @returns Current date string
  */
 export function getCurrentDate(): string {
-  return new Date().toISOString().split('T')[0];
+  const now = new Date();
+  // Convert to Vietnam timezone (UTC+7)
+  const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+  return vietnamTime.toISOString().split('T')[0];
 }
 
 /**
  * Get current month start/end dates
+ * Uses Vietnam timezone (UTC+7)
  *
  * @returns Object with startDate and endDate
  */
 export function getCurrentMonth(): { startDate: string; endDate: string } {
   const now = new Date();
-  const startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+  // Convert to Vietnam timezone (UTC+7)
+  const vietnamTime = new Date(now.getTime() + (7 * 60 * 60 * 1000));
+  
+  const startDate = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth(), 1)
     .toISOString()
     .split('T')[0];
-  const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  const endDate = new Date(vietnamTime.getFullYear(), vietnamTime.getMonth() + 1, 0)
     .toISOString()
     .split('T')[0];
 
