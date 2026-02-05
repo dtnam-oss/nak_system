@@ -7,16 +7,17 @@ import { format } from 'date-fns';
  * Core Logic: Row Flattening (like GHN)
  * Creates SEPARATE ROWS for each item in chiTietLoTrinh array.
  *
- * Columns (9 total):
+ * Columns (10 total):
  * A - Ngày vận chuyển thực tế (from chuyen_di.ngay_chuyen_di)
  * B - Lái xe 1 (split ten_tai_xe by comma, first item)
  * C - Lái xe 2 (split ten_tai_xe by comma, second item)
  * D - Ngày vận chuyển quy hoạch (from chi_tiet.ngay_tren_tem)
  * E - Tuyến vận chuyển (from chi_tiet.ten_tuyen)
- * F - Tem xe chiều đi (from chi_tiet.ma_chuyen_di_kh)
- * G - Đơn giá cố định (from chi_tiet.don_gia)
- * H - Biển số (from chi_tiet.bien_kiem_soat)
- * I - URL (from chi_tiet.hinh_anh, converted to AppSheet public URL)
+ * F - Lộ trình (from chi_tiet.lo_trinh)
+ * G - Tem xe chiều đi (from chi_tiet.ma_chuyen_di_kh)
+ * H - Đơn giá cố định (from chi_tiet.don_gia)
+ * I - Biển số (from chi_tiet.bien_kiem_soat)
+ * J - URL (from chi_tiet.hinh_anh, converted to AppSheet public URL)
  */
 
 interface OrderData {
@@ -82,6 +83,7 @@ export async function generateYUNYIExcel(data: OrderData[]): Promise<ExcelJS.Buf
     { header: 'Lái xe 2', key: 'driver2', width: 20 },
     { header: 'Ngày vận chuyển quy hoạch', key: 'plannedDate', width: 22 },
     { header: 'Tuyến vận chuyển', key: 'route', width: 35 },
+    { header: 'Lộ trình', key: 'detailRoute', width: 40 },
     { header: 'Tem xe chiều đi', key: 'stampCode', width: 25 },
     { header: 'Đơn giá cố định', key: 'fixedPrice', width: 18 },
     { header: 'Biển số', key: 'licensePlate', width: 15 },
@@ -152,6 +154,7 @@ export async function generateYUNYIExcel(data: OrderData[]): Promise<ExcelJS.Buf
         driver2: driver2,
         plannedDate: formattedPlannedDate,
         route: item.tenTuyen || '',
+        detailRoute: item.loTrinh || '',
         stampCode: item.maTuyen || '',
         fixedPrice: item.donGia || '',
         licensePlate: item.bienKiemSoat || '',
