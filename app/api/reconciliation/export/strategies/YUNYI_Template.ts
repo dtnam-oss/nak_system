@@ -28,6 +28,7 @@ interface OrderData {
     chiTietLoTrinh?: Array<{
       ngayTrenTem?: string;
       loTrinh?: string;
+      tenTuyen?: string;
       maTuyen?: string;
       donGia?: string | number;
       bienKiemSoat?: string;
@@ -150,7 +151,7 @@ export async function generateYUNYIExcel(data: OrderData[]): Promise<ExcelJS.Buf
         driver1: driver1,
         driver2: driver2,
         plannedDate: formattedPlannedDate,
-        route: item.loTrinh || '',
+        route: item.tenTuyen || '',
         stampCode: item.maTuyen || '',
         fixedPrice: item.donGia || '',
         licensePlate: item.bienKiemSoat || '',
