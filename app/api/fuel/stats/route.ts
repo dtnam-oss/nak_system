@@ -69,47 +69,28 @@ export async function GET() {
     const totalExportAll = parseFloat(exportAllResult.rows[0]?.total_export || '0');
     console.log('✓ Total Export (All):', totalExportAll);
 
-    // 4. Tính tồn kho theo FIFO
-    // Call internal FIFO API to get accurate inventory
-    let currentInventory = totalImport - totalExportInternal; // Fallback to simple calculation
+    // 4. Tính tồn kho và giá bình quân
+    // Use simple calculation (Total Import - Internal Export)
+    let currentInventory = totalImport - totalExportInternal;
     let currentAvgPrice = 0;
     let inventoryValue = 0;
 
-    try {
-      // Try to use FIFO calculation
-      const fifoResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/fuel/inventory/fifo`);
-      if (fifoResponse.ok) {
-        const fifoData = await fifoResponse.json();
-        if (fifoData.success && fifoData.data.summary) {
-          currentInventory = fifoData.data.summary.total_remaining;
-          currentAvgPrice = fifoData.data.summary.current_avg_price;
-          inventoryValue = fifoData.data.summary.total_value;
-          console.log('✓ Using FIFO Inventory Calculation');
-          console.log(`  - FIFO Inventory: ${currentInventory}L`);
-          console.log(`  - FIFO Avg Price: ${currentAvgPrice} VND/L`);
-        }
-      }
-    } catch (fifoError) {
-      console.warn('⚠️ FIFO API call failed, using simple calculation');
-      console.warn('Error:', fifoError);
-      
-      // Fallback: Get avg price from latest import
-      const avgPriceResult = await sql`
-        SELECT COALESCE(
-          CASE
-            WHEN don_gia_xuat_binh_quan::TEXT IS NULL OR don_gia_xuat_binh_quan::TEXT = '' THEN 0
-            WHEN don_gia_xuat_binh_quan::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-            ELSE don_gia_xuat_binh_quan::NUMERIC
-          END
-        , 0) as avg_price
-        FROM public.nhap_nhien_lieu
-        WHERE don_gia_xuat_binh_quan IS NOT NULL
-        ORDER BY ngay_nhap DESC
-        LIMIT 1
-      `;
-      currentAvgPrice = parseFloat(avgPriceResult.rows[0]?.avg_price || '0');
-      inventoryValue = currentInventory * currentAvgPrice;
-    }
+    // Get avg price from latest import
+    const avgPriceResult = await sql`
+      SELECT COALESCE(
+        CASE
+          WHEN don_gia_xuat_binh_quan::TEXT IS NULL OR don_gia_xuat_binh_quan::TEXT = '' THEN 0
+          WHEN don_gia_xuat_binh_quan::TEXT !~ '^-?[0-9]*\\.?[0-9]+$' THEN 0
+          ELSE don_gia_xuat_binh_quan::NUMERIC
+        END
+      , 0) as avg_price
+      FROM public.nhap_nhien_lieu
+      WHERE don_gia_xuat_binh_quan IS NOT NULL
+      ORDER BY ngay_nhap DESC
+      LIMIT 1
+    `;
+    currentAvgPrice = parseFloat(avgPriceResult.rows[0]?.avg_price || '0');
+    inventoryValue = currentInventory * currentAvgPrice;
 
     console.log('✓ Final Current Inventory:', currentInventory);
     console.log('✓ Final Current Avg Price:', currentAvgPrice);
