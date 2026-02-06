@@ -57,12 +57,24 @@ export async function GET() {
     const importsResult = await sql`
       SELECT 
         id,
-        ngay_tao as import_date,
-        so_luong as quantity,
-        don_gia as unit_price,
-        don_gia_binh_quan as avg_price
+        ngay_nhap as import_date,
+        CASE
+          WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
+          WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+          ELSE so_luong::NUMERIC
+        END as quantity,
+        CASE
+          WHEN don_gia_nhap::TEXT IS NULL OR don_gia_nhap::TEXT = '' THEN 0
+          WHEN don_gia_nhap::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+          ELSE don_gia_nhap::NUMERIC
+        END as unit_price,
+        CASE
+          WHEN don_gia_xuat_binh_quan::TEXT IS NULL OR don_gia_xuat_binh_quan::TEXT = '' THEN 0
+          WHEN don_gia_xuat_binh_quan::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+          ELSE don_gia_xuat_binh_quan::NUMERIC
+        END as avg_price
       FROM nhap_nhien_lieu
-      ORDER BY ngay_tao ASC, thoi_gian_tao ASC
+      ORDER BY ngay_nhap ASC, thoi_gian_tao ASC
     `;
 
     const imports: FuelImport[] = importsResult.rows.map(row => ({
@@ -81,10 +93,14 @@ export async function GET() {
       SELECT 
         id,
         ngay_tao as transaction_date,
-        so_luong as quantity,
-        nguon_nhien_lieu as fuel_source
+        CASE
+          WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
+          WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+          ELSE so_luong::NUMERIC
+        END as quantity,
+        loai_hinh as fuel_source
       FROM xuat_nhien_lieu
-      WHERE LOWER(TRIM(nguon_nhien_lieu)) = 'trụ nội bộ'
+      WHERE LOWER(TRIM(loai_hinh)) = 'trụ nội bộ'
       ORDER BY ngay_tao ASC, thoi_gian_tao ASC
     `;
 

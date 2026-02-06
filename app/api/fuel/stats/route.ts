@@ -28,7 +28,13 @@ export async function GET() {
 
     // 1. Tổng nhập kho
     const importResult = await sql`
-      SELECT COALESCE(SUM(CAST(so_luong AS NUMERIC)), 0) as total_import
+      SELECT COALESCE(SUM(
+        CASE
+          WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
+          WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+          ELSE so_luong::NUMERIC
+        END
+      ), 0) as total_import
       FROM public.nhap_nhien_lieu
     `;
     const totalImport = parseFloat(importResult.rows[0]?.total_import || '0');
@@ -36,7 +42,13 @@ export async function GET() {
 
     // 2. Tổng xuất tại Trụ nội bộ (loai_hinh = 'Trụ nội bộ')
     const exportInternalResult = await sql`
-      SELECT COALESCE(SUM(CAST(so_luong AS NUMERIC)), 0) as total_export
+      SELECT COALESCE(SUM(
+        CASE
+          WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
+          WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+          ELSE so_luong::NUMERIC
+        END
+      ), 0) as total_export
       FROM public.xuat_nhien_lieu
       WHERE LOWER(TRIM(loai_hinh)) = 'trụ nội bộ'
     `;
@@ -45,7 +57,13 @@ export async function GET() {
 
     // 3. Tổng xuất tất cả (để tính tiêu thụ trong tháng)
     const exportAllResult = await sql`
-      SELECT COALESCE(SUM(CAST(so_luong AS NUMERIC)), 0) as total_export
+      SELECT COALESCE(SUM(
+        CASE
+          WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
+          WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+          ELSE so_luong::NUMERIC
+        END
+      ), 0) as total_export
       FROM public.xuat_nhien_lieu
     `;
     const totalExportAll = parseFloat(exportAllResult.rows[0]?.total_export || '0');
@@ -77,7 +95,13 @@ export async function GET() {
       
       // Fallback: Get avg price from latest import
       const avgPriceResult = await sql`
-        SELECT COALESCE(CAST(don_gia_xuat_binh_quan AS NUMERIC), 0) as avg_price
+        SELECT COALESCE(
+          CASE
+            WHEN don_gia_xuat_binh_quan::TEXT IS NULL OR don_gia_xuat_binh_quan::TEXT = '' THEN 0
+            WHEN don_gia_xuat_binh_quan::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+            ELSE don_gia_xuat_binh_quan::NUMERIC
+          END
+        , 0) as avg_price
         FROM public.nhap_nhien_lieu
         WHERE don_gia_xuat_binh_quan IS NOT NULL
         ORDER BY ngay_nhap DESC
@@ -92,7 +116,13 @@ export async function GET() {
 
     // 5. Tiêu thụ trong tháng hiện tại
     const monthlyResult = await sql`
-      SELECT COALESCE(SUM(CAST(so_luong AS NUMERIC)), 0) as monthly_consumption
+      SELECT COALESCE(SUM(
+        CASE
+          WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
+          WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
+          ELSE so_luong::NUMERIC
+        END
+      ), 0) as monthly_consumption
       FROM public.xuat_nhien_lieu
       WHERE DATE_TRUNC('month', ngay_tao::date) = DATE_TRUNC('month', CURRENT_DATE)
     `;

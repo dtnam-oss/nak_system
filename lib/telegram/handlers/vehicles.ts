@@ -95,13 +95,27 @@ export async function handleVehiclesFuel(ctx: BotContext) {
         // Get 5 vehicles with highest fuel consumption this month
         const result = await sql`
       SELECT 
-        bien_kiem_soat as "bienSo",
-        SUM(so_luong) as "tongDau",
-        AVG(hieu_suat) as "hieuSuatTB",
+        bien_so_xe as "bienSo",
+        SUM(
+          CASE
+            WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
+            WHEN so_luong::TEXT !~ '^-?[0-9]*\\.?[0-9]+$' THEN 0
+            ELSE so_luong::NUMERIC
+          END
+        ) as "tongDau",
+        AVG(
+          CASE
+            WHEN hieu_suat::TEXT IS NULL OR hieu_suat::TEXT = '' THEN 0
+            WHEN hieu_suat::TEXT !~ '^-?[0-9]*\\.?[0-9]+$' THEN 0
+            ELSE hieu_suat::NUMERIC
+          END
+        ) as "hieuSuatTB",
         COUNT(*) as "soLanDo"
       FROM xuat_nhien_lieu
       WHERE ngay_tao >= date_trunc('month', CURRENT_DATE)
-      GROUP BY bien_kiem_soat
+        AND bien_so_xe IS NOT NULL
+        AND bien_so_xe != ''
+      GROUP BY bien_so_xe
       ORDER BY "tongDau" DESC
       LIMIT 10
     `;
