@@ -77,10 +77,13 @@ export default function FuelPage() {
 
       // Fetch stats
       const statsResponse = await fetch('/api/fuel/stats');
-      if (!statsResponse.ok) {
-        throw new Error('Failed to fetch fuel stats');
-      }
       const statsData = await statsResponse.json();
+      
+      console.log('Stats API Response:', statsData);
+      
+      if (!statsData.success) {
+        throw new Error(statsData.message || statsData.error || 'Failed to fetch fuel stats');
+      }
       setStats(statsData.data);
 
       // Fetch transactions
