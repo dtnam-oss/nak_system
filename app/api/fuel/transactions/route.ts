@@ -6,14 +6,35 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = parseInt(searchParams.get('offset') || '0');
+    const fromDate = searchParams.get('fromDate');
+    const toDate = searchParams.get('toDate');
 
-    console.log(`📊 Fetching fuel transactions (limit: ${limit}, offset: ${offset})`);
+    console.log(`📊 Fetching fuel transactions (limit: ${limit}, offset: ${offset}, fromDate: ${fromDate}, toDate: ${toDate})`);
     console.log('ENV POSTGRES_URL:', process.env.POSTGRES_URL);
-    
+
     // Test simple query first
     const testResult = await query('SELECT COUNT(*) as count FROM public.xuat_nhien_lieu', []);
     console.log('Total rows in table:', testResult.rows[0].count);
-    
+
+    // Build WHERE conditions
+    const conditions = ['id IS NOT NULL'];
+    const params: any[] = [];
+    let paramIndex = 1;
+
+    if (fromDate) {
+      conditions.push(`ngay_tao >= $${paramIndex}::date`);
+      params.push(fromDate);
+      paramIndex++;
+    }
+
+    if (toDate) {
+      conditions.push(`ngay_tao <= $${paramIndex}::date`);
+      params.push(toDate);
+      paramIndex++;
+    }
+
+    params.push(limit, offset);
+
     const result = await query(`
       SELECT 
         id,
@@ -32,11 +53,11 @@ export async function GET(request: Request) {
         thoi_gian_tao as created_at,
         nguoi_tao as created_by
       FROM public.xuat_nhien_lieu
-      WHERE id IS NOT NULL
+      WHERE ${conditions.join(' AND ')}
       ORDER BY ngay_tao DESC NULLS LAST, thoi_gian_tao DESC NULLS LAST
-      LIMIT $1
-      OFFSET $2
-    `, [limit, offset]);
+      LIMIT $${paramIndex}
+      OFFSET $${paramIndex + 1}
+    `, params);
 
     console.log(`✓ Found ${result.rows.length} fuel transactions`);
     if (result.rows.length > 0) {

@@ -8,7 +8,10 @@ import { FuelImportsTable } from '@/components/fuel/fuel-imports-table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle, BarChart3 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { AlertCircle, BarChart3, Download, Calendar, X } from 'lucide-react';
 
 interface FuelStats {
   total_import: number;
@@ -58,17 +61,24 @@ export default function FuelPage() {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('transactions');
   const [fuelSourceTab, setFuelSourceTab] = useState<string>('all'); // all, internal, quangminh, vanglai
+  const [fromDate, setFromDate] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchData();
-    
-    // Auto-refresh every 30 seconds for real-time fuel data
-    const interval = setInterval(() => {
-      fetchData();
-    }, 30 * 1000);
-    
-    return () => clearInterval(interval);
-  }, []);
+  }, [fromDate, toDate]);
+
+  useEffect(() => {
+    // Auto-refresh every 30 seconds for real-time fuel data (only if no date filter)
+    if (!fromDate && !toDate) {
+      const interval = setInterval(() => {
+        fetchData();
+      }, 30 * 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [fromDate, toDate]);
 
   const fetchData = async () => {
     try {
@@ -86,8 +96,12 @@ export default function FuelPage() {
       }
       setStats(statsData.data);
 
-      // Fetch transactions
-      const transactionsResponse = await fetch('/api/fuel/transactions');
+      // Fetch transactions with date filter
+      const transactionsParams = new URLSearchParams();
+      if (fromDate) transactionsParams.set('fromDate', fromDate);
+      if (toDate) transactionsParams.set('toDate', toDate);
+
+      const transactionsResponse = await fetch(`/api/fuel/transactions?${transactionsParams.toString()}`);
       if (transactionsResponse.ok) {
         const transactionsData = await transactionsResponse.json();
         setTransactions(transactionsData.data || []);
@@ -106,6 +120,43 @@ export default function FuelPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+
+      const params = new URLSearchParams();
+      if (fromDate) params.set('fromDate', fromDate);
+      if (toDate) params.set('toDate', toDate);
+
+      const response = await fetch(`/api/fuel/transactions/export?${params.toString()}`);
+
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+
+      // Download file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `fuel_transactions${fromDate ? `_${fromDate}` : ''}${toDate ? `_to_${toDate}` : ''}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Export error:', err);
+      setError('Không thể xuất file Excel');
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const clearDateFilter = () => {
+    setFromDate('');
+    setToDate('');
   };
 
   return (
@@ -129,6 +180,71 @@ export default function FuelPage() {
 
         {/* KPI Cards */}
         <FuelKPICards stats={stats} loading={loading} />
+
+        {/* Date Filter and Export */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">Bộ lọc và Xuất dữ liệu</CardTitle>
+                <CardDescription>Lọc theo khoảng thời gian và xuất file Excel</CardDescription>
+              </div>
+              <Button
+                onClick={handleExport}
+                disabled={exporting || transactions.length === 0}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap items-end gap-4">
+              <div className="flex-1 min-w-[200px]">
+                <Label htmlFor="fromDate" className="flex items-center gap-2 mb-2">
+                  <Calendar className="h-4 w-4" />
+                  Từ ngày
+                </Label>
+                <Input
+                  id="fromDate"
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  max={toDate || undefined}
+                />
+              </div>
+              <div className="flex-1 min-w-[200px]">
+                <Label htmlFor="toDate" className="flex items-center gap-2 mb-2">
+                  <Calendar className="h-4 w-4" />
+                  Đến ngày
+                </Label>
+                <Input
+                  id="toDate"
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  min={fromDate || undefined}
+                />
+              </div>
+              {(fromDate || toDate) && (
+                <Button
+                  variant="outline"
+                  onClick={clearDateFilter}
+                  className="gap-2"
+                >
+                  <X className="h-4 w-4" />
+                  Xóa bộ lọc
+                </Button>
+              )}
+              {(fromDate || toDate) && (
+                <div className="text-sm text-muted-foreground">
+                  {transactions.length} bản ghi
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Tabs Section */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
