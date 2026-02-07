@@ -82,7 +82,11 @@ export function FuelTransactionsTable({ transactions, loading }: FuelTransaction
   }
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return '-';
+
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '-';
+
     return date.toLocaleDateString('vi-VN');
   };
 

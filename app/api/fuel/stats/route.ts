@@ -48,7 +48,8 @@ export async function GET() {
         END
       ), 0) as total_export
       FROM public.xuat_nhien_lieu
-      WHERE LOWER(TRIM(loai_hinh)) = 'trụ nội bộ'
+      WHERE id IS NOT NULL
+        AND LOWER(TRIM(loai_hinh)) = 'trụ nội bộ'
     `;
     const totalExportInternal = parseFloat(exportInternalResult.rows[0]?.total_export || '0');
     console.log('✓ Total Export (Internal):', totalExportInternal);
@@ -62,6 +63,7 @@ export async function GET() {
         END
       ), 0) as total_export
       FROM public.xuat_nhien_lieu
+      WHERE id IS NOT NULL
     `;
     const totalExportAll = parseFloat(exportAllResult.rows[0]?.total_export || '0');
     console.log('✓ Total Export (All):', totalExportAll);
@@ -100,7 +102,9 @@ export async function GET() {
         END
       ), 0) as monthly_consumption
       FROM public.xuat_nhien_lieu
-      WHERE DATE_TRUNC('month', ngay_tao::date) = DATE_TRUNC('month', CURRENT_DATE)
+      WHERE id IS NOT NULL
+        AND ngay_tao IS NOT NULL
+        AND DATE_TRUNC('month', ngay_tao::date) = DATE_TRUNC('month', CURRENT_DATE)
     `;
     const monthlyConsumption = parseFloat(monthlyResult.rows[0]?.monthly_consumption || '0');
     console.log('✓ Monthly Consumption:', monthlyConsumption);

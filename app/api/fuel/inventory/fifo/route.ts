@@ -78,13 +78,15 @@ export async function GET() {
 
     // 2. Lấy tất cả phiếu xuất tại "Trụ nội bộ" (sorted by transaction_date ASC)
     const transactionsResult = await sql`
-      SELECT 
+      SELECT
         id,
         ngay_tao as transaction_date,
         REPLACE(COALESCE(so_luong::TEXT, '0'), ',', '.')::NUMERIC as quantity,
         loai_hinh as fuel_source
       FROM xuat_nhien_lieu
-      WHERE LOWER(TRIM(loai_hinh)) = 'trụ nội bộ'
+      WHERE id IS NOT NULL
+        AND ngay_tao IS NOT NULL
+        AND LOWER(TRIM(loai_hinh)) = 'trụ nội bộ'
       ORDER BY ngay_tao ASC, thoi_gian_tao ASC
     `;
 
