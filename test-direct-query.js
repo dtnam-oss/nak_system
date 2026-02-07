@@ -11,28 +11,35 @@ const pool = new Pool({
 
 async function test() {
   try {
-    console.log('Testing direct database connection...\n');
+    console.log('Testing query with and without aliases...\n');
     
-    const result = await pool.query(`
+    console.log('1. Query WITH aliases (current API style):\n');
+    const withAlias = await pool.query(`
       SELECT 
         id,
-        ngay_nhap,
-        to_char(ngay_nhap, 'YYYY-MM-DD') as formatted_date,
-        nha_cung_cap,
-        ten_nhien_lieu,
-        so_luong
-      FROM public.nhap_nhien_lieu
-      ORDER BY ngay_nhap DESC
-      LIMIT 5
+        ngay_tao as transaction_date,
+        loai_hinh as fuel_source,
+        bien_so_xe as license_plate
+      FROM public.xuat_nhien_lieu
+      LIMIT 2
     `);
+    console.log(JSON.stringify(withAlias.rows, null, 2));
     
-    console.log('Query successful!');
-    console.log('Rows:', result.rowCount);
-    console.log('\nData:');
-    console.log(JSON.stringify(result.rows, null, 2));
+    console.log('\n2. Query WITHOUT aliases (direct column names):\n');
+    const noAlias = await pool.query(`
+      SELECT 
+        id,
+        ngay_tao,
+        loai_hinh,
+        bien_so_xe
+      FROM public.xuat_nhien_lieu
+      LIMIT 2
+    `);
+    console.log(JSON.stringify(noAlias.rows, null, 2));
     
   } catch (error) {
     console.error('Error:', error.message);
+    console.error('Stack:', error.stack);
   } finally {
     await pool.end();
   }
