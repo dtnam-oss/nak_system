@@ -17,7 +17,7 @@ const envPostgresUrl = process.env.POSTGRES_URL || '';
 const isSelfHosted = envPostgresUrl.includes('163.223.12.189');
 const SELF_HOSTED_POSTGRES_URL = process.env.SELF_HOSTED_POSTGRES_URL 
   || (isSelfHosted ? envPostgresUrl : null)
-  || 'postgresql://postgres:123@163.223.12.189:5432/nak_vn';
+  || 'postgresql://nak_user:123@163.223.12.189:5432/nak_vn';
 
 // Database configuration
 const DB_CONFIG = {
