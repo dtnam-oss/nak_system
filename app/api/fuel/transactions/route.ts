@@ -32,7 +32,8 @@ export async function GET(request: Request) {
         thoi_gian_tao as created_at,
         nguoi_tao as created_by
       FROM public.xuat_nhien_lieu
-      ORDER BY ngay_tao DESC
+      WHERE id IS NOT NULL
+      ORDER BY ngay_tao DESC NULLS LAST, thoi_gian_tao DESC NULLS LAST
       LIMIT $1
       OFFSET $2
     `, [limit, offset]);
