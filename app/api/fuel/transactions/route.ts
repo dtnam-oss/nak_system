@@ -15,7 +15,7 @@ export async function GET(request: Request) {
     console.log('Total rows in table:', testResult.rows[0].count);
     
     const result = await query(`
-      SELECT
+      SELECT 
         id,
         ngay_tao as transaction_date,
         loai_hinh as fuel_source,
@@ -32,8 +32,7 @@ export async function GET(request: Request) {
         thoi_gian_tao as created_at,
         nguoi_tao as created_by
       FROM public.xuat_nhien_lieu
-      WHERE id IS NOT NULL AND ngay_tao IS NOT NULL
-      ORDER BY ngay_tao DESC, thoi_gian_tao DESC NULLS LAST
+      ORDER BY ngay_tao DESC
       LIMIT $1
       OFFSET $2
     `, [limit, offset]);
