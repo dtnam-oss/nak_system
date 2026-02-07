@@ -99,11 +99,7 @@ export async function GET() {
       // 6. Fuel imports total
       sql`
         SELECT COALESCE(SUM(
-          CASE
-            WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
-            WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-            ELSE so_luong::NUMERIC
-          END
+          REPLACE(COALESCE(so_luong::TEXT, '0'), ',', '.')::NUMERIC
         ), 0) as total
         FROM nhap_nhien_lieu
       `,
@@ -111,11 +107,7 @@ export async function GET() {
       // 7. Fuel exports internal
       sql`
         SELECT COALESCE(SUM(
-          CASE
-            WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
-            WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-            ELSE so_luong::NUMERIC
-          END
+          REPLACE(COALESCE(so_luong::TEXT, '0'), ',', '.')::NUMERIC
         ), 0) as total
         FROM xuat_nhien_lieu
         WHERE LOWER(TRIM(loai_hinh)) = 'trụ nội bộ'
@@ -142,11 +134,7 @@ export async function GET() {
           SELECT 
             ngay_tao::date as date,
             COALESCE(SUM(
-              CASE
-                WHEN thanh_tien::TEXT IS NULL OR thanh_tien::TEXT = '' THEN 0
-                WHEN thanh_tien::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-                ELSE thanh_tien::NUMERIC
-              END
+              REPLACE(COALESCE(thanh_tien::TEXT, '0'), ',', '.')::NUMERIC
             ), 0) as fuel_cost
           FROM xuat_nhien_lieu
           WHERE ngay_tao >= CURRENT_DATE - INTERVAL '6 days'

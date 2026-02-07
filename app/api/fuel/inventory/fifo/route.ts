@@ -58,21 +58,9 @@ export async function GET() {
       SELECT 
         id,
         ngay_nhap as import_date,
-        CASE
-          WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
-          WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-          ELSE so_luong::NUMERIC
-        END as quantity,
-        CASE
-          WHEN don_gia_nhap::TEXT IS NULL OR don_gia_nhap::TEXT = '' THEN 0
-          WHEN don_gia_nhap::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-          ELSE don_gia_nhap::NUMERIC
-        END as unit_price,
-        CASE
-          WHEN don_gia_xuat_binh_quan::TEXT IS NULL OR don_gia_xuat_binh_quan::TEXT = '' THEN 0
-          WHEN don_gia_xuat_binh_quan::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-          ELSE don_gia_xuat_binh_quan::NUMERIC
-        END as avg_price
+        REPLACE(COALESCE(so_luong::TEXT, '0'), ',', '.')::NUMERIC as quantity,
+        REPLACE(COALESCE(don_gia_nhap::TEXT, '0'), ',', '.')::NUMERIC as unit_price,
+        REPLACE(COALESCE(don_gia_xuat_binh_quan::TEXT, '0'), ',', '.')::NUMERIC as avg_price
       FROM nhap_nhien_lieu
       ORDER BY ngay_nhap ASC, thoi_gian_tao ASC
     `;
@@ -93,11 +81,7 @@ export async function GET() {
       SELECT 
         id,
         ngay_tao as transaction_date,
-        CASE
-          WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
-          WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-          ELSE so_luong::NUMERIC
-        END as quantity,
+        REPLACE(COALESCE(so_luong::TEXT, '0'), ',', '.')::NUMERIC as quantity,
         loai_hinh as fuel_source
       FROM xuat_nhien_lieu
       WHERE LOWER(TRIM(loai_hinh)) = 'trụ nội bộ'

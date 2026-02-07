@@ -31,8 +31,7 @@ export async function GET() {
       SELECT COALESCE(SUM(
         CASE
           WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
-          WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-          ELSE so_luong::NUMERIC
+          ELSE REPLACE(so_luong::TEXT, ',', '.')::NUMERIC
         END
       ), 0) as total_import
       FROM public.nhap_nhien_lieu
@@ -45,8 +44,7 @@ export async function GET() {
       SELECT COALESCE(SUM(
         CASE
           WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
-          WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-          ELSE so_luong::NUMERIC
+          ELSE REPLACE(so_luong::TEXT, ',', '.')::NUMERIC
         END
       ), 0) as total_export
       FROM public.xuat_nhien_lieu
@@ -60,8 +58,7 @@ export async function GET() {
       SELECT COALESCE(SUM(
         CASE
           WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
-          WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-          ELSE so_luong::NUMERIC
+          ELSE REPLACE(so_luong::TEXT, ',', '.')::NUMERIC
         END
       ), 0) as total_export
       FROM public.xuat_nhien_lieu
@@ -80,8 +77,7 @@ export async function GET() {
       SELECT COALESCE(
         CASE
           WHEN don_gia_xuat_binh_quan::TEXT IS NULL OR don_gia_xuat_binh_quan::TEXT = '' THEN 0
-          WHEN don_gia_xuat_binh_quan::TEXT !~ '^-?[0-9]*\\.?[0-9]+$' THEN 0
-          ELSE don_gia_xuat_binh_quan::NUMERIC
+          ELSE REPLACE(don_gia_xuat_binh_quan::TEXT, ',', '.')::NUMERIC
         END
       , 0) as avg_price
       FROM public.nhap_nhien_lieu
@@ -100,8 +96,7 @@ export async function GET() {
       SELECT COALESCE(SUM(
         CASE
           WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
-          WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-          ELSE so_luong::NUMERIC
+          ELSE REPLACE(so_luong::TEXT, ',', '.')::NUMERIC
         END
       ), 0) as monthly_consumption
       FROM public.xuat_nhien_lieu

@@ -24,26 +24,10 @@ export async function GET(request: Request) {
             ngay_nhap as import_date,
             nha_cung_cap as supplier,
             ten_nhien_lieu as fuel_type,
-            CASE
-              WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
-              WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-              ELSE so_luong::NUMERIC
-            END as quantity,
-            CASE
-              WHEN don_gia_nhap::TEXT IS NULL OR don_gia_nhap::TEXT = '' THEN 0
-              WHEN don_gia_nhap::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-              ELSE don_gia_nhap::NUMERIC
-            END as unit_price,
-            CASE
-              WHEN thanh_tien::TEXT IS NULL OR thanh_tien::TEXT = '' THEN 0
-              WHEN thanh_tien::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-              ELSE thanh_tien::NUMERIC
-            END as total_amount,
-            CASE
-              WHEN don_gia_xuat_binh_quan::TEXT IS NULL OR don_gia_xuat_binh_quan::TEXT = '' THEN 0
-              WHEN don_gia_xuat_binh_quan::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-              ELSE don_gia_xuat_binh_quan::NUMERIC
-            END as avg_price,
+            REPLACE(COALESCE(so_luong::TEXT, '0'), ',', '.')::NUMERIC as quantity,
+            REPLACE(COALESCE(don_gia_nhap::TEXT, '0'), ',', '.')::NUMERIC as unit_price,
+            REPLACE(COALESCE(thanh_tien::TEXT, '0'), ',', '.')::NUMERIC as total_amount,
+            REPLACE(COALESCE(don_gia_xuat_binh_quan::TEXT, '0'), ',', '.')::NUMERIC as avg_price,
             nguoi_tao as created_by,
             thoi_gian_tao as created_at
           FROM public.nhap_nhien_lieu

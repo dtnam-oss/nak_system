@@ -27,26 +27,10 @@ export async function GET(request: Request) {
             bien_so_xe as license_plate,
             ten_tai_xe as driver_name,
             loai_nhien_lieu as fuel_type,
-            CASE
-              WHEN so_luong::TEXT IS NULL OR so_luong::TEXT = '' THEN 0
-              WHEN so_luong::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-              ELSE so_luong::NUMERIC
-            END as quantity,
-            CASE
-              WHEN don_gia::TEXT IS NULL OR don_gia::TEXT = '' THEN 0
-              WHEN don_gia::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-              ELSE don_gia::NUMERIC
-            END as unit_price,
-            CASE
-              WHEN thanh_tien::TEXT IS NULL OR thanh_tien::TEXT = '' THEN 0
-              WHEN thanh_tien::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-              ELSE thanh_tien::NUMERIC
-            END as total_amount,
-            CASE
-              WHEN so_odo::TEXT IS NULL OR so_odo::TEXT = '' THEN 0
-              WHEN so_odo::TEXT !~ '^-?[0-9]*\.?[0-9]+$' THEN 0
-              ELSE so_odo::NUMERIC
-            END as odo_number,
+            REPLACE(COALESCE(so_luong::TEXT, '0'), ',', '.')::NUMERIC as quantity,
+            REPLACE(COALESCE(don_gia::TEXT, '0'), ',', '.')::NUMERIC as unit_price,
+            REPLACE(COALESCE(thanh_tien::TEXT, '0'), ',', '.')::NUMERIC as total_amount,
+            REPLACE(COALESCE(so_odo::TEXT, '0'), ',', '.')::NUMERIC as odo_number,
             trang_thai as status,
             hang_muc as category,
             thoi_gian_tao as created_at,
