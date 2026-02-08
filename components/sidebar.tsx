@@ -6,6 +6,7 @@ import { useEffect, useState } from "react"
 import {
   LayoutDashboard,
   FileText,
+  DollarSign,
   GitCompare,
   Fuel,
   Truck,
@@ -44,9 +45,9 @@ const navigation: NavigationItem[] = [
     icon: LayoutDashboard,
   },
   {
-    name: "Báo cáo",
-    href: "/reports",
-    icon: FileText,
+    name: "Data lương",
+    href: "/salary",
+    icon: DollarSign,
   },
   {
     name: "Đối soát",
