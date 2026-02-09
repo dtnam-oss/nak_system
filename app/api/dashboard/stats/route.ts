@@ -168,8 +168,8 @@ export async function GET() {
       
       // 11. Recent activities
       sql`
-        SELECT 
-          id,
+        SELECT
+          ma_chuyen_di as id,
           ma_chuyen_di as order_id,
           ten_khach_hang as customer,
           trang_thai_chuyen_di as status,
