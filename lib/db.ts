@@ -15,9 +15,9 @@ import { Pool, PoolClient, QueryResult, QueryResultRow } from 'pg';
 // Use SELF_HOSTED_POSTGRES_URL first, then fallback to POSTGRES_URL if starts with self-hosted IP
 const envPostgresUrl = process.env.POSTGRES_URL || '';
 const isSelfHosted = envPostgresUrl.includes('163.223.12.189');
-const SELF_HOSTED_POSTGRES_URL = process.env.SELF_HOSTED_POSTGRES_URL 
+const SELF_HOSTED_POSTGRES_URL = process.env.SELF_HOSTED_POSTGRES_URL
   || (isSelfHosted ? envPostgresUrl : null)
-  || 'postgresql://nak_user:123@163.223.12.189:5432/nak_vn';
+  || 'postgresql://nak_user:Nak_Str0ng_2026@163.223.12.189:5432/nak_vn';
 
 // Database configuration
 const DB_CONFIG = {
