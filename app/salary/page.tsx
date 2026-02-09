@@ -6,6 +6,8 @@ import { SalaryTable } from '@/components/salary/salary-table';
 import { LuongChuyenTable } from '@/components/salary/luong-chuyen-table';
 import { LuongTongHopTable } from '@/components/salary/luong-tong-hop-table';
 import { CreateSalarySlipDialog } from '@/components/salary/create-salary-slip-dialog';
+import { EditSalaryDialog } from '@/components/salary/edit-salary-dialog';
+import { DeleteSalaryDialog } from '@/components/salary/delete-salary-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -95,6 +97,9 @@ export default function SalaryPage() {
 
   const [exporting, setExporting] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<LuongTongHopRecord | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -313,6 +318,14 @@ export default function SalaryPage() {
                 <LuongTongHopTable
                   data={tongHopData}
                   loading={loading}
+                  onEdit={(record) => {
+                    setSelectedRecord(record);
+                    setEditDialogOpen(true);
+                  }}
+                  onDelete={(record) => {
+                    setSelectedRecord(record);
+                    setDeleteDialogOpen(true);
+                  }}
                 />
               </CardContent>
             </Card>
@@ -381,6 +394,22 @@ export default function SalaryPage() {
       <CreateSalarySlipDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+        onSuccess={() => fetchData()}
+      />
+
+      {/* Edit Salary Dialog */}
+      <EditSalaryDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        record={selectedRecord}
+        onSuccess={() => fetchData()}
+      />
+
+      {/* Delete Salary Dialog */}
+      <DeleteSalaryDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        record={selectedRecord}
         onSuccess={() => fetchData()}
       />
     </DashboardLayout>
