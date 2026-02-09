@@ -22,7 +22,7 @@ const SELF_HOSTED_POSTGRES_URL = process.env.SELF_HOSTED_POSTGRES_URL
 // Database configuration
 const DB_CONFIG = {
   connectionString: SELF_HOSTED_POSTGRES_URL, // Use env var or fallback to hardcoded
-  ssl: false, // Self-hosted PostgreSQL doesn't need SSL
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false, // Enable SSL for production (Vercel)
   max: 20, // Maximum pool size
   min: 2, // Minimum pool size
   idleTimeoutMillis: 30000, // Close idle clients after 30s
