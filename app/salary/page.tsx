@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { SalaryTable } from '@/components/salary/salary-table';
 import { LuongChuyenTable } from '@/components/salary/luong-chuyen-table';
+import { LuongTongHopTable } from '@/components/salary/luong-tong-hop-table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -48,12 +49,35 @@ interface LuongChuyenRecord {
   don_vi_van_chuyen: string;
 }
 
+interface LuongTongHopRecord {
+  id: string;
+  ma_nhan_vien: string;
+  ten_nhan_vien: string;
+  phong_ban: string;
+  chuc_vu: string;
+  thang: number;
+  nam: number;
+  luong_chuyen: number;
+  cp_sua_chua: number;
+  cp_do_dau: number;
+  cp_phat_sinh: number;
+  cp_ccdc: number;
+  ho_tro: number;
+  truy_thu: number;
+  tru_coc: number;
+  hoan_coc: number;
+  tam_ung: number;
+  phat_nguoi: number;
+  bhxh: number;
+  khac: number;
+}
+
 export default function SalaryPage() {
   // Tab states - 5 tabs mới
   const [activeTab, setActiveTab] = useState('tong-hop');
 
   // Data states cho 5 tabs
-  const [tongHopData, setTongHopData] = useState<SalaryRecord[]>([]);
+  const [tongHopData, setTongHopData] = useState<LuongTongHopRecord[]>([]);
   const [luongChuyenData, setLuongChuyenData] = useState<LuongChuyenRecord[]>([]);
   const [suaChuaData, setSuaChuaData] = useState<any[]>([]);
   const [vetcData, setVetcData] = useState<any[]>([]);
@@ -80,15 +104,18 @@ export default function SalaryPage() {
       setError(null);
 
       if (activeTab === 'tong-hop') {
-        // Lương tổng hợp - Bảng lương cuối cùng đã trừ hết chi phí
+        // Lương tổng hợp - Lấy dữ liệu từ bảng luong_tong_hop
+        console.log(`📊 Fetching luong-tong-hop data for month=${selectedMonth}, year=${selectedYear}`);
         const response = await fetch(
-          `/api/salary/list?month=${selectedMonth}&year=${selectedYear}`
+          `/api/salary/luong-tong-hop?month=${selectedMonth}&year=${selectedYear}`
         );
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
+          console.error('❌ API Error:', errorData);
           throw new Error(errorData.error || 'Không thể tải dữ liệu lương tổng hợp');
         }
         const data = await response.json();
+        console.log('✅ Luong-tong-hop data received:', data);
         setTongHopData(data.data || []);
       } else if (activeTab === 'luong-chuyen') {
         // Lương chuyến - Lấy dữ liệu từ bảng luong_tai_xe
@@ -131,7 +158,7 @@ export default function SalaryPage() {
       let filename = '';
 
       if (activeTab === 'tong-hop') {
-        endpoint = `/api/salary/export?month=${selectedMonth}&year=${selectedYear}`;
+        endpoint = `/api/salary/luong-tong-hop/export?month=${selectedMonth}&year=${selectedYear}`;
         filename = `luong_tong_hop_${selectedMonth}_${selectedYear}.xlsx`;
       } else if (activeTab === 'luong-chuyen') {
         endpoint = `/api/salary/luong-chuyen/export?month=${selectedMonth}&year=${selectedYear}`;
@@ -268,10 +295,9 @@ export default function SalaryPage() {
           <TabsContent value="tong-hop">
             <Card>
               <CardContent className="pt-6">
-                <SalaryTable
-                  salaries={tongHopData}
+                <LuongTongHopTable
+                  data={tongHopData}
                   loading={loading}
-                  type="tong_hop"
                 />
               </CardContent>
             </Card>
