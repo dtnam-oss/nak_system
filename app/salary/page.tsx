@@ -5,13 +5,14 @@ import { DashboardLayout } from '@/components/dashboard-layout';
 import { SalaryTable } from '@/components/salary/salary-table';
 import { LuongChuyenTable } from '@/components/salary/luong-chuyen-table';
 import { LuongTongHopTable } from '@/components/salary/luong-tong-hop-table';
+import { CreateSalarySlipDialog } from '@/components/salary/create-salary-slip-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Download, Calendar } from 'lucide-react';
+import { AlertCircle, Download, Calendar, FilePlus } from 'lucide-react';
 
 interface SalaryRecord {
   id: number;
@@ -93,6 +94,7 @@ export default function SalaryPage() {
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
 
   const [exporting, setExporting] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -266,6 +268,19 @@ export default function SalaryPage() {
               {/* Spacer */}
               <div className="flex-1"></div>
 
+              {/* Create Salary Slip Button - Only show for tong-hop tab */}
+              {activeTab === 'tong-hop' && (
+                <Button
+                  onClick={() => setCreateDialogOpen(true)}
+                  size="sm"
+                  variant="default"
+                  className="gap-2"
+                >
+                  <FilePlus className="h-4 w-4" />
+                  Tạo phiếu lương
+                </Button>
+              )}
+
               {/* Export Button */}
               <Button
                 onClick={handleExport}
@@ -361,6 +376,13 @@ export default function SalaryPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Create Salary Slip Dialog */}
+      <CreateSalarySlipDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={() => fetchData()}
+      />
     </DashboardLayout>
   );
 }
