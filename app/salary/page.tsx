@@ -157,15 +157,7 @@ export default function SalaryPage() {
 
   return (
     <DashboardLayout breadcrumbs={[{ label: 'Dashboard' }, { label: 'Data lương' }]}>
-      <div className="space-y-6">
-        {/* Header - Đơn giản, không có KPI cards */}
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Data lương</h1>
-          <p className="text-muted-foreground mt-2">
-            Quản lý lương và chi phí tháng {selectedMonth}/{selectedYear}
-          </p>
-        </div>
-
+      <div className="space-y-4">
         {/* Error Alert */}
         {error && (
           <Alert variant="destructive">
@@ -174,21 +166,23 @@ export default function SalaryPage() {
           </Alert>
         )}
 
-        {/* Filters Card */}
+        {/* Filters Card - Compact */}
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex flex-wrap items-end gap-4">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-6">
+              {/* Filter Title */}
+              <div className="flex items-center gap-2 min-w-[80px]">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Bộ lọc</span>
+              </div>
+
               {/* Month Filter */}
-              <div className="flex-1 min-w-[150px]">
-                <Label className="flex items-center gap-2 mb-2">
-                  <Calendar className="h-4 w-4" />
-                  Tháng
-                </Label>
+              <div className="w-[140px]">
                 <Select
                   value={selectedMonth.toString()}
                   onValueChange={(v) => setSelectedMonth(parseInt(v))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -202,16 +196,12 @@ export default function SalaryPage() {
               </div>
 
               {/* Year Filter */}
-              <div className="flex-1 min-w-[150px]">
-                <Label className="flex items-center gap-2 mb-2">
-                  <Calendar className="h-4 w-4" />
-                  Năm
-                </Label>
+              <div className="w-[120px]">
                 <Select
                   value={selectedYear.toString()}
                   onValueChange={(v) => setSelectedYear(parseInt(v))}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="h-9">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -231,8 +221,9 @@ export default function SalaryPage() {
               <Button
                 onClick={handleExport}
                 disabled={exporting || (activeTab !== 'tong-hop' && activeTab !== 'luong-chuyen')}
-                className="gap-2"
+                size="sm"
                 variant="outline"
+                className="gap-2"
               >
                 <Download className="h-4 w-4" />
                 {exporting ? 'Đang xuất...' : 'Xuất Excel'}
