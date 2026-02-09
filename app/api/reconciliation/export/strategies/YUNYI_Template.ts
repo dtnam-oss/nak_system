@@ -25,6 +25,7 @@ interface OrderData {
   date: string | Date;
   customer: string;
   driver_name?: string;
+  provider?: string; // Đơn vị vận chuyển (NAK/VENDOR)
   details?: {
     chiTietLoTrinh?: Array<{
       ngayTrenTem?: string;
@@ -133,6 +134,9 @@ export async function generateYUNYIExcel(data: OrderData[]): Promise<ExcelJS.Buf
     // Split driver names from parent order
     const { driver1, driver2 } = splitDriverNames(order.driver_name);
 
+    // If provider is 'Vendor', override driver1 with 'Vendor'
+    const finalDriver1 = order.provider?.toUpperCase() === 'VENDOR' ? 'Vendor' : driver1;
+
     // Create one Excel row for each detail item
     details.forEach((item) => {
       // Format planned date from detail
@@ -150,7 +154,7 @@ export async function generateYUNYIExcel(data: OrderData[]): Promise<ExcelJS.Buf
 
       const row = worksheet.addRow({
         actualDate: formattedActualDate,
-        driver1: driver1,
+        driver1: finalDriver1,  // Use finalDriver1 (Vendor override logic)
         driver2: driver2,
         plannedDate: formattedPlannedDate,
         route: item.tenTuyen || '',
