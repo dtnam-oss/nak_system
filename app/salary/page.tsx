@@ -84,19 +84,26 @@ export default function SalaryPage() {
         const response = await fetch(
           `/api/salary/list?month=${selectedMonth}&year=${selectedYear}`
         );
-        if (response.ok) {
-          const data = await response.json();
-          setTongHopData(data.data || []);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || 'Không thể tải dữ liệu lương tổng hợp');
         }
+        const data = await response.json();
+        setTongHopData(data.data || []);
       } else if (activeTab === 'luong-chuyen') {
         // Lương chuyến - Lấy dữ liệu từ bảng luong_tai_xe
+        console.log(`📊 Fetching luong-chuyen data for month=${selectedMonth}, year=${selectedYear}`);
         const response = await fetch(
           `/api/salary/luong-chuyen?month=${selectedMonth}&year=${selectedYear}`
         );
-        if (response.ok) {
-          const data = await response.json();
-          setLuongChuyenData(data.data || []);
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('❌ API Error:', errorData);
+          throw new Error(errorData.error || 'Không thể tải dữ liệu lương chuyến');
         }
+        const data = await response.json();
+        console.log('✅ Luong-chuyen data received:', data);
+        setLuongChuyenData(data.data || []);
       } else if (activeTab === 'sua-chua') {
         // Chi phí sửa chữa - Empty state (chưa có data)
         setSuaChuaData([]);
