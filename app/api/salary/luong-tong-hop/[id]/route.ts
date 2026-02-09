@@ -59,10 +59,28 @@ export async function PATCH(
 
     console.log(`✅ Updated salary record ${id}`);
 
+    // Convert numeric fields to actual numbers
+    const updatedRecord = {
+      ...result.rows[0],
+      luong_chuyen: parseFloat(result.rows[0].luong_chuyen) || 0,
+      cp_sua_chua: parseFloat(result.rows[0].cp_sua_chua) || 0,
+      cp_do_dau: parseFloat(result.rows[0].cp_do_dau) || 0,
+      cp_phat_sinh: parseFloat(result.rows[0].cp_phat_sinh) || 0,
+      cp_ccdc: parseFloat(result.rows[0].cp_ccdc) || 0,
+      ho_tro: parseFloat(result.rows[0].ho_tro) || 0,
+      truy_thu: parseFloat(result.rows[0].truy_thu) || 0,
+      tru_coc: parseFloat(result.rows[0].tru_coc) || 0,
+      hoan_coc: parseFloat(result.rows[0].hoan_coc) || 0,
+      tam_ung: parseFloat(result.rows[0].tam_ung) || 0,
+      phat_nguoi: parseFloat(result.rows[0].phat_nguoi) || 0,
+      bhxh: parseFloat(result.rows[0].bhxh) || 0,
+      khac: parseFloat(result.rows[0].khac) || 0,
+    };
+
     return NextResponse.json({
       success: true,
       message: 'Salary record updated successfully',
-      data: result.rows[0],
+      data: updatedRecord,
     });
 
   } catch (error: any) {

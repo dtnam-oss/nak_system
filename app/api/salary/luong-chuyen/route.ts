@@ -68,10 +68,16 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {});
 
+    // Convert numeric fields to actual numbers
+    const processedData = result.rows.map(row => ({
+      ...row,
+      luong_tai_xe: parseFloat(row.luong_tai_xe) || 0,
+    }));
+
     return NextResponse.json({
       success: true,
-      data: result.rows,
-      count: result.rows.length,
+      data: processedData,
+      count: processedData.length,
       summary: {
         total_luong: totalLuong,
         total_chuyen: totalChuyen,

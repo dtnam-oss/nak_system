@@ -69,10 +69,28 @@ export async function GET(request: NextRequest) {
       return sum + (income - deductions);
     }, 0);
 
+    // Convert all numeric fields from strings to numbers
+    const processedData = result.rows.map(row => ({
+      ...row,
+      luong_chuyen: parseFloat(row.luong_chuyen) || 0,
+      cp_sua_chua: parseFloat(row.cp_sua_chua) || 0,
+      cp_do_dau: parseFloat(row.cp_do_dau) || 0,
+      cp_phat_sinh: parseFloat(row.cp_phat_sinh) || 0,
+      cp_ccdc: parseFloat(row.cp_ccdc) || 0,
+      ho_tro: parseFloat(row.ho_tro) || 0,
+      truy_thu: parseFloat(row.truy_thu) || 0,
+      tru_coc: parseFloat(row.tru_coc) || 0,
+      hoan_coc: parseFloat(row.hoan_coc) || 0,
+      tam_ung: parseFloat(row.tam_ung) || 0,
+      phat_nguoi: parseFloat(row.phat_nguoi) || 0,
+      bhxh: parseFloat(row.bhxh) || 0,
+      khac: parseFloat(row.khac) || 0,
+    }));
+
     return NextResponse.json({
       success: true,
-      data: result.rows,
-      count: result.rows.length,
+      data: processedData,
+      count: processedData.length,
       summary: {
         total_records: totalRecords,
         total_luong_chuyen: totalLuongChuyen,
