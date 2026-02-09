@@ -62,6 +62,9 @@ export async function GET(request: NextRequest) {
     const params: any[] = [];
     let paramIndex = 1;
 
+    // ALWAYS exclude cancelled trips (Hủy) from export
+    conditions.push(`cd.trang_thai_chuyen_di NOT IN ('Hủy', 'Huỷ')`);
+
     if (fromDate) {
       conditions.push(`cd.ngay_tao::date >= $${paramIndex}::date`);
       params.push(fromDate);
