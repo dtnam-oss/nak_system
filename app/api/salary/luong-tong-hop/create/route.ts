@@ -1,5 +1,6 @@
 import { query } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
       }
 
       try {
+        const newId = randomUUID(); // Generate UUID in Node.js
         await query(`
           INSERT INTO luong_tong_hop (
             id,
@@ -90,11 +92,11 @@ export async function POST(request: NextRequest) {
             bhxh,
             khac
           ) VALUES (
-            gen_random_uuid(),
-            $1, $2, $3, $4, $5, $6,
+            $1, $2, $3, $4, $5, $6, $7,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
           )
         `, [
+          newId,
           driver.ma_nhan_vien,
           driver.ho_va_ten,
           driver.phong_ban,
