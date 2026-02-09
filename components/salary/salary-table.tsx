@@ -33,7 +33,7 @@ interface SalaryRecord {
 interface SalaryTableProps {
   salaries: SalaryRecord[];
   loading?: boolean;
-  type?: 'nhan_vien' | 'tai_xe';
+  type?: 'nhan_vien' | 'tai_xe' | 'tong_hop';
 }
 
 export function SalaryTable({ salaries, loading, type }: SalaryTableProps) {
@@ -64,7 +64,7 @@ export function SalaryTable({ salaries, loading, type }: SalaryTableProps) {
   if (salaries.length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Chưa có dữ liệu lương cho tháng này. Nhấn nút "Tính lương tháng này" để bắt đầu.
+        Chưa có dữ liệu lương cho tháng này.
       </div>
     );
   }
@@ -76,9 +76,10 @@ export function SalaryTable({ salaries, loading, type }: SalaryTableProps) {
           <TableRow>
             <TableHead className="w-[100px]">Mã NV</TableHead>
             <TableHead className="min-w-[200px]">Họ tên</TableHead>
+            {type === 'tong_hop' && <TableHead>Loại</TableHead>}
             <TableHead>Phòng ban</TableHead>
             <TableHead>Chức vụ</TableHead>
-            {type === 'tai_xe' && (
+            {(type === 'tai_xe' || type === 'tong_hop') && (
               <>
                 <TableHead className="text-right">Số chuyến</TableHead>
                 <TableHead className="text-right">Doanh thu</TableHead>
@@ -99,13 +100,27 @@ export function SalaryTable({ salaries, loading, type }: SalaryTableProps) {
             <TableRow key={salary.id}>
               <TableCell className="font-medium">{salary.ma_nhan_vien}</TableCell>
               <TableCell>{salary.ho_va_ten}</TableCell>
+              {type === 'tong_hop' && (
+                <TableCell>
+                  <Badge variant={salary.loai_nhan_vien === 'tai_xe' ? 'default' : 'secondary'}>
+                    {salary.loai_nhan_vien === 'tai_xe' ? 'Tài xế' : 'Nhân viên'}
+                  </Badge>
+                </TableCell>
+              )}
               <TableCell>{salary.phong_ban || '-'}</TableCell>
               <TableCell>{salary.chuc_vu || '-'}</TableCell>
-              {type === 'tai_xe' && (
+              {(type === 'tai_xe' || (type === 'tong_hop' && salary.loai_nhan_vien === 'tai_xe')) && (
                 <>
                   <TableCell className="text-right">{salary.so_chuyen_di || 0}</TableCell>
                   <TableCell className="text-right">{formatCurrency(salary.tong_doanh_thu)}</TableCell>
                   <TableCell className="text-right">{formatCurrency(salary.luong_theo_chuyen)}</TableCell>
+                </>
+              )}
+              {type === 'tong_hop' && salary.loai_nhan_vien !== 'tai_xe' && (
+                <>
+                  <TableCell className="text-right">-</TableCell>
+                  <TableCell className="text-right">-</TableCell>
+                  <TableCell className="text-right">-</TableCell>
                 </>
               )}
               <TableCell className="text-right">{formatCurrency(salary.luong_co_ban)}</TableCell>

@@ -2,25 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
-import { SalaryKPICards } from '@/components/salary/salary-kpi-cards';
 import { SalaryTable } from '@/components/salary/salary-table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Download, Calculator, Calendar } from 'lucide-react';
-
-interface SalaryStats {
-  total_salary_month: number;
-  total_employees: number;
-  avg_salary: number;
-  total_drivers: number;
-  total_driver_salary: number;
-  total_employee_salary: number;
-  pending_count: number;
-}
+import { AlertCircle, Download, Calendar } from 'lucide-react';
 
 interface SalaryRecord {
   id: number;
@@ -45,105 +34,70 @@ interface SalaryRecord {
 }
 
 export default function SalaryPage() {
-  const [stats, setStats] = useState<SalaryStats | null>(null);
-  const [employeeSalaries, setEmployeeSalaries] = useState<SalaryRecord[]>([]);
-  const [driverSalaries, setDriverSalaries] = useState<SalaryRecord[]>([]);
+  // Tab states - 5 tabs mới
+  const [activeTab, setActiveTab] = useState('tong-hop');
+
+  // Data states cho 5 tabs
+  const [tongHopData, setTongHopData] = useState<SalaryRecord[]>([]);
+  const [luongChuyenData, setLuongChuyenData] = useState<SalaryRecord[]>([]);
+  const [suaChuaData, setSuaChuaData] = useState<any[]>([]);
+  const [vetcData, setVetcData] = useState<any[]>([]);
+  const [truyThuData, setTruyThuData] = useState<any[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('employees');
 
   // Filters
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
   const [selectedMonth, setSelectedMonth] = useState<number>(currentMonth);
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
-  const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
 
   const [exporting, setExporting] = useState(false);
-  const [calculating, setCalculating] = useState(false);
 
   useEffect(() => {
     fetchData();
-  }, [selectedMonth, selectedYear, selectedDepartment, selectedStatus]);
+  }, [selectedMonth, selectedYear, activeTab]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Fetch stats
-      const statsResponse = await fetch(
-        `/api/salary/stats?month=${selectedMonth}&year=${selectedYear}`
-      );
-      const statsData = await statsResponse.json();
-
-      if (!statsData.success) {
-        throw new Error(statsData.error || 'Failed to fetch salary stats');
-      }
-      setStats(statsData.data);
-
-      // Fetch employee salaries
-      const employeeParams = new URLSearchParams({
-        month: selectedMonth.toString(),
-        year: selectedYear.toString(),
-        type: 'nhan_vien',
-      });
-      if (selectedDepartment !== 'all') employeeParams.set('department', selectedDepartment);
-      if (selectedStatus !== 'all') employeeParams.set('status', selectedStatus);
-
-      const employeeResponse = await fetch(`/api/salary/list?${employeeParams.toString()}`);
-      if (employeeResponse.ok) {
-        const employeeData = await employeeResponse.json();
-        setEmployeeSalaries(employeeData.data || []);
-      }
-
-      // Fetch driver salaries
-      const driverParams = new URLSearchParams({
-        month: selectedMonth.toString(),
-        year: selectedYear.toString(),
-        type: 'tai_xe',
-      });
-      if (selectedStatus !== 'all') driverParams.set('status', selectedStatus);
-
-      const driverResponse = await fetch(`/api/salary/list?${driverParams.toString()}`);
-      if (driverResponse.ok) {
-        const driverData = await driverResponse.json();
-        setDriverSalaries(driverData.data || []);
+      if (activeTab === 'tong-hop') {
+        // Lương tổng hợp - Bảng lương cuối cùng đã trừ hết chi phí
+        const response = await fetch(
+          `/api/salary/list?month=${selectedMonth}&year=${selectedYear}`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setTongHopData(data.data || []);
+        }
+      } else if (activeTab === 'luong-chuyen') {
+        // Lương chuyến - Chỉ lấy tài xế
+        const response = await fetch(
+          `/api/salary/list?month=${selectedMonth}&year=${selectedYear}&type=tai_xe`
+        );
+        if (response.ok) {
+          const data = await response.json();
+          setLuongChuyenData(data.data || []);
+        }
+      } else if (activeTab === 'sua-chua') {
+        // Chi phí sửa chữa - Empty state (chưa có data)
+        setSuaChuaData([]);
+      } else if (activeTab === 'vetc') {
+        // Chi phí VETC - Empty state (chưa có data)
+        setVetcData([]);
+      } else if (activeTab === 'truy-thu') {
+        // Truy thu - Empty state (chưa có data)
+        setTruyThuData([]);
       }
 
     } catch (err: any) {
-      console.error('Error fetching salary data:', err);
-      setError(err.message || 'Không thể tải dữ liệu lương');
+      console.error('Error fetching data:', err);
+      setError(err.message || 'Không thể tải dữ liệu');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleCalculateSalary = async () => {
-    try {
-      setCalculating(true);
-      setError(null);
-
-      const response = await fetch('/api/salary/calculate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ month: selectedMonth, year: selectedYear }),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Tính lương thất bại');
-      }
-
-      alert(`✅ ${result.message}`);
-      fetchData(); // Refresh data
-    } catch (err: any) {
-      console.error('Error calculating salary:', err);
-      setError(err.message || 'Không thể tính lương');
-    } finally {
-      setCalculating(false);
     }
   };
 
@@ -151,14 +105,22 @@ export default function SalaryPage() {
     try {
       setExporting(true);
 
-      const params = new URLSearchParams({
-        month: selectedMonth.toString(),
-        year: selectedYear.toString(),
-      });
-      if (activeTab === 'employees') params.set('type', 'nhan_vien');
-      if (activeTab === 'drivers') params.set('type', 'tai_xe');
+      let endpoint = '';
+      let filename = '';
 
-      const response = await fetch(`/api/salary/export?${params.toString()}`);
+      if (activeTab === 'tong-hop') {
+        endpoint = `/api/salary/export?month=${selectedMonth}&year=${selectedYear}`;
+        filename = `luong_tong_hop_${selectedMonth}_${selectedYear}.xlsx`;
+      } else if (activeTab === 'luong-chuyen') {
+        endpoint = `/api/salary/export?month=${selectedMonth}&year=${selectedYear}&type=tai_xe`;
+        filename = `luong_chuyen_${selectedMonth}_${selectedYear}.xlsx`;
+      } else {
+        // Các tabs khác chưa có export
+        alert('Chức năng export cho tab này chưa có dữ liệu');
+        return;
+      }
+
+      const response = await fetch(endpoint);
 
       if (!response.ok) {
         const error = await response.json();
@@ -170,7 +132,7 @@ export default function SalaryPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `bang_luong_${selectedMonth}_${selectedYear}.xlsx`;
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -183,26 +145,25 @@ export default function SalaryPage() {
     }
   };
 
+  const EmptyState = ({ message }: { message: string }) => (
+    <div className="flex flex-col items-center justify-center py-12 text-center">
+      <div className="rounded-full bg-gray-100 p-3 mb-4">
+        <AlertCircle className="h-6 w-6 text-gray-400" />
+      </div>
+      <h3 className="text-sm font-medium text-gray-900 mb-1">Chưa có dữ liệu</h3>
+      <p className="text-sm text-gray-500">{message}</p>
+    </div>
+  );
+
   return (
     <DashboardLayout breadcrumbs={[{ label: 'Dashboard' }, { label: 'Data lương' }]}>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Quản lý Data lương</h1>
-            <p className="text-muted-foreground mt-2">
-              Tính toán và quản lý lương nhân viên & tài xế tháng {selectedMonth}/{selectedYear}
-            </p>
-          </div>
-          <Button
-            onClick={handleCalculateSalary}
-            disabled={calculating}
-            className="gap-2"
-            variant="default"
-          >
-            <Calculator className="h-4 w-4" />
-            {calculating ? 'Đang tính...' : 'Tính lương tháng này'}
-          </Button>
+        {/* Header - Đơn giản, không có KPI cards */}
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Data lương</h1>
+          <p className="text-muted-foreground mt-2">
+            Quản lý lương và chi phí tháng {selectedMonth}/{selectedYear}
+          </p>
         </div>
 
         {/* Error Alert */}
@@ -213,29 +174,9 @@ export default function SalaryPage() {
           </Alert>
         )}
 
-        {/* KPI Cards */}
-        <SalaryKPICards stats={stats} loading={loading} />
-
-        {/* Filters */}
+        {/* Filters Card */}
         <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">Bộ lọc và Xuất dữ liệu</CardTitle>
-                <CardDescription>Lọc theo tháng, phòng ban, trạng thái</CardDescription>
-              </div>
-              <Button
-                onClick={handleExport}
-                disabled={exporting}
-                className="gap-2"
-                variant="outline"
-              >
-                <Download className="h-4 w-4" />
-                {exporting ? 'Đang xuất...' : 'Xuất Excel'}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-6">
             <div className="flex flex-wrap items-end gap-4">
               {/* Month Filter */}
               <div className="flex-1 min-w-[150px]">
@@ -283,94 +224,100 @@ export default function SalaryPage() {
                 </Select>
               </div>
 
-              {/* Department Filter (only for employees tab) */}
-              {activeTab === 'employees' && (
-                <div className="flex-1 min-w-[150px]">
-                  <Label className="mb-2">Phòng ban</Label>
-                  <Select
-                    value={selectedDepartment}
-                    onValueChange={setSelectedDepartment}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tất cả</SelectItem>
-                      <SelectItem value="Van phong">Văn phòng</SelectItem>
-                      <SelectItem value="Tai chinh">Tài chính</SelectItem>
-                      <SelectItem value="Van hanh">Vận hành</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              {/* Spacer */}
+              <div className="flex-1"></div>
 
-              {/* Status Filter */}
-              <div className="flex-1 min-w-[150px]">
-                <Label className="mb-2">Trạng thái</Label>
-                <Select
-                  value={selectedStatus}
-                  onValueChange={setSelectedStatus}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tất cả</SelectItem>
-                    <SelectItem value="chua_thanh_toan">Chưa thanh toán</SelectItem>
-                    <SelectItem value="da_xac_nhan">Đã xác nhận</SelectItem>
-                    <SelectItem value="da_thanh_toan">Đã thanh toán</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* Export Button */}
+              <Button
+                onClick={handleExport}
+                disabled={exporting || (activeTab !== 'tong-hop' && activeTab !== 'luong-chuyen')}
+                className="gap-2"
+                variant="outline"
+              >
+                <Download className="h-4 w-4" />
+                {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Tabs Section */}
+        {/* Tabs Section - 5 tabs mới */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="employees">
-              Lương nhân viên ({employeeSalaries.length})
-            </TabsTrigger>
-            <TabsTrigger value="drivers">
-              Lương tài xế ({driverSalaries.length})
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="tong-hop">Lương tổng hợp</TabsTrigger>
+            <TabsTrigger value="luong-chuyen">Lương chuyến</TabsTrigger>
+            <TabsTrigger value="sua-chua">Chi phí sửa chữa</TabsTrigger>
+            <TabsTrigger value="vetc">Chi phí VETC</TabsTrigger>
+            <TabsTrigger value="truy-thu">Truy thu</TabsTrigger>
           </TabsList>
 
-          {/* Tab 1: Employee Salaries */}
-          <TabsContent value="employees" className="space-y-4">
+          {/* Tab 1: Lương tổng hợp */}
+          <TabsContent value="tong-hop">
             <Card>
-              <CardHeader>
-                <CardTitle>Bảng lương nhân viên</CardTitle>
-                <CardDescription>
-                  Lương cố định theo hợp đồng - Tháng {selectedMonth}/{selectedYear}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <SalaryTable
-                  salaries={employeeSalaries}
+                  salaries={tongHopData}
                   loading={loading}
-                  type="nhan_vien"
+                  type="tong_hop"
                 />
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Tab 2: Driver Salaries */}
-          <TabsContent value="drivers" className="space-y-4">
+          {/* Tab 2: Lương chuyến */}
+          <TabsContent value="luong-chuyen">
             <Card>
-              <CardHeader>
-                <CardTitle>Bảng lương tài xế</CardTitle>
-                <CardDescription>
-                  Lương tính theo doanh thu chuyến đi (15%) - Tháng {selectedMonth}/{selectedYear}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
+              <CardContent className="pt-6">
                 <SalaryTable
-                  salaries={driverSalaries}
+                  salaries={luongChuyenData}
                   loading={loading}
                   type="tai_xe"
                 />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab 3: Chi phí sửa chữa */}
+          <TabsContent value="sua-chua">
+            <Card>
+              <CardContent className="pt-6">
+                {loading ? (
+                  <div className="text-center py-8 text-muted-foreground">Đang tải...</div>
+                ) : suaChuaData.length > 0 ? (
+                  <div>Table chi phí sửa chữa (coming soon)</div>
+                ) : (
+                  <EmptyState message="Dữ liệu chi phí sửa chữa sẽ được cập nhật sau" />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab 4: Chi phí VETC */}
+          <TabsContent value="vetc">
+            <Card>
+              <CardContent className="pt-6">
+                {loading ? (
+                  <div className="text-center py-8 text-muted-foreground">Đang tải...</div>
+                ) : vetcData.length > 0 ? (
+                  <div>Table chi phí VETC (coming soon)</div>
+                ) : (
+                  <EmptyState message="Dữ liệu chi phí VETC sẽ được cập nhật sau" />
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab 5: Truy thu */}
+          <TabsContent value="truy-thu">
+            <Card>
+              <CardContent className="pt-6">
+                {loading ? (
+                  <div className="text-center py-8 text-muted-foreground">Đang tải...</div>
+                ) : truyThuData.length > 0 ? (
+                  <div>Table truy thu (coming soon)</div>
+                ) : (
+                  <EmptyState message="Dữ liệu truy thu sẽ được cập nhật sau" />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
