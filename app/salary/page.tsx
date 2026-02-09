@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { SalaryTable } from '@/components/salary/salary-table';
+import { LuongChuyenTable } from '@/components/salary/luong-chuyen-table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -33,13 +34,27 @@ interface SalaryRecord {
   ngay_thanh_toan: string;
 }
 
+interface LuongChuyenRecord {
+  ma_chuyen_di: string;
+  ngay_tao: string;
+  nam: number;
+  thang: number;
+  ten_khach_hang: string;
+  loai_chuyen: string;
+  ten_tuyen: string;
+  ma_tuyen: string;
+  luong_tai_xe: number;
+  ten_tai_xe: string;
+  don_vi_van_chuyen: string;
+}
+
 export default function SalaryPage() {
   // Tab states - 5 tabs mới
   const [activeTab, setActiveTab] = useState('tong-hop');
 
   // Data states cho 5 tabs
   const [tongHopData, setTongHopData] = useState<SalaryRecord[]>([]);
-  const [luongChuyenData, setLuongChuyenData] = useState<SalaryRecord[]>([]);
+  const [luongChuyenData, setLuongChuyenData] = useState<LuongChuyenRecord[]>([]);
   const [suaChuaData, setSuaChuaData] = useState<any[]>([]);
   const [vetcData, setVetcData] = useState<any[]>([]);
   const [truyThuData, setTruyThuData] = useState<any[]>([]);
@@ -74,9 +89,9 @@ export default function SalaryPage() {
           setTongHopData(data.data || []);
         }
       } else if (activeTab === 'luong-chuyen') {
-        // Lương chuyến - Chỉ lấy tài xế
+        // Lương chuyến - Lấy dữ liệu từ bảng luong_tai_xe
         const response = await fetch(
-          `/api/salary/list?month=${selectedMonth}&year=${selectedYear}&type=tai_xe`
+          `/api/salary/luong-chuyen?month=${selectedMonth}&year=${selectedYear}`
         );
         if (response.ok) {
           const data = await response.json();
@@ -112,7 +127,7 @@ export default function SalaryPage() {
         endpoint = `/api/salary/export?month=${selectedMonth}&year=${selectedYear}`;
         filename = `luong_tong_hop_${selectedMonth}_${selectedYear}.xlsx`;
       } else if (activeTab === 'luong-chuyen') {
-        endpoint = `/api/salary/export?month=${selectedMonth}&year=${selectedYear}&type=tai_xe`;
+        endpoint = `/api/salary/luong-chuyen/export?month=${selectedMonth}&year=${selectedYear}`;
         filename = `luong_chuyen_${selectedMonth}_${selectedYear}.xlsx`;
       } else {
         // Các tabs khác chưa có export
@@ -259,10 +274,9 @@ export default function SalaryPage() {
           <TabsContent value="luong-chuyen">
             <Card>
               <CardContent className="pt-6">
-                <SalaryTable
-                  salaries={luongChuyenData}
+                <LuongChuyenTable
+                  data={luongChuyenData}
                   loading={loading}
-                  type="tai_xe"
                 />
               </CardContent>
             </Card>
