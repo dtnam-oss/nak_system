@@ -2,7 +2,7 @@ const { Pool } = require('pg');
 
 async function checkLuongTaiXe() {
   const pool = new Pool({
-    connectionString: 'postgresql://nak_user:123@163.223.12.189:5432/nak_vn',
+    connectionString: 'postgresql://nak_user:Nak_Str0ng_2026@163.223.12.189:5432/nak_vn',
   });
 
   try {

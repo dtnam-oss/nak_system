@@ -11,7 +11,7 @@ const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
 
-const CONNECTION_STRING = 'postgresql://nak_user:123@163.223.12.189:6432/nak_vn';
+const CONNECTION_STRING = 'postgresql://nak_user:Nak_Str0ng_2026@163.223.12.189:6432/nak_vn';
 
 async function getTableSchema(pool, tableName) {
   const result = await pool.query(`

@@ -3,7 +3,7 @@
 const { Pool } = require('pg');
 
 const pool = new Pool({
-  connectionString: 'postgresql://nak_user:123@163.223.12.189:6432/nak_vn'
+  connectionString: 'postgresql://nak_user:Nak_Str0ng_2026@163.223.12.189:6432/nak_vn'
 });
 
 async function testReconciliationQuery() {
