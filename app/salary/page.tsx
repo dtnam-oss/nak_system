@@ -7,6 +7,7 @@ import { LuongChuyenTable } from '@/components/salary/luong-chuyen-table';
 import { LuongTongHopTable } from '@/components/salary/luong-tong-hop-table';
 import { MaintenanceTable } from '@/components/maintenance/maintenance-table';
 import { TienCocTable } from '@/components/salary/tien-coc-table';
+import { TienThuongTable } from '@/components/salary/tien-thuong-table';
 import { CreateSalarySlipDialog } from '@/components/salary/create-salary-slip-dialog';
 import { EditSalaryDialog } from '@/components/salary/edit-salary-dialog';
 import { DeleteSalaryDialog } from '@/components/salary/delete-salary-dialog';
@@ -121,17 +122,29 @@ interface TienCocRecord {
   nam: number;
 }
 
+interface TienThuongRecord {
+  id: string;
+  ma_nhan_vien: string;
+  ho_va_ten: string;
+  email: string;
+  hang_muc: string;
+  tien_thuong: number;
+  thang: number;
+  nam: number;
+}
+
 export default function SalaryPage() {
   // Tab states - 5 tabs mới
   const [activeTab, setActiveTab] = useState('tong-hop');
 
-  // Data states cho 6 tabs
+  // Data states cho 7 tabs
   const [tongHopData, setTongHopData] = useState<LuongTongHopRecord[]>([]);
   const [luongChuyenData, setLuongChuyenData] = useState<LuongChuyenRecord[]>([]);
   const [suaChuaData, setSuaChuaData] = useState<MaintenanceRecord[]>([]);
   const [vetcData, setVetcData] = useState<any[]>([]);
   const [truyThuData, setTruyThuData] = useState<any[]>([]);
   const [tienCocData, setTienCocData] = useState<TienCocRecord[]>([]);
+  const [tienThuongData, setTienThuongData] = useState<TienThuongRecord[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -226,6 +239,20 @@ export default function SalaryPage() {
         const data = await response.json();
         console.log('✅ Tien-coc data received:', data);
         setTienCocData(data.data || []);
+      } else if (activeTab === 'tien-thuong') {
+        // Tiền thưởng - Lấy từ API tien-thuong
+        console.log(`📊 Fetching tien-thuong data for month=${selectedMonth}, year=${selectedYear}`);
+        const response = await fetch(
+          `/api/salary/tien-thuong?month=${selectedMonth}&year=${selectedYear}`
+        );
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('❌ API Error:', errorData);
+          throw new Error(errorData.error || 'Không thể tải dữ liệu tiền thưởng');
+        }
+        const data = await response.json();
+        console.log('✅ Tien-thuong data received:', data);
+        setTienThuongData(data.data || []);
       }
 
     } catch (err: any) {
@@ -252,6 +279,9 @@ export default function SalaryPage() {
       } else if (activeTab === 'tien-coc') {
         endpoint = `/api/salary/tien-coc/export?month=${selectedMonth}&year=${selectedYear}`;
         filename = `tien_coc_${selectedMonth}_${selectedYear}.xlsx`;
+      } else if (activeTab === 'tien-thuong') {
+        endpoint = `/api/salary/tien-thuong/export?month=${selectedMonth}&year=${selectedYear}`;
+        filename = `tien_thuong_${selectedMonth}_${selectedYear}.xlsx`;
       } else {
         // Các tabs khác chưa có export
         alert('Chức năng export cho tab này chưa có dữ liệu');
@@ -423,7 +453,7 @@ export default function SalaryPage() {
               {/* Export Button */}
               <Button
                 onClick={handleExport}
-                disabled={exporting || !['tong-hop', 'luong-chuyen', 'tien-coc'].includes(activeTab)}
+                disabled={exporting || !['tong-hop', 'luong-chuyen', 'tien-coc', 'tien-thuong'].includes(activeTab)}
                 size="sm"
                 variant="outline"
                 className="gap-2"
@@ -435,15 +465,16 @@ export default function SalaryPage() {
           </CardContent>
         </Card>
 
-        {/* Tabs Section - 6 tabs */}
+        {/* Tabs Section - 7 tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="tong-hop">Lương tổng hợp</TabsTrigger>
             <TabsTrigger value="luong-chuyen">Lương chuyến</TabsTrigger>
             <TabsTrigger value="sua-chua">Chi phí sửa chữa</TabsTrigger>
             <TabsTrigger value="vetc">Chi phí VETC</TabsTrigger>
             <TabsTrigger value="truy-thu">Truy thu</TabsTrigger>
             <TabsTrigger value="tien-coc">Tiền cọc</TabsTrigger>
+            <TabsTrigger value="tien-thuong">Tiền thưởng</TabsTrigger>
           </TabsList>
 
           {/* Tab 1: Lương tổng hợp */}
@@ -526,6 +557,18 @@ export default function SalaryPage() {
               <CardContent className="pt-6">
                 <TienCocTable
                   data={tienCocData}
+                  loading={loading}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab 7: Tiền thưởng */}
+          <TabsContent value="tien-thuong">
+            <Card>
+              <CardContent className="pt-6">
+                <TienThuongTable
+                  data={tienThuongData}
                   loading={loading}
                 />
               </CardContent>
