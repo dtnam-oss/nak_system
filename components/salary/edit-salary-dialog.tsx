@@ -31,6 +31,7 @@ interface LuongTongHopRecord {
   hoan_coc: number;
   chi_phi_do_dau_ngoai: number;
   chi_phi_phat_sinh_new: number;
+  thuong: number;
   
   // Khấu trừ (Deductions)
   truy_thu_dau: number;
@@ -174,6 +175,14 @@ export function EditSalaryDialog({
                   type="number"
                   value={formData.chi_phi_phat_sinh_new || 0}
                   onChange={(e) => handleChange('chi_phi_phat_sinh_new', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Thưởng</Label>
+                <Input
+                  type="number"
+                  value={formData.thuong || 0}
+                  onChange={(e) => handleChange('thuong', e.target.value)}
                 />
               </div>
             </div>

@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
         COALESCE(hoan_coc, 0) as hoan_coc,
         COALESCE(chi_phi_do_dau_ngoai, 0) as chi_phi_do_dau_ngoai,
         COALESCE(chi_phi_phat_sinh_new, 0) as chi_phi_phat_sinh_new,
+        COALESCE(thuong, 0) as thuong,
         -- Khấu trừ
         COALESCE(truy_thu_dau, 0) as truy_thu_dau,
         COALESCE(truy_thu_ontime, 0) as truy_thu_ontime,
@@ -87,6 +88,7 @@ export async function GET(request: NextRequest) {
       hoan_coc: parseFloat(row.hoan_coc) || 0,
       chi_phi_do_dau_ngoai: parseFloat(row.chi_phi_do_dau_ngoai) || 0,
       chi_phi_phat_sinh_new: parseFloat(row.chi_phi_phat_sinh_new) || 0,
+      thuong: parseFloat(row.thuong) || 0,
       truy_thu_dau: parseFloat(row.truy_thu_dau) || 0,
       truy_thu_ontime: parseFloat(row.truy_thu_ontime) || 0,
       tru_coc: parseFloat(row.tru_coc) || 0,

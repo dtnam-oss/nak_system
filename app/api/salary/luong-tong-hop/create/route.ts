@@ -83,6 +83,7 @@ export async function POST(request: NextRequest) {
             hoan_coc,
             chi_phi_do_dau_ngoai,
             chi_phi_phat_sinh_new,
+            thuong,
             truy_thu_dau,
             truy_thu_ontime,
             tru_coc,
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
             luong_thuc_lanh
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7,
-            0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0,
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 0, 0
           )

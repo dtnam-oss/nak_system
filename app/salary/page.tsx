@@ -87,6 +87,7 @@ interface LuongTongHopRecord {
   hoan_coc: number;
   chi_phi_do_dau_ngoai: number;
   chi_phi_phat_sinh_new: number;
+  thuong: number;
   
   // Khấu trừ (Deduction items)
   truy_thu_dau: number;

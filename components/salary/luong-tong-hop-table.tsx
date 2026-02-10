@@ -26,6 +26,7 @@ interface LuongTongHopRecord {
   hoan_coc: number;  // Hoàn cọc
   chi_phi_do_dau_ngoai: number;  // Hoàn phí đổ dầu ngoài
   chi_phi_phat_sinh_new: number;  // Hoàn chi phí phát sinh
+  thuong: number;  // Thưởng
   
   // Khấu trừ (Deduction items)
   truy_thu_dau: number;  // Truy thu đầu
@@ -84,13 +85,17 @@ export function LuongTongHopTable({ data, loading, onEdit, onDelete }: LuongTong
             <TableHead rowSpan={2} className="border-r min-w-[180px] font-semibold text-xs">Họ và tên</TableHead>
             <TableHead rowSpan={2} className="border-r font-semibold text-xs">Chức danh</TableHead>
 
-            <TableHead colSpan={5} className="text-center bg-green-100 border-r font-semibold text-xs">
+            <TableHead colSpan={6} className="text-center bg-green-100 border-r font-semibold text-xs">
               📈 CÁC KHOẢN THU NHẬP TRONG THÁNG (Cộng)
             </TableHead>
+
+            <TableHead rowSpan={2} className="text-center bg-green-200 border-r font-bold text-xs">✅ TỔNG THU NHẬP</TableHead>
 
             <TableHead colSpan={10} className="text-center bg-red-100 border-r font-semibold text-xs">
               📉 CÁC KHOẢN KHẤU TRỪ TRONG THÁNG (Trừ)
             </TableHead>
+
+            <TableHead rowSpan={2} className="text-center bg-red-200 border-r font-bold text-xs">⛔ TỔNG KHẤU TRỪ</TableHead>
 
             <TableHead rowSpan={2} className="text-center bg-blue-100 border-r font-bold text-xs">💰 THU NHẬP THỰC LĨNH</TableHead>
 
@@ -104,7 +109,8 @@ export function LuongTongHopTable({ data, loading, onEdit, onDelete }: LuongTong
             <TableHead className="text-right text-xs bg-green-50">Hoàn phí sửa chữa</TableHead>
             <TableHead className="text-right text-xs bg-green-50">Hoàn cọc</TableHead>
             <TableHead className="text-right text-xs bg-green-50">Hoàn phí đổ dầu ngoài</TableHead>
-            <TableHead className="text-right text-xs bg-green-50 border-r">Hoàn chi phí phát sinh</TableHead>
+            <TableHead className="text-right text-xs bg-green-50">Hoàn chi phí phát sinh</TableHead>
+            <TableHead className="text-right text-xs bg-green-50 border-r">Thưởng</TableHead>
 
             {/* Khấu trừ */}
             <TableHead className="text-right text-xs bg-red-50">Truy thu đầu</TableHead>
@@ -144,8 +150,16 @@ export function LuongTongHopTable({ data, loading, onEdit, onDelete }: LuongTong
                 <TableCell className="text-right text-green-600 text-xs">
                   {formatCurrency(record.chi_phi_do_dau_ngoai)}
                 </TableCell>
-                <TableCell className="text-right text-green-600 border-r text-xs">
+                <TableCell className="text-right text-green-600 text-xs">
                   {formatCurrency(record.chi_phi_phat_sinh_new)}
+                </TableCell>
+                <TableCell className="text-right text-green-600 border-r text-xs">
+                  {formatCurrency(record.thuong)}
+                </TableCell>
+
+                {/* TỔNG THU NHẬP */}
+                <TableCell className="text-right font-bold text-green-800 bg-green-50 border-r text-xs">
+                  {formatCurrency(record.tong_thu_nhap)}
                 </TableCell>
 
                 {/* KHẤU TRỪ */}
@@ -178,6 +192,11 @@ export function LuongTongHopTable({ data, loading, onEdit, onDelete }: LuongTong
                 </TableCell>
                 <TableCell className="text-right text-red-600 border-r text-xs">
                   {formatCurrency(record.khac)}
+                </TableCell>
+
+                {/* TỔNG KHẤU TRỪ */}
+                <TableCell className="text-right font-bold text-red-800 bg-red-50 border-r text-xs">
+                  {formatCurrency(record.tong_khau_tru)}
                 </TableCell>
 
                 {/* KẾT QUẢ */}

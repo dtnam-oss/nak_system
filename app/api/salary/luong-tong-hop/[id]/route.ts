@@ -23,20 +23,21 @@ export async function PATCH(
         hoan_coc = $3,
         chi_phi_do_dau_ngoai = $4,
         chi_phi_phat_sinh_new = $5,
-        truy_thu_dau = $6,
-        truy_thu_ontime = $7,
-        tru_coc = $8,
-        tam_ung = $9,
-        phat_che_tai = $10,
-        truy_thu_vetc = $11,
-        phat_nguoi = $12,
-        tien_lam_the = $13,
-        bhxh = $14,
-        khac = $15,
-        tong_thu_nhap = $16,
-        tong_khau_tru = $17,
-        luong_thuc_lanh = $18
-      WHERE id = $19
+        thuong = $6,
+        truy_thu_dau = $7,
+        truy_thu_ontime = $8,
+        tru_coc = $9,
+        tam_ung = $10,
+        phat_che_tai = $11,
+        truy_thu_vetc = $12,
+        phat_nguoi = $13,
+        tien_lam_the = $14,
+        bhxh = $15,
+        khac = $16,
+        tong_thu_nhap = $17,
+        tong_khau_tru = $18,
+        luong_thuc_lanh = $19
+      WHERE id = $20
       RETURNING *
     `, [
       body.luong_bat_dau || 0,
@@ -44,6 +45,7 @@ export async function PATCH(
       body.hoan_coc || 0,
       body.chi_phi_do_dau_ngoai || 0,
       body.chi_phi_phat_sinh_new || 0,
+      body.thuong || 0,
       body.truy_thu_dau || 0,
       body.truy_thu_ontime || 0,
       body.tru_coc || 0,
@@ -59,7 +61,8 @@ export async function PATCH(
       (body.tong_chi_phi_sua_chua || 0) + 
       (body.hoan_coc || 0) + 
       (body.chi_phi_do_dau_ngoai || 0) + 
-      (body.chi_phi_phat_sinh_new || 0),
+      (body.chi_phi_phat_sinh_new || 0) +
+      (body.thuong || 0),
       // Calculate tong_khau_tru
       (body.truy_thu_dau || 0) + 
       (body.truy_thu_ontime || 0) + 
@@ -76,7 +79,8 @@ export async function PATCH(
        (body.tong_chi_phi_sua_chua || 0) + 
        (body.hoan_coc || 0) + 
        (body.chi_phi_do_dau_ngoai || 0) + 
-       (body.chi_phi_phat_sinh_new || 0)) -
+       (body.chi_phi_phat_sinh_new || 0) +
+       (body.thuong || 0)) -
       ((body.truy_thu_dau || 0) + 
        (body.truy_thu_ontime || 0) + 
        (body.tru_coc || 0) + 
@@ -107,6 +111,7 @@ export async function PATCH(
       hoan_coc: parseFloat(result.rows[0].hoan_coc) || 0,
       chi_phi_do_dau_ngoai: parseFloat(result.rows[0].chi_phi_do_dau_ngoai) || 0,
       chi_phi_phat_sinh_new: parseFloat(result.rows[0].chi_phi_phat_sinh_new) || 0,
+      thuong: parseFloat(result.rows[0].thuong) || 0,
       truy_thu_dau: parseFloat(result.rows[0].truy_thu_dau) || 0,
       truy_thu_ontime: parseFloat(result.rows[0].truy_thu_ontime) || 0,
       tru_coc: parseFloat(result.rows[0].tru_coc) || 0,
