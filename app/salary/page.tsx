@@ -6,6 +6,7 @@ import { SalaryTable } from '@/components/salary/salary-table';
 import { LuongChuyenTable } from '@/components/salary/luong-chuyen-table';
 import { LuongTongHopTable } from '@/components/salary/luong-tong-hop-table';
 import { MaintenanceTable } from '@/components/maintenance/maintenance-table';
+import { TienCocTable } from '@/components/salary/tien-coc-table';
 import { CreateSalarySlipDialog } from '@/components/salary/create-salary-slip-dialog';
 import { EditSalaryDialog } from '@/components/salary/edit-salary-dialog';
 import { DeleteSalaryDialog } from '@/components/salary/delete-salary-dialog';
@@ -110,16 +111,27 @@ interface LuongTongHopRecord {
   luong_thuc_lanh: number;
 }
 
+interface TienCocRecord {
+  id: string;
+  ma_tai_xe: string;
+  ten_tai_xe: string;
+  email: string;
+  tien_thu_coc: number;
+  thang: number;
+  nam: number;
+}
+
 export default function SalaryPage() {
   // Tab states - 5 tabs mới
   const [activeTab, setActiveTab] = useState('tong-hop');
 
-  // Data states cho 5 tabs
+  // Data states cho 6 tabs
   const [tongHopData, setTongHopData] = useState<LuongTongHopRecord[]>([]);
   const [luongChuyenData, setLuongChuyenData] = useState<LuongChuyenRecord[]>([]);
   const [suaChuaData, setSuaChuaData] = useState<MaintenanceRecord[]>([]);
   const [vetcData, setVetcData] = useState<any[]>([]);
   const [truyThuData, setTruyThuData] = useState<any[]>([]);
+  const [tienCocData, setTienCocData] = useState<TienCocRecord[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -200,6 +212,20 @@ export default function SalaryPage() {
       } else if (activeTab === 'truy-thu') {
         // Truy thu - Empty state (chưa có data)
         setTruyThuData([]);
+      } else if (activeTab === 'tien-coc') {
+        // Tiền cọc - Lấy từ API tien-coc
+        console.log(`📊 Fetching tien-coc data for month=${selectedMonth}, year=${selectedYear}`);
+        const response = await fetch(
+          `/api/salary/tien-coc?month=${selectedMonth}&year=${selectedYear}`
+        );
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('❌ API Error:', errorData);
+          throw new Error(errorData.error || 'Không thể tải dữ liệu tiền cọc');
+        }
+        const data = await response.json();
+        console.log('✅ Tien-coc data received:', data);
+        setTienCocData(data.data || []);
       }
 
     } catch (err: any) {
@@ -223,6 +249,9 @@ export default function SalaryPage() {
       } else if (activeTab === 'luong-chuyen') {
         endpoint = `/api/salary/luong-chuyen/export?month=${selectedMonth}&year=${selectedYear}`;
         filename = `luong_chuyen_${selectedMonth}_${selectedYear}.xlsx`;
+      } else if (activeTab === 'tien-coc') {
+        endpoint = `/api/salary/tien-coc/export?month=${selectedMonth}&year=${selectedYear}`;
+        filename = `tien_coc_${selectedMonth}_${selectedYear}.xlsx`;
       } else {
         // Các tabs khác chưa có export
         alert('Chức năng export cho tab này chưa có dữ liệu');
@@ -394,7 +423,7 @@ export default function SalaryPage() {
               {/* Export Button */}
               <Button
                 onClick={handleExport}
-                disabled={exporting || (activeTab !== 'tong-hop' && activeTab !== 'luong-chuyen')}
+                disabled={exporting || !['tong-hop', 'luong-chuyen', 'tien-coc'].includes(activeTab)}
                 size="sm"
                 variant="outline"
                 className="gap-2"
@@ -406,14 +435,15 @@ export default function SalaryPage() {
           </CardContent>
         </Card>
 
-        {/* Tabs Section - 5 tabs mới */}
+        {/* Tabs Section - 6 tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="tong-hop">Lương tổng hợp</TabsTrigger>
             <TabsTrigger value="luong-chuyen">Lương chuyến</TabsTrigger>
             <TabsTrigger value="sua-chua">Chi phí sửa chữa</TabsTrigger>
             <TabsTrigger value="vetc">Chi phí VETC</TabsTrigger>
             <TabsTrigger value="truy-thu">Truy thu</TabsTrigger>
+            <TabsTrigger value="tien-coc">Tiền cọc</TabsTrigger>
           </TabsList>
 
           {/* Tab 1: Lương tổng hợp */}
@@ -486,6 +516,18 @@ export default function SalaryPage() {
                 ) : (
                   <EmptyState message="Dữ liệu truy thu sẽ được cập nhật sau" />
                 )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab 6: Tiền cọc */}
+          <TabsContent value="tien-coc">
+            <Card>
+              <CardContent className="pt-6">
+                <TienCocTable
+                  data={tienCocData}
+                  loading={loading}
+                />
               </CardContent>
             </Card>
           </TabsContent>

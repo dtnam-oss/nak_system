@@ -54,8 +54,8 @@ export async function calculateSingleEmployeeSalary(
   nam: number
 ): Promise<SalaryComponents | null> {
   try {
-    // Parallel queries - chỉ 3 queries
-    const [employeeResult, maintenanceResult, tripSalaryResult] = await Promise.all([
+    // Parallel queries - 4 queries
+    const [employeeResult, maintenanceResult, tripSalaryResult, depositResult] = await Promise.all([
       // 1. Get employee info
       pool.query(
         `SELECT ma_nhan_vien, ho_va_ten as ten_nhan_vien, email, chuc_vu 
@@ -77,10 +77,20 @@ export async function calculateSingleEmployeeSalary(
       // 3. Sum trip salaries
       pool.query(
         `SELECT COALESCE(SUM(luong_tai_xe), 0) as total
-         FROM luong_tai_xe
+         FROM du_lieu_luong_tx
          WHERE ma_tai_xe = $1
-           AND EXTRACT(MONTH FROM ngay_tao) = $2
-           AND EXTRACT(YEAR FROM ngay_tao) = $3`,
+           AND thang = $2
+           AND nam = $3`,
+        [ma_nhan_vien, thang, nam]
+      ),
+      
+      // 4. Sum deposit deductions (tru_coc)
+      pool.query(
+        `SELECT COALESCE(SUM(tien_thu_coc), 0) as total
+         FROM du_lieu_tien_coc
+         WHERE ma_tai_xe = $1
+           AND thang = $2
+           AND nam = $3`,
         [ma_nhan_vien, thang, nam]
       ),
     ]);
@@ -92,6 +102,7 @@ export async function calculateSingleEmployeeSalary(
     const employee = employeeResult.rows[0];
     const luong_bat_dau = parseFloat(tripSalaryResult.rows[0].total) || 0;
     const tong_chi_phi_sua_chua = parseFloat(maintenanceResult.rows[0].total) || 0;
+    const tru_coc = parseFloat(depositResult.rows[0].total) || 0;
     
     // Get existing record to preserve manual fields
     const existingResult = await pool.query(
@@ -123,7 +134,7 @@ export async function calculateSingleEmployeeSalary(
       
       truy_thu_dau: parseFloat(existing.truy_thu_dau) || 0,
       truy_thu_ontime: parseFloat(existing.truy_thu_ontime) || 0,
-      tru_coc: parseFloat(existing.tru_coc) || 0,
+      tru_coc,  // Auto-calculated from du_lieu_tien_coc
       tam_ung: parseFloat(existing.tam_ung) || 0,
       phat_che_tai: parseFloat(existing.phat_che_tai) || 0,
       truy_thu_vetc: parseFloat(existing.truy_thu_vetc) || 0,
@@ -170,15 +181,15 @@ export async function calculateSingleEmployeeSalary(
 
 /**
  * Tính lương cho tất cả nhân viên (Bulk calculation)
- * Tối ưu: Chỉ 4 queries cho toàn bộ nhân viên
+ * Tối ưu: Chỉ 5 queries cho toàn bộ nhân viên
  */
 export async function calculateBulkSalary(
   thang: number,
   nam: number
 ): Promise<{ success: boolean; processed: number; components: SalaryComponents[] }> {
   try {
-    // Parallel queries - only 4 queries for ALL employees
-    const [employeesResult, maintenanceResult, tripSalaryResult, existingResult] = await Promise.all([
+    // Parallel queries - only 5 queries for ALL employees
+    const [employeesResult, maintenanceResult, tripSalaryResult, depositResult, existingResult] = await Promise.all([
       // 1. Get all active drivers
       pool.query(
         `SELECT ma_nhan_vien, ho_va_ten as ten_nhan_vien, email, chuc_vu
@@ -205,15 +216,28 @@ export async function calculateBulkSalary(
         `SELECT 
            ma_tai_xe,
            SUM(luong_tai_xe) as luong_bat_dau
-         FROM luong_tai_xe
-         WHERE EXTRACT(MONTH FROM ngay_tao) = $1
-           AND EXTRACT(YEAR FROM ngay_tao) = $2
+         FROM du_lieu_luong_tx
+         WHERE thang = $1
+           AND nam = $2
            AND ma_tai_xe IS NOT NULL
          GROUP BY ma_tai_xe`,
         [thang, nam]
       ),
       
-      // 4. Get existing records to preserve manual fields
+      // 4. Aggregate deposit deductions for ALL employees
+      pool.query(
+        `SELECT 
+           ma_tai_xe,
+           SUM(tien_thu_coc) as tru_coc
+         FROM du_lieu_tien_coc
+         WHERE thang = $1
+           AND nam = $2
+           AND ma_tai_xe IS NOT NULL
+         GROUP BY ma_tai_xe`,
+        [thang, nam]
+      ),
+      
+      // 5. Get existing records to preserve manual fields
       pool.query(
         `SELECT * FROM luong_tong_hop
          WHERE thang = $1 AND nam = $2`,
@@ -232,6 +256,11 @@ export async function calculateBulkSalary(
       tripSalaryMap.set(row.ma_tai_xe, parseFloat(row.luong_bat_dau) || 0);
     });
     
+    const depositMap = new Map<string, number>();
+    depositResult.rows.forEach(row => {
+      depositMap.set(row.ma_tai_xe, parseFloat(row.tru_coc) || 0);
+    });
+    
     const existingMap = new Map<string, any>();
     existingResult.rows.forEach(row => {
       existingMap.set(row.ma_nhan_vien, row);
@@ -246,6 +275,7 @@ export async function calculateBulkSalary(
       
       const luong_bat_dau = tripSalaryMap.get(ma_nhan_vien) || 0;
       const tong_chi_phi_sua_chua = maintenanceMap.get(ma_nhan_vien) || 0;
+      const tru_coc = depositMap.get(ma_nhan_vien) || 0;
       
       const components: SalaryComponents = {
         ma_nhan_vien: employee.ma_nhan_vien,
@@ -267,7 +297,7 @@ export async function calculateBulkSalary(
         
         truy_thu_dau: parseFloat(existing.truy_thu_dau) || 0,
         truy_thu_ontime: parseFloat(existing.truy_thu_ontime) || 0,
-        tru_coc: parseFloat(existing.tru_coc) || 0,
+        tru_coc,  // Auto-calculated from du_lieu_tien_coc
         tam_ung: parseFloat(existing.tam_ung) || 0,
         phat_che_tai: parseFloat(existing.phat_che_tai) || 0,
         truy_thu_vetc: parseFloat(existing.truy_thu_vetc) || 0,
