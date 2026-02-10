@@ -11,7 +11,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 
 interface LuongChuyenRecord {
-  ma_chuyen_di: string;
+  id: string;
+  ma_chuyen: string;
   ngay_tao: string;
   nam: number;
   thang: number;
@@ -22,6 +23,8 @@ interface LuongChuyenRecord {
   luong_tai_xe: number;
   ten_tai_xe: string;
   don_vi_van_chuyen: string;
+  ma_tai_xe: string;
+  email_tai_xe: string;
 }
 
 interface LuongChuyenTableProps {
@@ -86,8 +89,8 @@ export function LuongChuyenTable({ data, loading }: LuongChuyenTableProps) {
         </TableHeader>
         <TableBody>
           {data.map((record, index) => (
-            <TableRow key={`${record.ma_chuyen_di}-${index}`}>
-              <TableCell className="font-medium">{record.ma_chuyen_di}</TableCell>
+            <TableRow key={record.id || `${record.ma_chuyen}-${index}`}>
+              <TableCell className="font-medium">{record.ma_chuyen}</TableCell>
               <TableCell>{formatDate(record.ngay_tao)}</TableCell>
               <TableCell>{record.ten_tai_xe || '-'}</TableCell>
               <TableCell>{record.ten_khach_hang || '-'}</TableCell>

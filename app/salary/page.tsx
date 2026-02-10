@@ -40,7 +40,8 @@ interface SalaryRecord {
 }
 
 interface LuongChuyenRecord {
-  ma_chuyen_di: string;
+  id: string;
+  ma_chuyen: string;
   ngay_tao: string;
   nam: number;
   thang: number;
@@ -51,6 +52,8 @@ interface LuongChuyenRecord {
   luong_tai_xe: number;
   ten_tai_xe: string;
   don_vi_van_chuyen: string;
+  ma_tai_xe: string;
+  email_tai_xe: string;
 }
 
 interface MaintenanceRecord {

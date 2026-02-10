@@ -18,13 +18,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch luong-chuyen data from luong_tai_xe table
+    // Fetch luong-chuyen data from du_lieu_luong_tx table
     const result = await query(`
       SELECT
-        ma_chuyen_di,
+        ma_chuyen,
         ngay_tao,
-        EXTRACT(YEAR FROM ngay_tao)::INTEGER as nam,
-        EXTRACT(MONTH FROM ngay_tao)::INTEGER as thang,
+        nam,
+        thang,
         ten_khach_hang,
         loai_chuyen,
         ten_tuyen,
@@ -33,11 +33,11 @@ export async function GET(request: NextRequest) {
         ten_tai_xe,
         don_vi_van_chuyen,
         ma_tai_xe,
-        email_tai_xe
-      FROM luong_tai_xe
-      WHERE EXTRACT(MONTH FROM ngay_tao) = $1 
-        AND EXTRACT(YEAR FROM ngay_tao) = $2
-      ORDER BY ngay_tao DESC, ma_chuyen_di DESC
+        email_tai_xe,
+        id
+      FROM du_lieu_luong_tx
+      WHERE thang = $1 AND nam = $2
+      ORDER BY ngay_tao DESC, ma_chuyen DESC
     `, [month, year]);
 
     if (result.rows.length === 0) {
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     // Format data for Excel
     const excelData = result.rows.map((row) => ({
-      'Mã chuyến': row.ma_chuyen_di || '',
+      'Mã chuyến': row.ma_chuyen || '',
       'Ngày tạo': row.ngay_tao ? new Date(row.ngay_tao).toLocaleDateString('vi-VN') : '',
       'Mã tài xế': row.ma_tai_xe || '',
       'Tài xế': row.ten_tai_xe || '',

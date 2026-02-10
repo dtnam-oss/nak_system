@@ -19,10 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build WHERE conditions
-    const conditions: string[] = [
-      'EXTRACT(MONTH FROM ngay_tao) = $1',
-      'EXTRACT(YEAR FROM ngay_tao) = $2'
-    ];
+    const conditions: string[] = ['thang = $1', 'nam = $2'];
     const params: any[] = [month, year];
     let paramIndex = 3;
 
@@ -33,13 +30,13 @@ export async function GET(request: NextRequest) {
 
     const whereClause = conditions.join(' AND ');
 
-    // Query from luong_tai_xe table
+    // Query from du_lieu_luong_tx table
     const result = await query(`
       SELECT
-        ma_chuyen_di,
+        ma_chuyen,
         ngay_tao,
-        EXTRACT(YEAR FROM ngay_tao)::INTEGER as nam,
-        EXTRACT(MONTH FROM ngay_tao)::INTEGER as thang,
+        nam,
+        thang,
         ten_khach_hang,
         loai_chuyen,
         ten_tuyen,
@@ -48,10 +45,11 @@ export async function GET(request: NextRequest) {
         ten_tai_xe,
         don_vi_van_chuyen,
         ma_tai_xe,
-        email_tai_xe
-      FROM luong_tai_xe
+        email_tai_xe,
+        id
+      FROM du_lieu_luong_tx
       WHERE ${whereClause}
-      ORDER BY ngay_tao DESC, ma_chuyen_di DESC
+      ORDER BY ngay_tao DESC, ma_chuyen DESC
     `, params);
 
     // Calculate summary statistics
