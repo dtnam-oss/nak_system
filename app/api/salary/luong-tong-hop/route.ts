@@ -24,11 +24,11 @@ export async function GET(request: NextRequest) {
         ma_nhan_vien,
         ten_nhan_vien,
         chuc_vu,
-        email,
+        COALESCE(email, '') as email,
         thang,
         nam,
         -- Thu nhập
-        COALESCE(luong_bat_dau, luong_chuyen, 0) as luong_bat_dau,
+        COALESCE(luong_bat_dau, 0) as luong_bat_dau,
         COALESCE(tong_chi_phi_sua_chua, 0) as tong_chi_phi_sua_chua,
         COALESCE(hoan_coc, 0) as hoan_coc,
         COALESCE(chi_phi_do_dau_ngoai, 0) as chi_phi_do_dau_ngoai,
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
         -- Calculated fields
         COALESCE(tong_thu_nhap, 0) as tong_thu_nhap,
         COALESCE(tong_khau_tru, 0) as tong_khau_tru,
-        COALESCE(luong_thuc_lanh, tra_tai_xe, 0) as luong_thuc_lanh
+        COALESCE(luong_thuc_lanh, 0) as luong_thuc_lanh
       FROM luong_tong_hop
       WHERE thang = $1 AND nam = $2
       ORDER BY ma_nhan_vien ASC
