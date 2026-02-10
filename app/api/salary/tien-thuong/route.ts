@@ -14,7 +14,7 @@ export async function GET(request: Request) {
       );
     }
 
-    // Query du_lieu_luong table
+    // Query du_lieu_thuong table
     const result = await query(
       `SELECT 
         id,
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
         tien_thuong,
         thang,
         nam
-      FROM du_lieu_luong
+      FROM du_lieu_thuong
       WHERE thang = $1 AND nam = $2
       ORDER BY ho_va_ten ASC`,
       [parseInt(month), parseInt(year)]

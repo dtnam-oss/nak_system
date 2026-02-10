@@ -97,7 +97,7 @@ export async function calculateSingleEmployeeSalary(
       // 5. Sum bonuses (thuong)
       pool.query(
         `SELECT COALESCE(SUM(tien_thuong), 0) as total
-         FROM du_lieu_luong
+         FROM du_lieu_thuong
          WHERE ma_nhan_vien = $1
            AND thang = $2
            AND nam = $3`,
@@ -253,7 +253,7 @@ export async function calculateBulkSalary(
         `SELECT 
            ma_nhan_vien,
            SUM(tien_thuong) as thuong
-         FROM du_lieu_luong
+         FROM du_lieu_thuong
          WHERE thang = $1
            AND nam = $2
            AND ma_nhan_vien IS NOT NULL
