@@ -128,6 +128,7 @@ export default function SalaryPage() {
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
 
   const [exporting, setExporting] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -250,6 +251,43 @@ export default function SalaryPage() {
     }
   };
 
+  const handleRecalculate = async () => {
+    if (!confirm(`Tính lại lương cho tất cả nhân viên trong tháng ${selectedMonth}/${selectedYear}?\n\n⚠️ Dữ liệu từ bảng Lương chuyến và Chi phí sửa chữa sẽ được tự động cập nhật.\nCác giá trị nhập tay (thưởng, khấu trừ khác...) sẽ được giữ nguyên.`)) {
+      return;
+    }
+
+    try {
+      setRecalculating(true);
+      setError(null);
+
+      const response = await fetch('/api/salary/calculate-bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          thang: selectedMonth,
+          nam: selectedYear,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Tính lại thất bại');
+      }
+
+      const result = await response.json();
+      
+      alert(`✅ ${result.message}\n\n📊 Đã xử lý: ${result.data.total_employees} nhân viên\n💾 Lưu thành công: ${result.data.saved}\n${result.data.errors > 0 ? `❌ Lỗi: ${result.data.errors}` : ''}`);
+      
+      // Refresh data
+      await fetchData();
+    } catch (err: any) {
+      console.error('Recalculate error:', err);
+      setError(err.message || 'Không thể tính lại lương');
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
   const EmptyState = ({ message }: { message: string }) => (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <div className="rounded-full bg-gray-100 p-3 mb-4">
@@ -324,15 +362,29 @@ export default function SalaryPage() {
 
               {/* Create Salary Slip Button - Only show for tong-hop tab */}
               {activeTab === 'tong-hop' && (
-                <Button
-                  onClick={() => setCreateDialogOpen(true)}
-                  size="sm"
-                  variant="default"
-                  className="gap-2"
-                >
-                  <FilePlus className="h-4 w-4" />
-                  Tạo phiếu lương
-                </Button>
+                <>
+                  <Button
+                    onClick={handleRecalculate}
+                    disabled={recalculating}
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    {recalculating ? 'Đang tính...' : 'Tính lại'}
+                  </Button>
+                  <Button
+                    onClick={() => setCreateDialogOpen(true)}
+                    size="sm"
+                    variant="default"
+                    className="gap-2"
+                  >
+                    <FilePlus className="h-4 w-4" />
+                    Tạo phiếu lương
+                  </Button>
+                </>
               )}
 
               {/* Export Button */}
