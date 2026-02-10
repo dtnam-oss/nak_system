@@ -4,21 +4,22 @@ import { query } from '@/lib/db';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const month = searchParams.get('month');
     const year = searchParams.get('year');
 
-    if (!year) {
+    if (!month || !year) {
       return NextResponse.json(
-        { error: 'Year is required' },
+        { error: 'Month and year are required' },
         { status: 400 }
       );
     }
 
-    // Query aggregated salary data by month for the year
+    // Query aggregated salary data for specific month
     const result = await query(
       `SELECT 
         thang,
         COUNT(DISTINCT ma_nhan_vien) as so_nhan_vien,
-        SUM(luong_bat_dau) as tong_luong_bat_dau,
+        SUM(luong_bat_dau) as tong_luong_chuyen,
         SUM(tong_chi_phi_sua_chua) as tong_chi_phi_sua_chua,
         SUM(hoan_coc) as tong_hoan_coc,
         SUM(chi_phi_do_dau_ngoai) as tong_chi_phi_do_dau_ngoai,
@@ -38,19 +39,15 @@ export async function GET(request: Request) {
         SUM(tong_khau_tru) as tong_khau_tru,
         SUM(luong_thuc_lanh) as tong_luong_thuc_lanh
       FROM luong_tong_hop
-      WHERE nam = $1
-      GROUP BY thang
-      ORDER BY thang ASC`,
-      [parseInt(year)]
+      WHERE thang = $1 AND nam = $2`,
+      [parseInt(month), parseInt(year)]
     );
 
-    // Transform data into report format
-    const monthlyData = result.rows;
-    
-    // Calculate totals across all months
-    const totals = {
+    // Get single month data
+    const monthData = result.rows[0] || {
+      thang: parseInt(month),
       so_nhan_vien: 0,
-      tong_luong_bat_dau: 0,
+      tong_luong_chuyen: 0,
       tong_chi_phi_sua_chua: 0,
       tong_hoan_coc: 0,
       tong_chi_phi_do_dau_ngoai: 0,
@@ -71,15 +68,9 @@ export async function GET(request: Request) {
       tong_luong_thuc_lanh: 0
     };
 
-    monthlyData.forEach(month => {
-      Object.keys(totals).forEach(key => {
-        totals[key as keyof typeof totals] += parseFloat(month[key as keyof typeof month] as any) || 0;
-      });
-    });
-
     return NextResponse.json({
-      data: monthlyData,
-      totals,
+      data: monthData,
+      month: parseInt(month),
       year: parseInt(year)
     });
   } catch (error: any) {

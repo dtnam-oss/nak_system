@@ -1,9 +1,9 @@
 'use client';
 
-interface MonthlyData {
+interface BaoCaoData {
   thang: number;
   so_nhan_vien: number;
-  tong_luong_bat_dau: number;
+  tong_luong_chuyen: number;
   tong_chi_phi_sua_chua: number;
   tong_hoan_coc: number;
   tong_chi_phi_do_dau_ngoai: number;
@@ -25,12 +25,13 @@ interface MonthlyData {
 }
 
 interface BaoCaoTableProps {
-  data: MonthlyData[];
+  data: BaoCaoData | null;
   loading: boolean;
+  month: number;
   year: number;
 }
 
-export function BaoCaoTable({ data, loading, year }: BaoCaoTableProps) {
+export function BaoCaoTable({ data, loading, month, year }: BaoCaoTableProps) {
   if (loading) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -39,10 +40,10 @@ export function BaoCaoTable({ data, loading, year }: BaoCaoTableProps) {
     );
   }
 
-  if (!data || data.length === 0) {
+  if (!data) {
     return (
       <div className="text-center py-8 text-muted-foreground">
-        Không có dữ liệu báo cáo cho năm {year}
+        Không có dữ liệu báo cáo cho tháng {month}/{year}
       </div>
     );
   }
@@ -50,7 +51,7 @@ export function BaoCaoTable({ data, loading, year }: BaoCaoTableProps) {
   // Define categories
   const categories = [
     { key: 'so_nhan_vien', label: 'Số nhân viên', type: 'info' },
-    { key: 'tong_luong_bat_dau', label: 'Lương bắt đầu', type: 'income' },
+    { key: 'tong_luong_chuyen', label: 'Lương chuyến', type: 'income' },
     { key: 'tong_chi_phi_sua_chua', label: 'Chi phí sửa chữa', type: 'income' },
     { key: 'tong_hoan_coc', label: 'Hoàn cọc', type: 'income' },
     { key: 'tong_chi_phi_do_dau_ngoai', label: 'Chi phí đổ dầu ngoài', type: 'income' },
@@ -71,15 +72,9 @@ export function BaoCaoTable({ data, loading, year }: BaoCaoTableProps) {
     { key: 'tong_luong_thuc_lanh', label: 'Lương thực lãnh', type: 'summary' }
   ];
 
-  const months = data.map(d => d.thang).sort((a, b) => a - b);
-
   const formatNumber = (value: number, isCount = false) => {
     if (isCount) return value.toString();
     return new Intl.NumberFormat('vi-VN').format(value);
-  };
-
-  const getRowTotal = (key: string) => {
-    return data.reduce((sum, month) => sum + (parseFloat(month[key as keyof MonthlyData] as any) || 0), 0);
   };
 
   return (
@@ -88,22 +83,17 @@ export function BaoCaoTable({ data, loading, year }: BaoCaoTableProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-blue-600 text-white">
-              <th className="h-12 px-4 text-left font-semibold min-w-[200px] sticky left-0 bg-blue-600">
+              <th className="h-12 px-4 text-left font-semibold min-w-[250px]">
                 Hạng mục
               </th>
-              {months.map(month => (
-                <th key={month} className="h-12 px-4 text-right font-semibold min-w-[120px]">
-                  Tháng {month}
-                </th>
-              ))}
-              <th className="h-12 px-4 text-right font-semibold min-w-[120px] bg-blue-700">
-                Tổng cộng
+              <th className="h-12 px-4 text-right font-semibold min-w-[180px]">
+                Tháng {month}/{year}
               </th>
             </tr>
           </thead>
           <tbody>
-            {categories.map((category, idx) => {
-              const total = getRowTotal(category.key);
+            {categories.map((category) => {
+              const value = parseFloat(data[category.key as keyof BaoCaoData] as any) || 0;
               const isCount = category.key === 'so_nhan_vien';
               
               let rowClass = 'border-b hover:bg-muted/50';
@@ -115,20 +105,11 @@ export function BaoCaoTable({ data, loading, year }: BaoCaoTableProps) {
 
               return (
                 <tr key={category.key} className={rowClass}>
-                  <td className="p-3 sticky left-0 bg-inherit font-medium">
+                  <td className="p-4 font-medium">
                     {category.label}
                   </td>
-                  {months.map(month => {
-                    const monthData = data.find(d => d.thang === month);
-                    const value = monthData ? parseFloat(monthData[category.key as keyof MonthlyData] as any) || 0 : 0;
-                    return (
-                      <td key={month} className="p-3 text-right">
-                        {formatNumber(value, isCount)}
-                      </td>
-                    );
-                  })}
-                  <td className="p-3 text-right font-bold bg-gray-50">
-                    {formatNumber(total, isCount)}
+                  <td className="p-4 text-right font-medium">
+                    {formatNumber(value, isCount)}
                   </td>
                 </tr>
               );
@@ -140,9 +121,9 @@ export function BaoCaoTable({ data, loading, year }: BaoCaoTableProps) {
       <div className="text-sm text-muted-foreground">
         <p className="font-medium">Ghi chú:</p>
         <ul className="list-disc list-inside mt-2 space-y-1">
-          <li>Báo cáo tổng hợp tất cả nhân viên theo tháng</li>
+          <li>Báo cáo tổng hợp tất cả nhân viên cho tháng {month}/{year}</li>
           <li>Các số liệu được tự động tính toán từ bảng Lương tổng hợp</li>
-          <li>Thu nhập = Lương bắt đầu + Chi phí sửa chữa + Hoàn cọc + Chi phí đổ dầu + Chi phí phát sinh + Thưởng</li>
+          <li>Thu nhập = Lương chuyến + Chi phí sửa chữa + Hoàn cọc + Chi phí đổ dầu + Chi phí phát sinh + Thưởng</li>
           <li>Khấu trừ = Truy thu dầu + Truy thu ontime + Trừ cọc + Tạm ứng + Các khoản phạt + BHXH + Khác</li>
         </ul>
       </div>

@@ -137,7 +137,7 @@ interface TienThuongRecord {
 interface BaoCaoData {
   thang: number;
   so_nhan_vien: number;
-  tong_luong_bat_dau: number;
+  tong_luong_chuyen: number;
   tong_chi_phi_sua_chua: number;
   tong_hoan_coc: number;
   tong_chi_phi_do_dau_ngoai: number;
@@ -163,7 +163,7 @@ export default function SalaryPage() {
   const [activeTab, setActiveTab] = useState('bao-cao');
 
   // Data states cho 8 tabs
-  const [baoCaoData, setBaoCaoData] = useState<BaoCaoData[]>([]);
+  const [baoCaoData, setBaoCaoData] = useState<BaoCaoData | null>(null);
   const [tongHopData, setTongHopData] = useState<LuongTongHopRecord[]>([]);
   const [luongChuyenData, setLuongChuyenData] = useState<LuongChuyenRecord[]>([]);
   const [suaChuaData, setSuaChuaData] = useState<MaintenanceRecord[]>([]);
@@ -198,10 +198,10 @@ export default function SalaryPage() {
       setError(null);
 
       if (activeTab === 'bao-cao') {
-        // Báo cáo - Lấy dữ liệu tổng hợp theo năm
-        console.log(`📊 Fetching bao-cao data for year=${selectedYear}`);
+        // Báo cáo - Lấy dữ liệu tổng hợp theo tháng
+        console.log(`📊 Fetching bao-cao data for month=${selectedMonth}, year=${selectedYear}`);
         const response = await fetch(
-          `/api/salary/bao-cao?year=${selectedYear}`
+          `/api/salary/bao-cao?month=${selectedMonth}&year=${selectedYear}`
         );
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
@@ -210,7 +210,7 @@ export default function SalaryPage() {
         }
         const data = await response.json();
         console.log('✅ Bao-cao data received:', data);
-        setBaoCaoData(data.data || []);
+        setBaoCaoData(data.data || null);
       } else if (activeTab === 'tong-hop') {
         // Lương tổng hợp - Lấy dữ liệu từ bảng luong_tong_hop
         console.log(`📊 Fetching luong-tong-hop data for month=${selectedMonth}, year=${selectedYear}`);
@@ -311,8 +311,8 @@ export default function SalaryPage() {
       let filename = '';
 
       if (activeTab === 'bao-cao') {
-        endpoint = `/api/salary/bao-cao/export?year=${selectedYear}`;
-        filename = `bao_cao_luong_${selectedYear}.xlsx`;
+        endpoint = `/api/salary/bao-cao/export?month=${selectedMonth}&year=${selectedYear}`;
+        filename = `bao_cao_luong_${selectedMonth}_${selectedYear}.xlsx`;
       } else if (activeTab === 'tong-hop') {
         endpoint = `/api/salary/luong-tong-hop/export?month=${selectedMonth}&year=${selectedYear}`;
         filename = `luong_tong_hop_${selectedMonth}_${selectedYear}.xlsx`;
@@ -528,6 +528,7 @@ export default function SalaryPage() {
                 <BaoCaoTable
                   data={baoCaoData}
                   loading={loading}
+                  month={selectedMonth}
                   year={selectedYear}
                 />
               </CardContent>

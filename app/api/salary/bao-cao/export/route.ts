@@ -5,21 +5,22 @@ import ExcelJS from 'exceljs';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
+    const month = searchParams.get('month');
     const year = searchParams.get('year');
 
-    if (!year) {
+    if (!month || !year) {
       return NextResponse.json(
-        { error: 'Year is required' },
+        { error: 'Month and year are required' },
         { status: 400 }
       );
     }
 
-    // Query aggregated salary data by month for the year
+    // Query aggregated salary data for specific month
     const result = await query(
       `SELECT 
         thang,
         COUNT(DISTINCT ma_nhan_vien) as so_nhan_vien,
-        SUM(luong_bat_dau) as tong_luong_bat_dau,
+        SUM(luong_bat_dau) as tong_luong_chuyen,
         SUM(tong_chi_phi_sua_chua) as tong_chi_phi_sua_chua,
         SUM(hoan_coc) as tong_hoan_coc,
         SUM(chi_phi_do_dau_ngoai) as tong_chi_phi_do_dau_ngoai,
@@ -39,20 +40,28 @@ export async function GET(request: Request) {
         SUM(tong_khau_tru) as tong_khau_tru,
         SUM(luong_thuc_lanh) as tong_luong_thuc_lanh
       FROM luong_tong_hop
-      WHERE nam = $1
-      GROUP BY thang
-      ORDER BY thang ASC`,
-      [parseInt(year)]
+      WHERE thang = $1 AND nam = $2`,
+      [parseInt(month), parseInt(year)]
     );
 
     // Create workbook
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(`Báo cáo lương ${year}`);
+    const worksheet = workbook.addWorksheet(`Báo cáo tháng ${month}/${year}`);
+
+    // Get single month data
+    const monthData = result.rows[0];
+
+    if (!monthData) {
+      return NextResponse.json(
+        { error: 'No data found for this month' },
+        { status: 404 }
+      );
+    }
 
     // Define categories
     const categories = [
       { key: 'so_nhan_vien', label: 'Số nhân viên', section: 'info' },
-      { key: 'tong_luong_bat_dau', label: 'Lương bắt đầu', section: 'income' },
+      { key: 'tong_luong_chuyen', label: 'Lương chuyến', section: 'income' },
       { key: 'tong_chi_phi_sua_chua', label: 'Chi phí sửa chữa', section: 'income' },
       { key: 'tong_hoan_coc', label: 'Hoàn cọc', section: 'income' },
       { key: 'tong_chi_phi_do_dau_ngoai', label: 'Chi phí đổ dầu ngoài', section: 'income' },
@@ -73,12 +82,10 @@ export async function GET(request: Request) {
       { key: 'tong_luong_thuc_lanh', label: 'Lương thực lãnh', section: 'summary' }
     ];
 
-    // Build dynamic columns
-    const months = result.rows.map(r => r.thang).sort((a, b) => a - b);
+    // Simple columns for single month
     const columns = [
       { header: 'Hạng mục', key: 'hang_muc', width: 30 },
-      ...months.map(m => ({ header: `Tháng ${m}`, key: `thang_${m}`, width: 15 })),
-      { header: 'Tổng cộng', key: 'tong', width: 15 }
+      { header: `Tháng ${month}/${year}`, key: 'gia_tri', width: 20 }
     ];
 
     worksheet.columns = columns;
@@ -94,28 +101,21 @@ export async function GET(request: Request) {
 
     // Add data rows
     categories.forEach(category => {
-      const rowData: any = { hang_muc: category.label };
-      let total = 0;
-
-      months.forEach(month => {
-        const monthData = result.rows.find(r => r.thang === month);
-        const value = monthData ? parseFloat(monthData[category.key]) || 0 : 0;
-        rowData[`thang_${month}`] = value;
-        total += value;
-      });
-
-      rowData.tong = total;
+      const value = parseFloat(monthData[category.key]) || 0;
+      const rowData = {
+        hang_muc: category.label,
+        gia_tri: value
+      };
+      
       const row = worksheet.addRow(rowData);
 
       // Format numbers
-      columns.slice(1).forEach((col, idx) => {
-        const cell = row.getCell(idx + 2);
-        if (category.key === 'so_nhan_vien') {
-          cell.numFmt = '0'; // Integer
-        } else {
-          cell.numFmt = '#,##0'; // Currency
-        }
-      });
+      const cell = row.getCell(2);
+      if (category.key === 'so_nhan_vien') {
+        cell.numFmt = '0'; // Integer
+      } else {
+        cell.numFmt = '#,##0'; // Currency
+      }
 
       // Section styling
       if (category.section === 'info') {
@@ -134,7 +134,7 @@ export async function GET(request: Request) {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="bao_cao_luong_${year}.xlsx"`
+        'Content-Disposition': `attachment; filename="bao_cao_luong_${month}_${year}.xlsx"`
       }
     });
   } catch (error: any) {
