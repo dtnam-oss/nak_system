@@ -23,17 +23,20 @@ export async function GET(request: NextRequest) {
       SELECT
         ma_chuyen_di,
         ngay_tao,
-        nam,
-        thang,
+        EXTRACT(YEAR FROM ngay_tao)::INTEGER as nam,
+        EXTRACT(MONTH FROM ngay_tao)::INTEGER as thang,
         ten_khach_hang,
         loai_chuyen,
         ten_tuyen,
         ma_tuyen,
         luong_tai_xe,
         ten_tai_xe,
-        don_vi_van_chuyen
+        don_vi_van_chuyen,
+        ma_tai_xe,
+        email_tai_xe
       FROM luong_tai_xe
-      WHERE thang = $1 AND nam = $2
+      WHERE EXTRACT(MONTH FROM ngay_tao) = $1 
+        AND EXTRACT(YEAR FROM ngay_tao) = $2
       ORDER BY ngay_tao DESC, ma_chuyen_di DESC
     `, [month, year]);
 
@@ -48,7 +51,9 @@ export async function GET(request: NextRequest) {
     const excelData = result.rows.map((row) => ({
       'Mã chuyến': row.ma_chuyen_di || '',
       'Ngày tạo': row.ngay_tao ? new Date(row.ngay_tao).toLocaleDateString('vi-VN') : '',
+      'Mã tài xế': row.ma_tai_xe || '',
       'Tài xế': row.ten_tai_xe || '',
+      'Email': row.email_tai_xe || '',
       'Khách hàng': row.ten_khach_hang || '',
       'Loại chuyến': row.loai_chuyen || '',
       'Tuyến đường': row.ten_tuyen || row.ma_tuyen || '',
@@ -64,7 +69,9 @@ export async function GET(request: NextRequest) {
     const columnWidths = [
       { wch: 15 },  // Mã chuyến
       { wch: 12 },  // Ngày tạo
+      { wch: 10 },  // Mã tài xế
       { wch: 20 },  // Tài xế
+      { wch: 25 },  // Email
       { wch: 25 },  // Khách hàng
       { wch: 12 },  // Loại chuyến
       { wch: 30 },  // Tuyến đường
