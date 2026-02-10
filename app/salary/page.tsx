@@ -8,6 +8,7 @@ import { LuongTongHopTable } from '@/components/salary/luong-tong-hop-table';
 import { MaintenanceTable } from '@/components/maintenance/maintenance-table';
 import { TienCocTable } from '@/components/salary/tien-coc-table';
 import { TienThuongTable } from '@/components/salary/tien-thuong-table';
+import { BaoCaoTable } from '@/components/salary/bao-cao-table';
 import { CreateSalarySlipDialog } from '@/components/salary/create-salary-slip-dialog';
 import { EditSalaryDialog } from '@/components/salary/edit-salary-dialog';
 import { DeleteSalaryDialog } from '@/components/salary/delete-salary-dialog';
@@ -133,11 +134,36 @@ interface TienThuongRecord {
   nam: number;
 }
 
-export default function SalaryPage() {
-  // Tab states - 5 tabs mới
-  const [activeTab, setActiveTab] = useState('tong-hop');
+interface BaoCaoData {
+  thang: number;
+  so_nhan_vien: number;
+  tong_luong_bat_dau: number;
+  tong_chi_phi_sua_chua: number;
+  tong_hoan_coc: number;
+  tong_chi_phi_do_dau_ngoai: number;
+  tong_chi_phi_phat_sinh_new: number;
+  tong_thuong: number;
+  tong_truy_thu_dau: number;
+  tong_truy_thu_ontime: number;
+  tong_tru_coc: number;
+  tong_tam_ung: number;
+  tong_phat_che_tai: number;
+  tong_truy_thu_vetc: number;
+  tong_phat_nguoi: number;
+  tong_tien_lam_the: number;
+  tong_bhxh: number;
+  tong_khac: number;
+  tong_thu_nhap: number;
+  tong_khau_tru: number;
+  tong_luong_thuc_lanh: number;
+}
 
-  // Data states cho 7 tabs
+export default function SalaryPage() {
+  // Tab states - 8 tabs
+  const [activeTab, setActiveTab] = useState('bao-cao');
+
+  // Data states cho 8 tabs
+  const [baoCaoData, setBaoCaoData] = useState<BaoCaoData[]>([]);
   const [tongHopData, setTongHopData] = useState<LuongTongHopRecord[]>([]);
   const [luongChuyenData, setLuongChuyenData] = useState<LuongChuyenRecord[]>([]);
   const [suaChuaData, setSuaChuaData] = useState<MaintenanceRecord[]>([]);
@@ -171,7 +197,21 @@ export default function SalaryPage() {
       setLoading(true);
       setError(null);
 
-      if (activeTab === 'tong-hop') {
+      if (activeTab === 'bao-cao') {
+        // Báo cáo - Lấy dữ liệu tổng hợp theo năm
+        console.log(`📊 Fetching bao-cao data for year=${selectedYear}`);
+        const response = await fetch(
+          `/api/salary/bao-cao?year=${selectedYear}`
+        );
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('❌ API Error:', errorData);
+          throw new Error(errorData.error || 'Không thể tải dữ liệu báo cáo');
+        }
+        const data = await response.json();
+        console.log('✅ Bao-cao data received:', data);
+        setBaoCaoData(data.data || []);
+      } else if (activeTab === 'tong-hop') {
         // Lương tổng hợp - Lấy dữ liệu từ bảng luong_tong_hop
         console.log(`📊 Fetching luong-tong-hop data for month=${selectedMonth}, year=${selectedYear}`);
         const response = await fetch(
@@ -270,7 +310,10 @@ export default function SalaryPage() {
       let endpoint = '';
       let filename = '';
 
-      if (activeTab === 'tong-hop') {
+      if (activeTab === 'bao-cao') {
+        endpoint = `/api/salary/bao-cao/export?year=${selectedYear}`;
+        filename = `bao_cao_luong_${selectedYear}.xlsx`;
+      } else if (activeTab === 'tong-hop') {
         endpoint = `/api/salary/luong-tong-hop/export?month=${selectedMonth}&year=${selectedYear}`;
         filename = `luong_tong_hop_${selectedMonth}_${selectedYear}.xlsx`;
       } else if (activeTab === 'luong-chuyen') {
@@ -453,7 +496,7 @@ export default function SalaryPage() {
               {/* Export Button */}
               <Button
                 onClick={handleExport}
-                disabled={exporting || !['tong-hop', 'luong-chuyen', 'tien-coc', 'tien-thuong'].includes(activeTab)}
+                disabled={exporting || !['bao-cao', 'tong-hop', 'luong-chuyen', 'tien-coc', 'tien-thuong'].includes(activeTab)}
                 size="sm"
                 variant="outline"
                 className="gap-2"
@@ -465,9 +508,10 @@ export default function SalaryPage() {
           </CardContent>
         </Card>
 
-        {/* Tabs Section - 7 tabs */}
+        {/* Tabs Section - 8 tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-8">
+            <TabsTrigger value="bao-cao">Báo cáo</TabsTrigger>
             <TabsTrigger value="tong-hop">Lương tổng hợp</TabsTrigger>
             <TabsTrigger value="luong-chuyen">Lương chuyến</TabsTrigger>
             <TabsTrigger value="sua-chua">Chi phí sửa chữa</TabsTrigger>
@@ -477,7 +521,20 @@ export default function SalaryPage() {
             <TabsTrigger value="tien-thuong">Tiền thưởng</TabsTrigger>
           </TabsList>
 
-          {/* Tab 1: Lương tổng hợp */}
+          {/* Tab 1: Báo cáo */}
+          <TabsContent value="bao-cao">
+            <Card>
+              <CardContent className="pt-6">
+                <BaoCaoTable
+                  data={baoCaoData}
+                  loading={loading}
+                  year={selectedYear}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Tab 2: Lương tổng hợp */}
           <TabsContent value="tong-hop">
             <Card>
               <CardContent className="pt-6">
