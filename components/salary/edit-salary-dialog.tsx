@@ -24,19 +24,28 @@ interface LuongTongHopRecord {
   chuc_vu: string;
   thang: number;
   nam: number;
-  luong_chuyen: number;
-  cp_sua_chua: number;
-  cp_do_dau: number;
-  cp_phat_sinh: number;
-  cp_ccdc: number;
-  ho_tro: number;
-  truy_thu: number;
-  tru_coc: number;
+  
+  // Thu nhập (Income)
+  luong_bat_dau: number;
+  tong_chi_phi_sua_chua: number;
   hoan_coc: number;
+  chi_phi_do_dau_ngoai: number;
+  chi_phi_phat_sinh_new: number;
+  
+  // Khấu trừ (Deductions)
+  truy_thu_dau: number;
+  truy_thu_ontime: number;
+  tru_coc: number;
   tam_ung: number;
+  phat_che_tai: number;
+  truy_thu_vetc: number;
   phat_nguoi: number;
+  tien_lam_the: number;
   bhxh: number;
   khac: number;
+  
+  // Kết quả
+  tra_tai_xe: number;
 }
 
 interface EditSalaryDialogProps {
@@ -101,12 +110,26 @@ export function EditSalaryDialog({
 
   if (!formData) return null;
 
-  const tongThuNhap = (formData.luong_chuyen || 0) + (formData.ho_tro || 0) + (formData.hoan_coc || 0);
-  const tongKhauTru = (formData.cp_sua_chua || 0) + (formData.cp_do_dau || 0) +
-                      (formData.cp_phat_sinh || 0) + (formData.cp_ccdc || 0) +
-                      (formData.truy_thu || 0) + (formData.tru_coc || 0) +
-                      (formData.tam_ung || 0) + (formData.phat_nguoi || 0) +
-                      (formData.bhxh || 0) + (formData.khac || 0);
+  // Tính toán theo công thức mới
+  const tongThuNhap = 
+    (formData.luong_bat_dau || 0) + 
+    (formData.tong_chi_phi_sua_chua || 0) + 
+    (formData.hoan_coc || 0) + 
+    (formData.chi_phi_do_dau_ngoai || 0) + 
+    (formData.chi_phi_phat_sinh_new || 0);
+    
+  const tongKhauTru = 
+    (formData.truy_thu_dau || 0) + 
+    (formData.truy_thu_ontime || 0) + 
+    (formData.tru_coc || 0) + 
+    (formData.tam_ung || 0) + 
+    (formData.phat_che_tai || 0) + 
+    (formData.truy_thu_vetc || 0) + 
+    (formData.phat_nguoi || 0) + 
+    (formData.tien_lam_the || 0) + 
+    (formData.bhxh || 0) + 
+    (formData.khac || 0);
+    
   const thucLanh = tongThuNhap - tongKhauTru;
 
   return (
@@ -129,19 +152,19 @@ export function EditSalaryDialog({
           <TabsContent value="thu-nhap" className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Lương chuyến</Label>
+                <Label>Lương chuyển</Label>
                 <Input
                   type="number"
-                  value={formData.luong_chuyen || 0}
-                  onChange={(e) => handleChange('luong_chuyen', e.target.value)}
+                  value={formData.luong_bat_dau || 0}
+                  onChange={(e) => handleChange('luong_bat_dau', e.target.value)}
                 />
               </div>
               <div>
-                <Label>Hỗ trợ</Label>
+                <Label>Hoàn phí sửa chữa</Label>
                 <Input
                   type="number"
-                  value={formData.ho_tro || 0}
-                  onChange={(e) => handleChange('ho_tro', e.target.value)}
+                  value={formData.tong_chi_phi_sua_chua || 0}
+                  onChange={(e) => handleChange('tong_chi_phi_sua_chua', e.target.value)}
                 />
               </div>
               <div>
@@ -152,49 +175,41 @@ export function EditSalaryDialog({
                   onChange={(e) => handleChange('hoan_coc', e.target.value)}
                 />
               </div>
+              <div>
+                <Label>Hoàn phí đổ dầu ngoài</Label>
+                <Input
+                  type="number"
+                  value={formData.chi_phi_do_dau_ngoai || 0}
+                  onChange={(e) => handleChange('chi_phi_do_dau_ngoai', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Hoàn chi phí phát sinh</Label>
+                <Input
+                  type="number"
+                  value={formData.chi_phi_phat_sinh_new || 0}
+                  onChange={(e) => handleChange('chi_phi_phat_sinh_new', e.target.value)}
+                />
+              </div>
             </div>
           </TabsContent>
 
           <TabsContent value="khau-tru" className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>CP Sửa chữa</Label>
+                <Label>Truy thu đầu</Label>
                 <Input
                   type="number"
-                  value={formData.cp_sua_chua || 0}
-                  onChange={(e) => handleChange('cp_sua_chua', e.target.value)}
+                  value={formData.truy_thu_dau || 0}
+                  onChange={(e) => handleChange('truy_thu_dau', e.target.value)}
                 />
               </div>
               <div>
-                <Label>CP Đổ dầu</Label>
+                <Label>Truy thu ontime</Label>
                 <Input
                   type="number"
-                  value={formData.cp_do_dau || 0}
-                  onChange={(e) => handleChange('cp_do_dau', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>CP Phát sinh</Label>
-                <Input
-                  type="number"
-                  value={formData.cp_phat_sinh || 0}
-                  onChange={(e) => handleChange('cp_phat_sinh', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>CP CCDC</Label>
-                <Input
-                  type="number"
-                  value={formData.cp_ccdc || 0}
-                  onChange={(e) => handleChange('cp_ccdc', e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Truy thu</Label>
-                <Input
-                  type="number"
-                  value={formData.truy_thu || 0}
-                  onChange={(e) => handleChange('truy_thu', e.target.value)}
+                  value={formData.truy_thu_ontime || 0}
+                  onChange={(e) => handleChange('truy_thu_ontime', e.target.value)}
                 />
               </div>
               <div>
@@ -206,7 +221,7 @@ export function EditSalaryDialog({
                 />
               </div>
               <div>
-                <Label>Tạm ứng</Label>
+                <Label>Phí tạm ứng</Label>
                 <Input
                   type="number"
                   value={formData.tam_ung || 0}
@@ -214,11 +229,35 @@ export function EditSalaryDialog({
                 />
               </div>
               <div>
-                <Label>Phạt người</Label>
+                <Label>Phạt chế tài</Label>
+                <Input
+                  type="number"
+                  value={formData.phat_che_tai || 0}
+                  onChange={(e) => handleChange('phat_che_tai', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Truy thu VETC</Label>
+                <Input
+                  type="number"
+                  value={formData.truy_thu_vetc || 0}
+                  onChange={(e) => handleChange('truy_thu_vetc', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Phạt nguội</Label>
                 <Input
                   type="number"
                   value={formData.phat_nguoi || 0}
                   onChange={(e) => handleChange('phat_nguoi', e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Tiền làm thẻ</Label>
+                <Input
+                  type="number"
+                  value={formData.tien_lam_the || 0}
+                  onChange={(e) => handleChange('tien_lam_the', e.target.value)}
                 />
               </div>
               <div>

@@ -60,19 +60,28 @@ interface LuongTongHopRecord {
   chuc_vu: string;
   thang: number;
   nam: number;
-  luong_chuyen: number;
-  cp_sua_chua: number;
-  cp_do_dau: number;
-  cp_phat_sinh: number;
-  cp_ccdc: number;
-  ho_tro: number;
-  truy_thu: number;
-  tru_coc: number;
+  
+  // Thu nhập (Income items)
+  luong_bat_dau: number;
+  tong_chi_phi_sua_chua: number;
   hoan_coc: number;
+  chi_phi_do_dau_ngoai: number;
+  chi_phi_phat_sinh_new: number;
+  
+  // Khấu trừ (Deduction items)
+  truy_thu_dau: number;
+  truy_thu_ontime: number;
+  tru_coc: number;
   tam_ung: number;
+  phat_che_tai: number;
+  truy_thu_vetc: number;
   phat_nguoi: number;
+  tien_lam_the: number;
   bhxh: number;
   khac: number;
+  
+  // Kết quả
+  tra_tai_xe: number;
 }
 
 export default function SalaryPage() {

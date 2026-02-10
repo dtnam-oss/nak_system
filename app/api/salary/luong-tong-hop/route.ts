@@ -27,19 +27,25 @@ export async function GET(request: NextRequest) {
         chuc_vu,
         thang,
         nam,
-        luong_chuyen,
-        cp_sua_chua,
-        cp_do_dau,
-        cp_phat_sinh,
-        cp_ccdc,
-        ho_tro,
-        truy_thu,
-        tru_coc,
-        hoan_coc,
-        tam_ung,
-        phat_nguoi,
-        bhxh,
-        khac
+        -- Thu nhập
+        COALESCE(luong_bat_dau, luong_chuyen, 0) as luong_bat_dau,
+        COALESCE(tong_chi_phi_sua_chua, 0) as tong_chi_phi_sua_chua,
+        COALESCE(hoan_coc, 0) as hoan_coc,
+        COALESCE(chi_phi_do_dau_ngoai, 0) as chi_phi_do_dau_ngoai,
+        COALESCE(chi_phi_phat_sinh_new, 0) as chi_phi_phat_sinh_new,
+        -- Khấu trừ
+        COALESCE(truy_thu_dau, 0) as truy_thu_dau,
+        COALESCE(truy_thu_ontime, 0) as truy_thu_ontime,
+        COALESCE(tru_coc, 0) as tru_coc,
+        COALESCE(tam_ung, 0) as tam_ung,
+        COALESCE(phat_che_tai, 0) as phat_che_tai,
+        COALESCE(truy_thu_vetc, 0) as truy_thu_vetc,
+        COALESCE(phat_nguoi, 0) as phat_nguoi,
+        COALESCE(tien_lam_the, 0) as tien_lam_the,
+        COALESCE(bhxh, 0) as bhxh,
+        COALESCE(khac, 0) as khac,
+        -- Kết quả
+        COALESCE(tra_tai_xe, 0) as tra_tai_xe
       FROM luong_tong_hop
       WHERE thang = $1 AND nam = $2
       ORDER BY ma_nhan_vien ASC
@@ -48,43 +54,48 @@ export async function GET(request: NextRequest) {
     // Calculate summary statistics
     const totalRecords = result.rows.length;
     const totalLuongChuyen = result.rows.reduce((sum, row) =>
-      sum + parseFloat(row.luong_chuyen || '0'), 0
+      sum + parseFloat(row.luong_bat_dau || '0'), 0
     );
 
     // Calculate total actual salary (income - deductions)
     const totalThucLanh = result.rows.reduce((sum, row) => {
-      const income = parseFloat(row.luong_chuyen || '0') +
-                     parseFloat(row.ho_tro || '0') +
-                     parseFloat(row.hoan_coc || '0');
-      const deductions = parseFloat(row.cp_sua_chua || '0') +
-                        parseFloat(row.cp_do_dau || '0') +
-                        parseFloat(row.cp_phat_sinh || '0') +
-                        parseFloat(row.cp_ccdc || '0') +
-                        parseFloat(row.truy_thu || '0') +
+      const income = parseFloat(row.luong_bat_dau || '0') +
+                     parseFloat(row.tong_chi_phi_sua_chua || '0') +
+                     parseFloat(row.hoan_coc || '0') +
+                     parseFloat(row.chi_phi_do_dau_ngoai || '0') +
+                     parseFloat(row.chi_phi_phat_sinh_new || '0');
+      const deductions = parseFloat(row.truy_thu_dau || '0') +
+                        parseFloat(row.truy_thu_ontime || '0') +
                         parseFloat(row.tru_coc || '0') +
                         parseFloat(row.tam_ung || '0') +
+                        parseFloat(row.phat_che_tai || '0') +
+                        parseFloat(row.truy_thu_vetc || '0') +
                         parseFloat(row.phat_nguoi || '0') +
+                        parseFloat(row.tien_lam_the || '0') +
                         parseFloat(row.bhxh || '0') +
                         parseFloat(row.khac || '0');
-      return sum + (income - deductions);
+      return sum + (parseFloat(row.tra_tai_xe || '0') || (income - deductions));
     }, 0);
 
     // Convert all numeric fields from strings to numbers
     const processedData = result.rows.map(row => ({
       ...row,
-      luong_chuyen: parseFloat(row.luong_chuyen) || 0,
-      cp_sua_chua: parseFloat(row.cp_sua_chua) || 0,
-      cp_do_dau: parseFloat(row.cp_do_dau) || 0,
-      cp_phat_sinh: parseFloat(row.cp_phat_sinh) || 0,
-      cp_ccdc: parseFloat(row.cp_ccdc) || 0,
-      ho_tro: parseFloat(row.ho_tro) || 0,
-      truy_thu: parseFloat(row.truy_thu) || 0,
-      tru_coc: parseFloat(row.tru_coc) || 0,
+      luong_bat_dau: parseFloat(row.luong_bat_dau) || 0,
+      tong_chi_phi_sua_chua: parseFloat(row.tong_chi_phi_sua_chua) || 0,
       hoan_coc: parseFloat(row.hoan_coc) || 0,
+      chi_phi_do_dau_ngoai: parseFloat(row.chi_phi_do_dau_ngoai) || 0,
+      chi_phi_phat_sinh_new: parseFloat(row.chi_phi_phat_sinh_new) || 0,
+      truy_thu_dau: parseFloat(row.truy_thu_dau) || 0,
+      truy_thu_ontime: parseFloat(row.truy_thu_ontime) || 0,
+      tru_coc: parseFloat(row.tru_coc) || 0,
       tam_ung: parseFloat(row.tam_ung) || 0,
+      phat_che_tai: parseFloat(row.phat_che_tai) || 0,
+      truy_thu_vetc: parseFloat(row.truy_thu_vetc) || 0,
       phat_nguoi: parseFloat(row.phat_nguoi) || 0,
+      tien_lam_the: parseFloat(row.tien_lam_the) || 0,
       bhxh: parseFloat(row.bhxh) || 0,
       khac: parseFloat(row.khac) || 0,
+      tra_tai_xe: parseFloat(row.tra_tai_xe) || 0,
     }));
 
     return NextResponse.json({
