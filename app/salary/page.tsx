@@ -5,6 +5,7 @@ import { DashboardLayout } from '@/components/dashboard-layout';
 import { SalaryTable } from '@/components/salary/salary-table';
 import { LuongChuyenTable } from '@/components/salary/luong-chuyen-table';
 import { LuongTongHopTable } from '@/components/salary/luong-tong-hop-table';
+import { MaintenanceTable } from '@/components/maintenance/maintenance-table';
 import { CreateSalarySlipDialog } from '@/components/salary/create-salary-slip-dialog';
 import { EditSalaryDialog } from '@/components/salary/edit-salary-dialog';
 import { DeleteSalaryDialog } from '@/components/salary/delete-salary-dialog';
@@ -52,6 +53,25 @@ interface LuongChuyenRecord {
   don_vi_van_chuyen: string;
 }
 
+interface MaintenanceRecord {
+  id: string;
+  ngay: string;
+  loai_xe: string | null;
+  bien_so_xe: string;
+  loai_phu_tung: string | null;
+  ma_phu_tung: string | null;
+  ten_phu_tung: string | null;
+  so_luong: number;
+  don_gia: number;
+  thanh_tien: number;
+  km_sua_chua: number;
+  so_tien: number;
+  ca_nhan_thanh_toan: string | null;
+  dia_chi_sua_chua: string | null;
+  ma_nhan_vien: string | null;
+  ten_nhan_vien: string | null;
+}
+
 interface LuongTongHopRecord {
   id: string;
   ma_nhan_vien: string;
@@ -93,7 +113,7 @@ export default function SalaryPage() {
   // Data states cho 5 tabs
   const [tongHopData, setTongHopData] = useState<LuongTongHopRecord[]>([]);
   const [luongChuyenData, setLuongChuyenData] = useState<LuongChuyenRecord[]>([]);
-  const [suaChuaData, setSuaChuaData] = useState<any[]>([]);
+  const [suaChuaData, setSuaChuaData] = useState<MaintenanceRecord[]>([]);
   const [vetcData, setVetcData] = useState<any[]>([]);
   const [truyThuData, setTruyThuData] = useState<any[]>([]);
 
@@ -150,8 +170,25 @@ export default function SalaryPage() {
         console.log('✅ Luong-chuyen data received:', data);
         setLuongChuyenData(data.data || []);
       } else if (activeTab === 'sua-chua') {
-        // Chi phí sửa chữa - Empty state (chưa có data)
-        setSuaChuaData([]);
+        // Chi phí sửa chữa - Lấy từ API maintenance
+        console.log(`📊 Fetching maintenance data for month=${selectedMonth}, year=${selectedYear}`);
+        
+        // Calculate date range for the month
+        const fromDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`;
+        const lastDay = new Date(selectedYear, selectedMonth, 0).getDate();
+        const toDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+        
+        const response = await fetch(
+          `/api/maintenance?from_date=${fromDate}&to_date=${toDate}&limit=1000`
+        );
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('❌ API Error:', errorData);
+          throw new Error(errorData.error || 'Không thể tải dữ liệu chi phí sửa chữa');
+        }
+        const data = await response.json();
+        console.log('✅ Maintenance data received:', data);
+        setSuaChuaData(data.data || []);
       } else if (activeTab === 'vetc') {
         // Chi phí VETC - Empty state (chưa có data)
         setVetcData([]);
@@ -358,13 +395,10 @@ export default function SalaryPage() {
           <TabsContent value="sua-chua">
             <Card>
               <CardContent className="pt-6">
-                {loading ? (
-                  <div className="text-center py-8 text-muted-foreground">Đang tải...</div>
-                ) : suaChuaData.length > 0 ? (
-                  <div>Table chi phí sửa chữa (coming soon)</div>
-                ) : (
-                  <EmptyState message="Dữ liệu chi phí sửa chữa sẽ được cập nhật sau" />
-                )}
+                <MaintenanceTable
+                  data={suaChuaData}
+                  loading={loading}
+                />
               </CardContent>
             </Card>
           </TabsContent>
