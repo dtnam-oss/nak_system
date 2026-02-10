@@ -19,7 +19,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Build WHERE conditions
-    const conditions: string[] = ['thang = $1', 'nam = $2'];
+    const conditions: string[] = [
+      'EXTRACT(MONTH FROM ngay_tao) = $1',
+      'EXTRACT(YEAR FROM ngay_tao) = $2'
+    ];
     const params: any[] = [month, year];
     let paramIndex = 3;
 
@@ -35,15 +38,17 @@ export async function GET(request: NextRequest) {
       SELECT
         ma_chuyen_di,
         ngay_tao,
-        nam,
-        thang,
+        EXTRACT(YEAR FROM ngay_tao)::INTEGER as nam,
+        EXTRACT(MONTH FROM ngay_tao)::INTEGER as thang,
         ten_khach_hang,
         loai_chuyen,
         ten_tuyen,
         ma_tuyen,
         luong_tai_xe,
         ten_tai_xe,
-        don_vi_van_chuyen
+        don_vi_van_chuyen,
+        ma_tai_xe,
+        email_tai_xe
       FROM luong_tai_xe
       WHERE ${whereClause}
       ORDER BY ngay_tao DESC, ma_chuyen_di DESC
