@@ -35,7 +35,7 @@ export async function GET(request: Request) {
       `tien_coc_${month}_${year}.pdf`
     );
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
