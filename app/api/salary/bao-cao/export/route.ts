@@ -48,15 +48,8 @@ export async function GET(request: Request) {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(`Báo cáo tháng ${month}/${year}`);
 
-    // Get single month data
+    // Get single month data - always returns at least one row with COALESCE
     const monthData = result.rows[0];
-
-    if (!monthData) {
-      return NextResponse.json(
-        { error: 'No data found for this month' },
-        { status: 404 }
-      );
-    }
 
     // Define categories
     const categories = [

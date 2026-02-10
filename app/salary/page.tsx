@@ -182,6 +182,7 @@ export default function SalaryPage() {
   const [selectedYear, setSelectedYear] = useState<number>(currentYear);
 
   const [exporting, setExporting] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -356,6 +357,58 @@ export default function SalaryPage() {
     }
   };
 
+  const handleExportPdf = async () => {
+    try {
+      setExportingPdf(true);
+
+      let endpoint = '';
+      let filename = '';
+
+      if (activeTab === 'bao-cao') {
+        endpoint = `/api/salary/bao-cao/export-pdf?month=${selectedMonth}&year=${selectedYear}`;
+        filename = `bao_cao_luong_${selectedMonth}_${selectedYear}.pdf`;
+      } else if (activeTab === 'tong-hop') {
+        endpoint = `/api/salary/luong-tong-hop/export-pdf?month=${selectedMonth}&year=${selectedYear}`;
+        filename = `luong_tong_hop_${selectedMonth}_${selectedYear}.pdf`;
+      } else if (activeTab === 'luong-chuyen') {
+        endpoint = `/api/salary/luong-chuyen/export-pdf?month=${selectedMonth}&year=${selectedYear}`;
+        filename = `luong_chuyen_${selectedMonth}_${selectedYear}.pdf`;
+      } else if (activeTab === 'tien-coc') {
+        endpoint = `/api/salary/tien-coc/export-pdf?month=${selectedMonth}&year=${selectedYear}`;
+        filename = `tien_coc_${selectedMonth}_${selectedYear}.pdf`;
+      } else if (activeTab === 'tien-thuong') {
+        endpoint = `/api/salary/tien-thuong/export-pdf?month=${selectedMonth}&year=${selectedYear}`;
+        filename = `tien_thuong_${selectedMonth}_${selectedYear}.pdf`;
+      } else {
+        alert('Chức năng export PDF cho tab này chưa có dữ liệu');
+        return;
+      }
+
+      const response = await fetch(endpoint);
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Export PDF failed');
+      }
+
+      // Download file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      console.error('Export PDF error:', err);
+      alert(err.message || 'Không thể xuất PDF');
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   const handleRecalculate = async () => {
     if (!confirm(`Tính lại lương cho tất cả nhân viên trong tháng ${selectedMonth}/${selectedYear}?\n\n⚠️ Dữ liệu từ bảng Lương chuyến và Chi phí sửa chữa sẽ được tự động cập nhật.\nCác giá trị nhập tay (thưởng, khấu trừ khác...) sẽ được giữ nguyên.`)) {
       return;
@@ -503,6 +556,18 @@ export default function SalaryPage() {
               >
                 <Download className="h-4 w-4" />
                 {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+              </Button>
+
+              {/* PDF Export Button */}
+              <Button
+                onClick={handleExportPdf}
+                disabled={exportingPdf || !['bao-cao', 'tong-hop', 'luong-chuyen', 'tien-coc', 'tien-thuong'].includes(activeTab)}
+                size="sm"
+                variant="outline"
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                {exportingPdf ? 'Đang xuất...' : 'Xuất PDF'}
               </Button>
             </div>
           </CardContent>

@@ -43,6 +43,8 @@
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "jose": "^6.1.3",
+    "jspdf": "^4.1.0",
+    "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.562.0",
     "next": "16.1.1",
     "node-cron": "^4.2.1",
