@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
         id,
         ma_nhan_vien,
         ten_nhan_vien,
-        phong_ban,
         chuc_vu,
+        email,
         thang,
         nam,
         -- Thu nhập
@@ -44,8 +44,10 @@ export async function GET(request: NextRequest) {
         COALESCE(tien_lam_the, 0) as tien_lam_the,
         COALESCE(bhxh, 0) as bhxh,
         COALESCE(khac, 0) as khac,
-        -- Kết quả
-        COALESCE(tra_tai_xe, 0) as tra_tai_xe
+        -- Calculated fields
+        COALESCE(tong_thu_nhap, 0) as tong_thu_nhap,
+        COALESCE(tong_khau_tru, 0) as tong_khau_tru,
+        COALESCE(luong_thuc_lanh, tra_tai_xe, 0) as luong_thuc_lanh
       FROM luong_tong_hop
       WHERE thang = $1 AND nam = $2
       ORDER BY ma_nhan_vien ASC
@@ -95,7 +97,9 @@ export async function GET(request: NextRequest) {
       tien_lam_the: parseFloat(row.tien_lam_the) || 0,
       bhxh: parseFloat(row.bhxh) || 0,
       khac: parseFloat(row.khac) || 0,
-      tra_tai_xe: parseFloat(row.tra_tai_xe) || 0,
+      tong_thu_nhap: parseFloat(row.tong_thu_nhap) || 0,
+      tong_khau_tru: parseFloat(row.tong_khau_tru) || 0,
+      luong_thuc_lanh: parseFloat(row.luong_thuc_lanh) || 0,
     }));
 
     return NextResponse.json({

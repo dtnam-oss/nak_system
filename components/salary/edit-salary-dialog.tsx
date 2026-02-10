@@ -20,7 +20,7 @@ interface LuongTongHopRecord {
   id: string;
   ma_nhan_vien: string;
   ten_nhan_vien: string;
-  phong_ban: string;
+  email: string;
   chuc_vu: string;
   thang: number;
   nam: number;
@@ -44,8 +44,10 @@ interface LuongTongHopRecord {
   bhxh: number;
   khac: number;
   
-  // Kết quả
-  tra_tai_xe: number;
+  // Calculated fields
+  tong_thu_nhap: number;
+  tong_khau_tru: number;
+  luong_thuc_lanh: number;
 }
 
 interface EditSalaryDialogProps {
@@ -110,27 +112,10 @@ export function EditSalaryDialog({
 
   if (!formData) return null;
 
-  // Tính toán theo công thức mới
-  const tongThuNhap = 
-    (formData.luong_bat_dau || 0) + 
-    (formData.tong_chi_phi_sua_chua || 0) + 
-    (formData.hoan_coc || 0) + 
-    (formData.chi_phi_do_dau_ngoai || 0) + 
-    (formData.chi_phi_phat_sinh_new || 0);
-    
-  const tongKhauTru = 
-    (formData.truy_thu_dau || 0) + 
-    (formData.truy_thu_ontime || 0) + 
-    (formData.tru_coc || 0) + 
-    (formData.tam_ung || 0) + 
-    (formData.phat_che_tai || 0) + 
-    (formData.truy_thu_vetc || 0) + 
-    (formData.phat_nguoi || 0) + 
-    (formData.tien_lam_the || 0) + 
-    (formData.bhxh || 0) + 
-    (formData.khac || 0);
-    
-  const thucLanh = tongThuNhap - tongKhauTru;
+  // Display calculated fields from database (read-only, server calculates on save)
+  const tongThuNhap = formData.tong_thu_nhap || 0;
+  const tongKhauTru = formData.tong_khau_tru || 0;
+  const thucLanh = formData.luong_thuc_lanh || 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

@@ -56,8 +56,8 @@ interface LuongTongHopRecord {
   id: string;
   ma_nhan_vien: string;
   ten_nhan_vien: string;
-  phong_ban: string;
   chuc_vu: string;
+  email: string;
   thang: number;
   nam: number;
   
@@ -80,8 +80,10 @@ interface LuongTongHopRecord {
   bhxh: number;
   khac: number;
   
-  // Kết quả
-  tra_tai_xe: number;
+  // Calculated fields
+  tong_thu_nhap: number;
+  tong_khau_tru: number;
+  luong_thuc_lanh: number;
 }
 
 export default function SalaryPage() {

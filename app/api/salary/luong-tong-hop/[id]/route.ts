@@ -33,8 +33,10 @@ export async function PATCH(
         tien_lam_the = $13,
         bhxh = $14,
         khac = $15,
-        updated_at = NOW()
-      WHERE id = $16
+        tong_thu_nhap = $16,
+        tong_khau_tru = $17,
+        luong_thuc_lanh = $18
+      WHERE id = $19
       RETURNING *
     `, [
       body.luong_bat_dau || 0,
@@ -52,6 +54,39 @@ export async function PATCH(
       body.tien_lam_the || 0,
       body.bhxh || 0,
       body.khac || 0,
+      // Calculate tong_thu_nhap
+      (body.luong_bat_dau || 0) + 
+      (body.tong_chi_phi_sua_chua || 0) + 
+      (body.hoan_coc || 0) + 
+      (body.chi_phi_do_dau_ngoai || 0) + 
+      (body.chi_phi_phat_sinh_new || 0),
+      // Calculate tong_khau_tru
+      (body.truy_thu_dau || 0) + 
+      (body.truy_thu_ontime || 0) + 
+      (body.tru_coc || 0) + 
+      (body.tam_ung || 0) + 
+      (body.phat_che_tai || 0) + 
+      (body.truy_thu_vetc || 0) + 
+      (body.phat_nguoi || 0) + 
+      (body.tien_lam_the || 0) + 
+      (body.bhxh || 0) + 
+      (body.khac || 0),
+      // Calculate luong_thuc_lanh
+      ((body.luong_bat_dau || 0) + 
+       (body.tong_chi_phi_sua_chua || 0) + 
+       (body.hoan_coc || 0) + 
+       (body.chi_phi_do_dau_ngoai || 0) + 
+       (body.chi_phi_phat_sinh_new || 0)) -
+      ((body.truy_thu_dau || 0) + 
+       (body.truy_thu_ontime || 0) + 
+       (body.tru_coc || 0) + 
+       (body.tam_ung || 0) + 
+       (body.phat_che_tai || 0) + 
+       (body.truy_thu_vetc || 0) + 
+       (body.phat_nguoi || 0) + 
+       (body.tien_lam_the || 0) + 
+       (body.bhxh || 0) + 
+       (body.khac || 0)),
       id,
     ]);
 
@@ -82,6 +117,9 @@ export async function PATCH(
       tien_lam_the: parseFloat(result.rows[0].tien_lam_the) || 0,
       bhxh: parseFloat(result.rows[0].bhxh) || 0,
       khac: parseFloat(result.rows[0].khac) || 0,
+      tong_thu_nhap: parseFloat(result.rows[0].tong_thu_nhap) || 0,
+      tong_khau_tru: parseFloat(result.rows[0].tong_khau_tru) || 0,
+      luong_thuc_lanh: parseFloat(result.rows[0].luong_thuc_lanh) || 0,
     };
 
     return NextResponse.json({

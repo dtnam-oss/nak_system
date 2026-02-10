@@ -24,8 +24,8 @@ export async function POST(request: NextRequest) {
       SELECT
         ma_nhan_vien,
         ho_va_ten,
-        phong_ban,
-        chuc_vu
+        chuc_vu,
+        email
       FROM nhan_vien
       WHERE chuc_vu = 'Tài xế'
         AND tinh_trang_cong_tac = 'Đang làm việc'
@@ -74,33 +74,40 @@ export async function POST(request: NextRequest) {
             id,
             ma_nhan_vien,
             ten_nhan_vien,
-            phong_ban,
             chuc_vu,
+            email,
             thang,
             nam,
-            luong_chuyen,
-            cp_sua_chua,
-            cp_do_dau,
-            cp_phat_sinh,
-            cp_ccdc,
-            ho_tro,
-            truy_thu,
-            tru_coc,
+            luong_bat_dau,
+            tong_chi_phi_sua_chua,
             hoan_coc,
+            chi_phi_do_dau_ngoai,
+            chi_phi_phat_sinh_new,
+            truy_thu_dau,
+            truy_thu_ontime,
+            tru_coc,
             tam_ung,
+            phat_che_tai,
+            truy_thu_vetc,
             phat_nguoi,
+            tien_lam_the,
             bhxh,
-            khac
+            khac,
+            tong_thu_nhap,
+            tong_khau_tru,
+            luong_thuc_lanh
           ) VALUES (
             $1, $2, $3, $4, $5, $6, $7,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+            0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0
           )
         `, [
           newId,
           driver.ma_nhan_vien,
           driver.ho_va_ten,
-          driver.phong_ban,
           driver.chuc_vu,
+          driver.email,
           month,
           year,
         ]);

@@ -15,7 +15,7 @@ interface LuongTongHopRecord {
   id: string;
   ma_nhan_vien: string;
   ten_nhan_vien: string;
-  phong_ban: string;
+  email: string;
   chuc_vu: string;
   thang: number;
   nam: number;
@@ -39,8 +39,10 @@ interface LuongTongHopRecord {
   bhxh: number;  // BHXH
   khac: number;  // Khác
   
-  // Kết quả
-  tra_tai_xe: number;  // Thu nhập thực lĩnh
+  // Calculated fields
+  tong_thu_nhap: number;
+  tong_khau_tru: number;
+  luong_thuc_lanh: number;
 }
 
 interface LuongTongHopTableProps {
@@ -119,27 +121,8 @@ export function LuongTongHopTable({ data, loading, onEdit, onDelete }: LuongTong
         </TableHeader>
         <TableBody>
           {data.map((record, index) => {
-            // Calculate totals theo công thức mới
-            const tongThuNhap = 
-              (record.luong_bat_dau || 0) + 
-              (record.tong_chi_phi_sua_chua || 0) + 
-              (record.hoan_coc || 0) + 
-              (record.chi_phi_do_dau_ngoai || 0) + 
-              (record.chi_phi_phat_sinh_new || 0);
-              
-            const tongKhauTru = 
-              (record.truy_thu_dau || 0) + 
-              (record.truy_thu_ontime || 0) + 
-              (record.tru_coc || 0) + 
-              (record.tam_ung || 0) + 
-              (record.phat_che_tai || 0) + 
-              (record.truy_thu_vetc || 0) + 
-              (record.phat_nguoi || 0) + 
-              (record.tien_lam_the || 0) + 
-              (record.bhxh || 0) + 
-              (record.khac || 0);
-              
-            const thucLanh = record.tra_tai_xe || (tongThuNhap - tongKhauTru);
+            // Use calculated fields from database
+            const thucLanh = record.luong_thuc_lanh || 0;
 
             return (
               <TableRow key={record.id} className="hover:bg-gray-50">
@@ -239,23 +222,13 @@ export function LuongTongHopTable({ data, loading, onEdit, onDelete }: LuongTong
           <div>
             <p className="text-green-600 text-xs mb-1">📈 Tổng thu nhập</p>
             <p className="font-bold text-lg text-green-700">
-              {formatCurrency(data.reduce((sum, r) =>
-                sum + (r.luong_bat_dau || 0) + (r.tong_chi_phi_sua_chua || 0) + 
-                (r.hoan_coc || 0) + (r.chi_phi_do_dau_ngoai || 0) + (r.chi_phi_phat_sinh_new || 0), 0
-              ))}
+              {formatCurrency(data.reduce((sum, r) => sum + (r.tong_thu_nhap || 0), 0))}
             </p>
           </div>
           <div className="bg-blue-100 px-3 py-2 rounded">
             <p className="text-blue-700 text-xs mb-1 font-semibold">💰 Tổng thực lãnh</p>
             <p className="font-bold text-xl text-blue-800">
-              {formatCurrency(data.reduce((sum, r) => {
-                const income = (r.luong_bat_dau || 0) + (r.tong_chi_phi_sua_chua || 0) + 
-                              (r.hoan_coc || 0) + (r.chi_phi_do_dau_ngoai || 0) + (r.chi_phi_phat_sinh_new || 0);
-                const deduct = (r.truy_thu_dau || 0) + (r.truy_thu_ontime || 0) + (r.tru_coc || 0) +
-                              (r.tam_ung || 0) + (r.phat_che_tai || 0) + (r.truy_thu_vetc || 0) +
-                              (r.phat_nguoi || 0) + (r.tien_lam_the || 0) + (r.bhxh || 0) + (r.khac || 0);
-                return sum + (r.tra_tai_xe || (income - deduct));
-              }, 0))}
+              {formatCurrency(data.reduce((sum, r) => sum + (r.luong_thuc_lanh || 0), 0))}
             </p>
           </div>
         </div>
