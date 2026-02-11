@@ -92,29 +92,6 @@ export async function POST(request: Request) {
         } else {
           throw new Error(emailResult.error || 'Email send failed');
         }
-          results.success++;
-          results.logs.push({
-            ma_nhan_vien: employee.ma_nhan_vien,
-            ten_nhan_vien: employee.ten_nhan_vien,
-            email: employee.email,
-            status: 'success'
-          });
-
-          // Log success
-          await logEmailSend(
-            employee.ma_nhan_vien,
-            employee.ten_nhan_vien,
-            employee.email,
-            `Phiếu lương tháng ${month}/${year} - ${employee.ten_nhan_vien}`,
-            parseInt(month),
-            parseInt(year),
-            'success'
-          );
-
-          console.log(`  ✅ Success`);
-        } else {
-          throw new Error(emailResult.error || 'Email send failed');
-        }
 
         // Delay to avoid rate limiting (1.5 seconds between emails)
         await delay(1500);
