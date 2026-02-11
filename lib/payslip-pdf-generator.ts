@@ -9,6 +9,16 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { query } from '@/lib/db';
 
+// Add Vietnamese font support - use Courier (supports basic Latin Extended)
+// For production, should add a proper Vietnamese font like Roboto
+const addVietnameseSupport = (doc: jsPDF) => {
+  // jsPDF built-in fonts that support some Vietnamese characters:
+  // - courier (best for Vietnamese)
+  // - times
+  // - helvetica (limited support)
+  doc.setFont('courier');
+};
+
 interface PayslipData {
   ma_nhan_vien: string;
   ten_nhan_vien: string;
@@ -44,7 +54,7 @@ interface PayslipData {
 }
 
 /**
- * Generate PDF Phiếu lương tổng hợp (1 page)
+ * Generate PDF Phieu luong tổng hợp (1 page)
  */
 export async function generateTongHopPDF(
   payslip: PayslipData
@@ -55,36 +65,39 @@ export async function generateTongHopPDF(
     format: 'a4'
   });
   
+  // Set font to courier for Vietnamese support
+  doc.setFont('courier');
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('vi-VN').format(value);
   };
   
   // Title
   doc.setFontSize(18);
-  doc.setFont('helvetica', 'bold');
-  doc.text('PHIẾU LƯƠNG TỔNG HỢP', 105, 20, { align: 'center' });
+  doc.setFont('courier', 'bold');
+  doc.text('PHIEU LUONG TONG HOP', 105, 20, { align: 'center' });
   
   doc.setFontSize(12);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Tháng ${payslip.thang}/${payslip.nam}`, 105, 28, { align: 'center' });
+  doc.setFont('courier', 'normal');
+  doc.text(`Thang ${payslip.thang}/${payslip.nam}`, 105, 28, { align: 'center' });
   
   // Employee info section
   let yPos = 40;
   doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('THÔNG TIN NHÂN VIÊN', 15, yPos);
+  doc.setFont('courier', 'bold');
+  doc.text('THONG TIN NHAN VIEN', 15, yPos);
   
   yPos += 7;
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Mã nhân viên:`, 20, yPos);
+  doc.setFont('courier', 'normal');
+  doc.text(`Ma nhan vien:`, 20, yPos);
   doc.text(payslip.ma_nhan_vien, 70, yPos);
   
   yPos += 6;
-  doc.text(`Họ và tên:`, 20, yPos);
+  doc.text(`Ho va ten:`, 20, yPos);
   doc.text(payslip.ten_nhan_vien, 70, yPos);
   
   yPos += 6;
-  doc.text(`Chức vụ:`, 20, yPos);
+  doc.text(`Chuc vu:`, 20, yPos);
   doc.text(payslip.chuc_vu, 70, yPos);
   
   yPos += 6;
@@ -93,66 +106,66 @@ export async function generateTongHopPDF(
   
   // Income section
   yPos += 12;
-  doc.setFont('helvetica', 'bold');
+  doc.setFont('courier', 'bold');
   doc.setFillColor(230, 230, 230);
   doc.rect(15, yPos - 4, 180, 7, 'F');
-  doc.text('THU NHẬP', 20, yPos);
+  doc.text('THU NHAP', 20, yPos);
   
   yPos += 8;
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('courier', 'normal');
   
   const incomeItems = [
-    ['Lương chuyến', formatCurrency(payslip.luong_bat_dau)],
-    ['Chi phí sửa chữa', formatCurrency(payslip.tong_chi_phi_sua_chua)],
-    ['Hoàn cọc', formatCurrency(payslip.hoan_coc)],
-    ['Chi phí đổ dầu ngoài', formatCurrency(payslip.chi_phi_do_dau_ngoai)],
-    ['Chi phí phát sinh', formatCurrency(payslip.chi_phi_phat_sinh_new)],
-    ['Tiền thưởng', formatCurrency(payslip.thuong)]
+    ['Luong chuyen', formatCurrency(payslip.luong_bat_dau)],
+    ['Chi phi sua chua', formatCurrency(payslip.tong_chi_phi_sua_chua)],
+    ['Hoan coc', formatCurrency(payslip.hoan_coc)],
+    ['Chi phi do dau ngoai', formatCurrency(payslip.chi_phi_do_dau_ngoai)],
+    ['Chi phi phat sinh', formatCurrency(payslip.chi_phi_phat_sinh_new)],
+    ['Tien thuong', formatCurrency(payslip.thuong)]
   ];
   
   incomeItems.forEach(([label, value]) => {
     doc.text(`- ${label}:`, 20, yPos);
-    doc.text(`${value} đ`, 190, yPos, { align: 'right' });
+    doc.text(`${value} d`, 190, yPos, { align: 'right' });
     yPos += 6;
   });
   
   yPos += 2;
-  doc.setFont('helvetica', 'bold');
-  doc.text('TỔNG THU NHẬP:', 20, yPos);
-  doc.text(`${formatCurrency(payslip.tong_thu_nhap)} đ`, 190, yPos, { align: 'right' });
+  doc.setFont('courier', 'bold');
+  doc.text('TONG THU NHAP:', 20, yPos);
+  doc.text(`${formatCurrency(payslip.tong_thu_nhap)} d`, 190, yPos, { align: 'right' });
   
   // Deductions section
   yPos += 10;
   doc.setFillColor(230, 230, 230);
   doc.rect(15, yPos - 4, 180, 7, 'F');
-  doc.text('KHẤU TRỪ', 20, yPos);
+  doc.text('KHAU TRU', 20, yPos);
   
   yPos += 8;
-  doc.setFont('helvetica', 'normal');
+  doc.setFont('courier', 'normal');
   
   const deductionItems = [
-    ['Truy thu dầu', formatCurrency(payslip.truy_thu_dau)],
+    ['Truy thu dau', formatCurrency(payslip.truy_thu_dau)],
     ['Truy thu on-time', formatCurrency(payslip.truy_thu_ontime)],
-    ['Trừ cọc', formatCurrency(payslip.tru_coc)],
-    ['Tạm ứng', formatCurrency(payslip.tam_ung)],
-    ['Phạt chế tài', formatCurrency(payslip.phat_che_tai)],
+    ['Tru coc', formatCurrency(payslip.tru_coc)],
+    ['Tam ung', formatCurrency(payslip.tam_ung)],
+    ['Phat che tai', formatCurrency(payslip.phat_che_tai)],
     ['Truy thu VETC', formatCurrency(payslip.truy_thu_vetc)],
-    ['Phạt người', formatCurrency(payslip.phat_nguoi)],
-    ['Tiền làm thẻ', formatCurrency(payslip.tien_lam_the)],
+    ['Phat nguoi', formatCurrency(payslip.phat_nguoi)],
+    ['Tien lam the', formatCurrency(payslip.tien_lam_the)],
     ['BHXH', formatCurrency(payslip.bhxh)],
-    ['Khác', formatCurrency(payslip.khac)]
+    ['Khac', formatCurrency(payslip.khac)]
   ];
   
   deductionItems.forEach(([label, value]) => {
     doc.text(`- ${label}:`, 20, yPos);
-    doc.text(`${value} đ`, 190, yPos, { align: 'right' });
+    doc.text(`${value} d`, 190, yPos, { align: 'right' });
     yPos += 6;
   });
   
   yPos += 2;
-  doc.setFont('helvetica', 'bold');
-  doc.text('TỔNG KHẤU TRỪ:', 20, yPos);
-  doc.text(`${formatCurrency(payslip.tong_khau_tru)} đ`, 190, yPos, { align: 'right' });
+  doc.setFont('courier', 'bold');
+  doc.text('TONG KHAU TRU:', 20, yPos);
+  doc.text(`${formatCurrency(payslip.tong_khau_tru)} d`, 190, yPos, { align: 'right' });
   
   // Final salary
   yPos += 12;
@@ -160,21 +173,21 @@ export async function generateTongHopPDF(
   doc.rect(15, yPos - 5, 180, 10, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(12);
-  doc.text('THỰC LĨNH:', 20, yPos);
-  doc.text(`${formatCurrency(payslip.luong_thuc_lanh)} đ`, 190, yPos, { align: 'right' });
+  doc.text('THUC LINH:', 20, yPos);
+  doc.text(`${formatCurrency(payslip.luong_thuc_lanh)} d`, 190, yPos, { align: 'right' });
   
   // Footer
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(8);
-  doc.setFont('helvetica', 'italic');
-  doc.text(`Ngày tạo: ${new Date().toLocaleDateString('vi-VN')}`, 105, 280, { align: 'center' });
-  doc.text('NAK Logistics - Phòng Nhân sự', 105, 285, { align: 'center' });
+  doc.setFont('courier', 'normal');
+  doc.text(`Ngay tao: ${new Date().toLocaleDateString('vi-VN')}`, 105, 280, { align: 'center' });
+  doc.text('NAK Logistics - Phong Nhan su', 105, 285, { align: 'center' });
   
   return Buffer.from(doc.output('arraybuffer'));
 }
 
 /**
- * Generate PDF Phiếu lương chi tiết (Multiple pages)
+ * Generate PDF Phieu luong chi tiết (Multiple pages)
  */
 export async function generateChiTietPDF(
   ma_nhan_vien: string,
@@ -188,6 +201,9 @@ export async function generateChiTietPDF(
     format: 'a4'
   });
   
+  // Set courier font for Vietnamese support
+  doc.setFont('courier');
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('vi-VN').format(value);
   };
@@ -195,15 +211,15 @@ export async function generateChiTietPDF(
   // Helper to add page header
   const addPageHeader = (title: string, pageNum: number) => {
     doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PHIẾU LƯƠNG CHI TIẾT', 105, 15, { align: 'center' });
+    doc.setFont('courier', 'bold');
+    doc.text('PHIEU LUONG CHI TIET', 105, 15, { align: 'center' });
     
     doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Nhân viên: ${ten_nhan_vien} | Tháng ${thang}/${nam}`, 105, 22, { align: 'center' });
+    doc.setFont('courier', 'normal');
+    doc.text(`Nhan vien: ${ten_nhan_vien} | Thang ${thang}/${nam}`, 105, 22, { align: 'center' });
     
     doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
+    doc.setFont('courier', 'bold');
     doc.text(title, 15, 32);
     
     doc.setFontSize(8);
@@ -214,7 +230,7 @@ export async function generateChiTietPDF(
   
   let pageNum = 1;
   
-  // Page 1: Lương chuyến
+  // Page 1: Luong chuyến
   try {
     const luongChuyenResult = await query(
       `SELECT ma_chuyen, ngay_tao, ten_khach_hang, loai_chuyen, ten_tuyen, luong_tai_xe
@@ -225,11 +241,11 @@ export async function generateChiTietPDF(
     );
     
     if (luongChuyenResult.rows.length > 0) {
-      const yStart = addPageHeader('CHI TIẾT LƯƠNG CHUYẾN', pageNum++);
+      const yStart = addPageHeader('CHI TIET LUONG CHUYEN', pageNum++);
       
       (doc as any).autoTable({
         startY: yStart,
-        head: [['STT', 'Mã chuyến', 'Ngày', 'Khách hàng', 'Tuyến', 'Lương']],
+        head: [['STT', 'Ma chuyen', 'Ngày', 'Khach hang', 'Tuyen', 'Luong']],
         body: luongChuyenResult.rows.map((row, idx) => [
           idx + 1,
           row.ma_chuyen,
@@ -263,11 +279,11 @@ export async function generateChiTietPDF(
     
     if (thuongResult.rows.length > 0) {
       doc.addPage();
-      const yStart = addPageHeader('CHI TIẾT TIỀN THƯỞNG', pageNum++);
+      const yStart = addPageHeader('CHI TIET TIEN THUONG', pageNum++);
       
       (doc as any).autoTable({
         startY: yStart,
-        head: [['STT', 'Hạng mục', 'Số tiền']],
+        head: [['STT', 'Hang muc', 'So tien']],
         body: thuongResult.rows.map((row, idx) => [
           idx + 1,
           row.hang_muc,
@@ -298,14 +314,14 @@ export async function generateChiTietPDF(
     
     if (cocResult.rows.length > 0) {
       doc.addPage();
-      const yStart = addPageHeader('CHI TIẾT TRỪ CỌC', pageNum++);
+      const yStart = addPageHeader('CHI TIET TRU COC', pageNum++);
       
       (doc as any).autoTable({
         startY: yStart,
-        head: [['STT', 'Mô tả', 'Số tiền']],
+        head: [['STT', 'Mo ta', 'So tien']],
         body: cocResult.rows.map((row, idx) => [
           idx + 1,
-          'Trừ cọc tháng ' + thang + '/' + nam,
+          'Tru coc thang ' + thang + '/' + nam,
           formatCurrency(row.tien_thu_coc) + ' đ'
         ]),
         foot: [[
@@ -337,7 +353,7 @@ export async function generateChiTietPDF(
       
       (doc as any).autoTable({
         startY: yStart,
-        head: [['STT', 'Hạng mục', 'Số tiền']],
+        head: [['STT', 'Hang muc', 'So tien']],
         body: bhxhResult.rows.map((row, idx) => [
           idx + 1,
           row.hang_muc,
@@ -361,8 +377,8 @@ export async function generateChiTietPDF(
   const totalPages = doc.internal.pages.length - 1;
   doc.setPage(totalPages);
   doc.setFontSize(8);
-  doc.setFont('helvetica', 'italic');
-  doc.text(`Ngày tạo: ${new Date().toLocaleDateString('vi-VN')}`, 105, 285, { align: 'center' });
+  doc.setFont('courier', 'italic');
+  doc.text(`Ngay tao: ${new Date().toLocaleDateString('vi-VN')}`, 105, 285, { align: 'center' });
   doc.text('NAK Logistics - Phòng Nhân sự', 105, 290, { align: 'center' });
   
   return Buffer.from(doc.output('arraybuffer'));
