@@ -1,28 +1,12 @@
 /**
  * Email Service for sending payslips
- * Uses Nodemailer with Gmail SMTP
+ * Uses Google Apps Script Web App (no App Password needed)
  */
 
-import nodemailer from 'nodemailer';
 import { query } from '@/lib/db';
 
-// Email configuration
-const emailConfig = {
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD
-  }
-};
-
-// Create reusable transporter
-const createTransporter = () => {
-  if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-    throw new Error('Email configuration missing. Please set GMAIL_USER and GMAIL_APP_PASSWORD in .env.local');
-  }
-  
-  return nodemailer.createTransport(emailConfig);
-};
+// Google Apps Script Web App URL
+const GAS_WEB_APP_URL = process.env.GAS_WEB_APP_URL;
 
 interface SendPayslipEmailOptions {
   to: string;
@@ -122,42 +106,46 @@ const getEmailTemplate = (employeeName: string, month: number, year: number) => 
 };
 
 /**
- * Send payslip email with 2 PDF attachments
+ * Send payslip email via Google Apps Script
  */
 export async function sendPayslipEmail(options: SendPayslipEmailOptions): Promise<{
   success: boolean;
   error?: string;
 }> {
   try {
-    const transporter = createTransporter();
-    
-    const mailOptions = {
-      from: {
-        name: 'NAK Logistics - Phòng Nhân sự',
-        address: process.env.GMAIL_USER!
+    if (!GAS_WEB_APP_URL) {
+      throw new Error('GAS_WEB_APP_URL not configured. Please set it in .env.local');
+    }
+
+    // Convert PDFs to base64
+    const pdfTongHopBase64 = options.pdfTongHop.toString('base64');
+    const pdfChiTietBase64 = options.pdfChiTiet.toString('base64');
+
+    // Send to Google Apps Script
+    const response = await fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
       },
-      to: options.to,
-      subject: `Phiếu lương tháng ${options.month}/${options.year} - ${options.employeeName}`,
-      html: getEmailTemplate(options.employeeName, options.month, options.year),
-      attachments: [
-        {
-          filename: `phieu_luong_tong_hop_${options.month}_${options.year}.pdf`,
-          content: options.pdfTongHop,
-          contentType: 'application/pdf'
-        },
-        {
-          filename: `phieu_luong_chi_tiet_${options.month}_${options.year}.pdf`,
-          content: options.pdfChiTiet,
-          contentType: 'application/pdf'
-        }
-      ]
-    };
-    
-    await transporter.sendMail(mailOptions);
-    
+      body: JSON.stringify({
+        recipientEmail: options.to,
+        recipientName: options.employeeName,
+        month: options.month,
+        year: options.year,
+        pdfTongHopBase64,
+        pdfChiTietBase64
+      })
+    });
+
+    const result = await response.json();
+
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to send email via GAS');
+    }
+
     return { success: true };
   } catch (error: any) {
-    console.error('Error sending email:', error);
+    console.error('Error sending email via GAS:', error);
     return {
       success: false,
       error: error.message || 'Unknown error occurred'
