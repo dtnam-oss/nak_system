@@ -9,7 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2, Mail, Flask } from 'lucide-react';
+import { Pencil, Trash2, Mail, FlaskConical } from 'lucide-react';
 
 interface LuongTongHopRecord {
   id: string;
@@ -216,7 +216,7 @@ export function LuongTongHopTable({ data, loading, onEdit, onDelete, onResendEma
                         onClick={() => onTestEmail(record.ma_nhan_vien, record.ten_nhan_vien)}
                         title="Test gửi email"
                       >
-                        <Flask className="h-4 w-4 text-purple-600" />
+                        <FlaskConical className="h-4 w-4 text-purple-600" />
                       </Button>
                     )}                    {onResendEmail && record.email && (
                       <Button
