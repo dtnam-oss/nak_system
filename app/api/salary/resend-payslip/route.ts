@@ -9,6 +9,7 @@ export async function POST(request: Request) {
     const ma_nhan_vien = searchParams.get('ma_nhan_vien');
     const month = searchParams.get('month');
     const year = searchParams.get('year');
+    const test_email = searchParams.get('test_email'); // Email test (optional)
 
     if (!ma_nhan_vien || !month || !year) {
       return NextResponse.json(
@@ -59,7 +60,10 @@ export async function POST(request: Request) {
 
     const employee = result.rows[0];
 
-    if (!employee.email || employee.email.trim() === '') {
+    // Use test_email if provided, otherwise use employee email
+    const targetEmail = test_email || employee.email;
+
+    if (!test_email && (!employee.email || employee.email.trim() === '')) {
       return NextResponse.json(
         { error: 'Employee does not have an email address' },
         { status: 400 }
@@ -67,7 +71,8 @@ export async function POST(request: Request) {
     }
 
     try {
-      console.log(`📧 Resending payslip to ${employee.ten_nhan_vien} (${employee.email})...`);
+      const emailType = test_email ? 'TEST' : 'Resending';
+      console.log(`📧 ${emailType} payslip to ${employee.ten_nhan_vien} (${targetEmail})...`);
 
       // Generate PDFs
       const pdfTongHop = await generateTongHopPDF(employee);
@@ -80,7 +85,7 @@ export async function POST(request: Request) {
 
       // Send email
       const emailResult = await sendPayslipEmail({
-        to: employee.email,
+        to: targetEmail,
         employeeName: employee.ten_nhan_vien,
         month: parseInt(month),
         year: parseInt(year),
@@ -93,8 +98,8 @@ export async function POST(request: Request) {
         await logEmailSend(
           employee.ma_nhan_vien,
           employee.ten_nhan_vien,
-          employee.email,
-          `[Resend] Phiếu lương tháng ${month}/${year} - ${employee.ten_nhan_vien}`,
+          targetEmail,
+          `${test_email ? '[TEST]' : '[Resend]'} Phiếu lương tháng ${month}/${year} - ${employee.ten_nhan_vien}`,
           parseInt(month),
           parseInt(year),
           'success'
@@ -103,11 +108,11 @@ export async function POST(request: Request) {
         console.log(`  ✅ Success`);
 
         return NextResponse.json({
-          message: 'Payslip sent successfully',
+          message: test_email ? 'Test payslip sent successfully' : 'Payslip sent successfully',
           employee: {
             ma_nhan_vien: employee.ma_nhan_vien,
             ten_nhan_vien: employee.ten_nhan_vien,
-            email: employee.email
+            email: targetEmail
           }
         });
       } else {
@@ -121,8 +126,8 @@ export async function POST(request: Request) {
       await logEmailSend(
         employee.ma_nhan_vien,
         employee.ten_nhan_vien,
-        employee.email,
-        `[Resend] Phiếu lương tháng ${month}/${year} - ${employee.ten_nhan_vien}`,
+        targetEmail,
+        `${test_email ? '[TEST]' : '[Resend]'} Phiếu lương tháng ${month}/${year} - ${employee.ten_nhan_vien}`,
         parseInt(month),
         parseInt(year),
         'failed',

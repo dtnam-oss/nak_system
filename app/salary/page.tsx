@@ -204,6 +204,9 @@ export default function SalaryPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<LuongTongHopRecord | null>(null);
+  const [testEmailDialogOpen, setTestEmailDialogOpen] = useState(false);
+  const [testEmailData, setTestEmailData] = useState<{ ma_nhan_vien: string; ten_nhan_vien: string } | null>(null);
+  const [testEmail, setTestEmail] = useState('');
 
   useEffect(() => {
     fetchData();
@@ -543,6 +546,43 @@ export default function SalaryPage() {
     }
   };
 
+  const handleTestEmail = (ma_nhan_vien: string, ten_nhan_vien: string) => {
+    setTestEmailData({ ma_nhan_vien, ten_nhan_vien });
+    setTestEmail('');
+    setTestEmailDialogOpen(true);
+  };
+
+  const handleSendTestEmail = async () => {
+    if (!testEmail || !testEmailData) return;
+
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(testEmail)) {
+      alert('❌ Email không hợp lệ!');
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/salary/resend-payslip?ma_nhan_vien=${testEmailData.ma_nhan_vien}&month=${selectedMonth}&year=${selectedYear}&test_email=${encodeURIComponent(testEmail)}`,
+        { method: 'POST' }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Gửi email test thất bại');
+      }
+
+      const result = await response.json();
+      setTestEmailDialogOpen(false);
+      alert(`✅ Test email thành công!\nĐã gửi phiếu lương của ${testEmailData.ten_nhan_vien} đến: ${testEmail}`);
+
+    } catch (err: any) {
+      console.error('Test email error:', err);
+      alert(`❌ Lỗi: ${err.message}`);
+    }
+  };
+
   const EmptyState = ({ message }: { message: string }) => (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <div className="rounded-full bg-gray-100 p-3 mb-4">
@@ -724,6 +764,7 @@ export default function SalaryPage() {
                     setDeleteDialogOpen(true);
                   }}
                   onResendEmail={handleResendPayslip}
+                  onTestEmail={handleTestEmail}
                 />
               </CardContent>
             </Card>
@@ -843,6 +884,53 @@ export default function SalaryPage() {
         record={selectedRecord}
         onSuccess={() => fetchData()}
       />
+
+      {/* Test Email Dialog */}
+      {testEmailDialogOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h2 className="text-lg font-semibold mb-4">
+              🧪 Test gửi email phiếu lương
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Nhân viên: <strong>{testEmailData?.ten_nhan_vien}</strong>
+            </p>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Email test <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  placeholder="test@example.com"
+                  className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  PDF sẽ được tạo với data thật của nhân viên này
+                </p>
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => setTestEmailDialogOpen(false)}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  onClick={handleSendTestEmail}
+                  disabled={!testEmail}
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  Gửi test email
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
