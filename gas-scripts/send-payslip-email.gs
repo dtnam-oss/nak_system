@@ -213,24 +213,42 @@ function doPost(e) {
   }
 }
 
-// Test function (optional - for testing in Apps Script editor)
+// Test function - Creates simple PDF for testing
 function testSendEmail() {
-  // Create sample base64 PDFs for testing
-  const testData = {
-    recipientEmail: 'test@example.com',
-    recipientName: 'Nguyễn Văn A',
-    month: '1',
-    year: '2026',
-    pdfTongHopBase64: 'JVBERi0xLjMKJcfs...(base64)', // Replace with real base64
-    pdfChiTietBase64: 'JVBERi0xLjMKJcfs...(base64)'  // Replace with real base64
-  };
+  // Create a simple test PDF blob directly (not from base64)
+  const pdfContent = 'JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PAovVHlwZSAvQ2F0YWxvZwovUGFnZXMgMiAwIFIKPj4KZW5kb2JqCjIgMCBvYmoKPDwKL1R5cGUgL1BhZ2VzCi9LaWRzIFszIDAgUl0KL0NvdW50IDEKL01lZGlhQm94IFswIDAgNTk1IDg0Ml0KPj4KZW5kb2JqCjMgMCBvYmoKPDwKL1R5cGUgL1BhZ2UKL1BhcmVudCAyIDAgUgovUmVzb3VyY2VzIDw8Ci9Gb250IDw8Ci9GMSA0IDAgUgo+Pgo+PgovQ29udGVudHMgNSAwIFIKPj4KZW5kb2JqCjQgMCBvYmoKPDwKL1R5cGUgL0ZvbnQKL1N1YnR5cGUgL1R5cGUxCi9CYXNlRm9udCAvSGVsdmV0aWNhCj4+CmVuZG9iago1IDAgb2JqCjw8Ci9MZW5ndGggNDQKPj4Kc3RyZWFtCkJUCi9GMSA0OCBUZgoxMCA3MDAgVGQKKFRlc3QgUERGKSBUagpFVAplbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxNSAwMDAwMCBuIAowMDAwMDAwMDY0IDAwMDAwIG4gCjAwMDAwMDAxMzQgMDAwMDAgbiAKMDAwMDAwMDI1MSAwMDAwMCBuIAowMDAwMDAwMzMzIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNgovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNDI1CiUlRU9G';
   
-  const mockEvent = {
-    postData: {
-      contents: JSON.stringify(testData)
-    }
-  };
+  const pdfTongHop = Utilities.newBlob(
+    Utilities.base64Decode(pdfContent),
+    'application/pdf',
+    'Test_Tong_Hop.pdf'
+  );
   
-  const result = doPost(mockEvent);
-  Logger.log(result.getContent());
+  const pdfChiTiet = Utilities.newBlob(
+    Utilities.base64Decode(pdfContent),
+    'application/pdf',
+    'Test_Chi_Tiet.pdf'
+  );
+  
+  try {
+    // Send test email
+    GmailApp.sendEmail(
+      'your-test-email@gmail.com', // THAY ĐỔI EMAIL NÀY
+      'Test - Phiếu lương tháng 1/2026',
+      'Đây là email test. Vui lòng xem file đính kèm.',
+      {
+        htmlBody: '<h1>Test Email</h1><p>Phiếu lương test tháng 1/2026</p>',
+        attachments: [pdfTongHop, pdfChiTiet],
+        name: 'Phòng Nhân sự NAK'
+      }
+    );
+    
+    Logger.log('✅ Test email sent successfully!');
+    Logger.log('Check your inbox: your-test-email@gmail.com');
+    return { success: true };
+    
+  } catch (error) {
+    Logger.log('❌ Error: ' + error.toString());
+    return { success: false, error: error.toString() };
+  }
 }
