@@ -307,7 +307,7 @@ export async function generateChiTietPDF(
           idx + 1,
           'Trừ cọc tháng ' + thang + '/' + nam,
           formatCurrency(row.tien_thu_coc) + ' đ'
-        ]],
+        ]),
         foot: [[
           '', 'TỔNG:',
           formatCurrency(cocResult.rows.reduce((sum, row) => sum + parseFloat(row.tien_thu_coc), 0)) + ' đ'
