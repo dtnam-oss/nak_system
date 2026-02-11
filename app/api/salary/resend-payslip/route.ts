@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { query } from '@/lib/db';
-import { generateTongHopPDF, generateChiTietPDF } from '@/lib/payslip-pdf-generator';
+import { preparePayslipData } from '@/lib/payslip-data-preparer';
 import { sendPayslipEmail, logEmailSend } from '@/lib/email-service';
 
 export async function POST(request: Request) {
@@ -18,101 +17,41 @@ export async function POST(request: Request) {
       );
     }
 
-    // Get employee salary data
-    const result = await query(
-      `SELECT 
-        ma_nhan_vien,
-        ten_nhan_vien,
-        chuc_vu,
-        email,
-        thang,
-        nam,
-        luong_bat_dau,
-        tong_chi_phi_sua_chua,
-        hoan_coc,
-        chi_phi_do_dau_ngoai,
-        chi_phi_phat_sinh_new,
-        thuong,
-        truy_thu_dau,
-        truy_thu_ontime,
-        tru_coc,
-        tam_ung,
-        phat_che_tai,
-        truy_thu_vetc,
-        phat_nguoi,
-        tien_lam_the,
-        bhxh,
-        khac,
-        tong_thu_nhap,
-        tong_khau_tru,
-        luong_thuc_lanh
-      FROM luong_tong_hop
-      WHERE ma_nhan_vien = $1 AND thang = $2 AND nam = $3`,
-      [ma_nhan_vien, parseInt(month), parseInt(year)]
-    );
-
-    if (result.rows.length === 0) {
-      return NextResponse.json(
-        { error: 'Salary data not found for this employee' },
-        { status: 404 }
-      );
-    }
-
-    const employee = result.rows[0];
-
-    // Use test_email if provided, otherwise use employee email
-    const targetEmail = test_email || employee.email;
-
-    if (!test_email && (!employee.email || employee.email.trim() === '')) {
-      return NextResponse.json(
-        { error: 'Employee does not have an email address' },
-        { status: 400 }
-      );
-    }
-
     try {
       const emailType = test_email ? 'TEST' : 'Resending';
-      console.log(`📧 ${emailType} payslip to ${employee.ten_nhan_vien} (${targetEmail})...`);
+      console.log(`\n📧 ${emailType} payslip for ${ma_nhan_vien} - ${month}/${year}...`);
 
-      // Generate PDFs
-      const pdfTongHop = await generateTongHopPDF(employee);
-      const pdfChiTiet = await generateChiTietPDF(
-        employee.ma_nhan_vien,
-        employee.ten_nhan_vien,
+      // Chuẩn bị data từ database
+      const payslipData = await preparePayslipData(
+        ma_nhan_vien,
         parseInt(month),
-        parseInt(year)
+        parseInt(year),
+        test_email || undefined
       );
 
-      // Send email
-      const emailResult = await sendPayslipEmail({
-        to: targetEmail,
-        employeeName: employee.ten_nhan_vien,
-        month: parseInt(month),
-        year: parseInt(year),
-        pdfTongHop,
-        pdfChiTiet
-      });
+      // Gửi email qua GAS (GAS sẽ generate PDF từ Google Docs templates)
+      const emailResult = await sendPayslipEmail(payslipData);
 
       if (emailResult.success) {
         // Log success
         await logEmailSend(
-          employee.ma_nhan_vien,
-          employee.ten_nhan_vien,
-          targetEmail,
-          `${test_email ? '[TEST]' : '[Resend]'} Phiếu lương tháng ${month}/${year} - ${employee.ten_nhan_vien}`,
+          payslipData.ma_nhan_vien,
+          payslipData.ten_nhan_vien,
+          payslipData.recipientEmail,
+          `${test_email ? '[TEST]' : '[Resend]'} Phiếu lương tháng ${month}/${year} - ${payslipData.ten_nhan_vien}`,
           parseInt(month),
           parseInt(year),
           'success'
         );
 
-        console.log(`  ✅ Success`);
+        console.log(`  ✅ Success - Email sent to ${payslipData.recipientEmail}`);
 
         return NextResponse.json({
           message: test_email ? 'Test payslip sent successfully' : 'Payslip sent successfully',
           employee: {
-            ma_nhan_vien: employee.ma_nhan_vien,
-            ten_nhan_vien: employee.ten_nhan_vien,
-            email: targetEmail
+            ma_nhan_vien: payslipData.ma_nhan_vien,
+            ten_nhan_vien: payslipData.ten_nhan_vien,
+            email: payslipData.recipientEmail
           }
         });
       } else {
@@ -123,16 +62,20 @@ export async function POST(request: Request) {
       console.error(`  ❌ Failed:`, error.message);
 
       // Log failure
-      await logEmailSend(
-        employee.ma_nhan_vien,
-        employee.ten_nhan_vien,
-        targetEmail,
-        `${test_email ? '[TEST]' : '[Resend]'} Phiếu lương tháng ${month}/${year} - ${employee.ten_nhan_vien}`,
-        parseInt(month),
-        parseInt(year),
-        'failed',
-        error.message
-      );
+      try {
+        await logEmailSend(
+          ma_nhan_vien,
+          'Unknown',
+          test_email || 'unknown@email.com',
+          `${test_email ? '[TEST]' : '[Resend]'} Phiếu lương tháng ${month}/${year}`,
+          parseInt(month),
+          parseInt(year),
+          'failed',
+          error.message
+        );
+      } catch (logError) {
+        // Ignore log errors
+      }
 
       return NextResponse.json(
         { error: 'Failed to send payslip', details: error.message },

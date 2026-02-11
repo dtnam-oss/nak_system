@@ -1,21 +1,13 @@
 /**
  * Email Service for sending payslips
- * Uses Google Apps Script Web App (no App Password needed)
+ * Uses Google Apps Script to generate PDFs from Google Docs templates
  */
 
 import { query } from '@/lib/db';
+import { PayslipData } from '@/lib/payslip-data-preparer';
 
 // Google Apps Script Web App URL
 const GAS_WEB_APP_URL = process.env.GAS_WEB_APP_URL;
-
-interface SendPayslipEmailOptions {
-  to: string;
-  employeeName: string;
-  month: number;
-  year: number;
-  pdfTongHop: Buffer;
-  pdfChiTiet: Buffer;
-}
 
 /**
  * HTML Email template with logo
@@ -107,8 +99,9 @@ const getEmailTemplate = (employeeName: string, month: number, year: number) => 
 
 /**
  * Send payslip email via Google Apps Script
+ * GAS will generate PDFs from Google Docs templates
  */
-export async function sendPayslipEmail(options: SendPayslipEmailOptions): Promise<{
+export async function sendPayslipEmail(data: PayslipData): Promise<{
   success: boolean;
   error?: string;
 }> {
@@ -117,24 +110,15 @@ export async function sendPayslipEmail(options: SendPayslipEmailOptions): Promis
       throw new Error('GAS_WEB_APP_URL not configured. Please set it in .env.local');
     }
 
-    // Convert PDFs to base64
-    const pdfTongHopBase64 = options.pdfTongHop.toString('base64');
-    const pdfChiTietBase64 = options.pdfChiTiet.toString('base64');
+    console.log(`📧 Sending payslip data to GAS for ${data.ten_nhan_vien}...`);
 
-    // Send to Google Apps Script
+    // Send data to Google Apps Script (GAS generates PDFs from templates)
     const response = await fetch(GAS_WEB_APP_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        recipientEmail: options.to,
-        recipientName: options.employeeName,
-        month: options.month,
-        year: options.year,
-        pdfTongHopBase64,
-        pdfChiTietBase64
-      })
+      body: JSON.stringify(data)
     });
 
     const result = await response.json();

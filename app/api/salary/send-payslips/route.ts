@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { generateTongHopPDF, generateChiTietPDF } from '@/lib/payslip-pdf-generator';
-import { sendPayslipEmail, logEmailSend, delay } from '@/lib/email-service';
+import { preparePayslipData } from '@/lib/payslip-data-preparer';
+import { sendPayslipEmail, logEmailSend } from '@/lib/email-service';
 
 export const maxDuration = 300; // 5 minutes for bulk sending
+
+// Delay helper
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function POST(request: Request) {
   try {
@@ -23,29 +26,7 @@ export async function POST(request: Request) {
       `SELECT 
         ma_nhan_vien,
         ten_nhan_vien,
-        chuc_vu,
-        email,
-        thang,
-        nam,
-        luong_bat_dau,
-        tong_chi_phi_sua_chua,
-        hoan_coc,
-        chi_phi_do_dau_ngoai,
-        chi_phi_phat_sinh_new,
-        thuong,
-        truy_thu_dau,
-        truy_thu_ontime,
-        tru_coc,
-        tam_ung,
-        phat_che_tai,
-        truy_thu_vetc,
-        phat_nguoi,
-        tien_lam_the,
-        bhxh,
-        khac,
-        tong_thu_nhap,
-        tong_khau_tru,
-        luong_thuc_lanh
+        email
       FROM luong_tong_hop
       WHERE thang = $1 AND nam = $2
         AND email IS NOT NULL
@@ -70,31 +51,47 @@ export async function POST(request: Request) {
       logs: [] as any[]
     };
 
+    console.log(`\n📧 Bulk sending payslips for ${month}/${year} to ${employees.length} employees...`);
+
     // Process each employee
     for (const employee of employees) {
       try {
-        console.log(`📧 Sending payslip to ${employee.ten_nhan_vien} (${employee.email})...`);
+        console.log(`\n  Processing ${employee.ten_nhan_vien} (${employee.ma_nhan_vien})...`);
 
-        // Generate PDFs
-        const pdfTongHop = await generateTongHopPDF(employee);
-        const pdfChiTiet = await generateChiTietPDF(
+        // Chuẩn bị data
+        const payslipData = await preparePayslipData(
           employee.ma_nhan_vien,
-          employee.ten_nhan_vien,
           parseInt(month),
           parseInt(year)
         );
 
-        // Send email
-        const emailResult = await sendPayslipEmail({
-          to: employee.email,
-          employeeName: employee.ten_nhan_vien,
-          month: parseInt(month),
-          year: parseInt(year),
-          pdfTongHop,
-          pdfChiTiet
-        });
+        // Gửi email qua GAS
+        const emailResult = await sendPayslipEmail(payslipData);
 
         if (emailResult.success) {
+          results.success++;
+          results.logs.push({
+            ma_nhan_vien: employee.ma_nhan_vien,
+            ten_nhan_vien: employee.ten_nhan_vien,
+            email: employee.email,
+            status: 'success'
+          });
+
+          // Log success
+          await logEmailSend(
+            employee.ma_nhan_vien,
+            employee.ten_nhan_vien,
+            employee.email,
+            `Phiếu lương tháng ${month}/${year} - ${employee.ten_nhan_vien}`,
+            parseInt(month),
+            parseInt(year),
+            'success'
+          );
+
+          console.log(`    ✅ Success`);
+        } else {
+          throw new Error(emailResult.error || 'Email send failed');
+        }
           results.success++;
           results.logs.push({
             ma_nhan_vien: employee.ma_nhan_vien,
