@@ -342,7 +342,7 @@ export async function generateChiTietPDF(
           idx + 1,
           row.hang_muc,
           formatCurrency(row.so_tien) + ' đ'
-        ]],
+        ]),
         foot: [[
           '', 'TỔNG:',
           formatCurrency(bhxhResult.rows.reduce((sum, row) => sum + parseFloat(row.so_tien), 0)) + ' đ'
