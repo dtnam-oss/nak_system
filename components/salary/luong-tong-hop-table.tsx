@@ -9,7 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Pencil, Trash2 } from 'lucide-react';
+import { Pencil, Trash2, Mail } from 'lucide-react';
 
 interface LuongTongHopRecord {
   id: string;
@@ -51,9 +51,10 @@ interface LuongTongHopTableProps {
   loading?: boolean;
   onEdit?: (record: LuongTongHopRecord) => void;
   onDelete?: (record: LuongTongHopRecord) => void;
+  onResendEmail?: (ma_nhan_vien: string, ten_nhan_vien: string) => void;
 }
 
-export function LuongTongHopTable({ data, loading, onEdit, onDelete }: LuongTongHopTableProps) {
+export function LuongTongHopTable({ data, loading, onEdit, onDelete, onResendEmail }: LuongTongHopTableProps) {
   const formatCurrency = (num: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -207,6 +208,17 @@ export function LuongTongHopTable({ data, loading, onEdit, onDelete }: LuongTong
                 {/* Action buttons */}
                 <TableCell className="text-center">
                   <div className="flex gap-1 justify-center">
+                    {onResendEmail && record.email && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => onResendEmail(record.ma_nhan_vien, record.ten_nhan_vien)}
+                        title="Gửi lại phiếu lương"
+                      >
+                        <Mail className="h-4 w-4 text-green-600" />
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="sm"

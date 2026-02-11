@@ -19,7 +19,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, Download, Calendar, FilePlus } from 'lucide-react';
+import { AlertCircle, Download, Calendar, FilePlus, Mail } from 'lucide-react';
 
 interface SalaryRecord {
   id: number;
@@ -197,6 +197,9 @@ export default function SalaryPage() {
   const [exporting, setExporting] = useState(false);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
+  const [sendingEmails, setSendingEmails] = useState(false);
+  const [emailProgress, setEmailProgress] = useState({ current: 0, total: 0, logs: [] as any[] });
+  const [showEmailProgress, setShowEmailProgress] = useState(false);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -476,6 +479,70 @@ export default function SalaryPage() {
     }
   };
 
+  const handleSendPayslips = async () => {
+    if (!confirm(`Bạn sắp gửi phiếu lương cho tất cả nhân viên trong tháng ${selectedMonth}/${selectedYear}.\n\nMỗi email sẽ bao gồm:\n- Phiếu lương tổng hợp (PDF)\n- Phiếu lương chi tiết (PDF)\n\nTiếp tục?`)) {
+      return;
+    }
+
+    try {
+      setSendingEmails(true);
+      setShowEmailProgress(true);
+      setEmailProgress({ current: 0, total: 0, logs: [] });
+      setError(null);
+
+      const response = await fetch(
+        `/api/salary/send-payslips?month=${selectedMonth}&year=${selectedYear}`,
+        { method: 'POST' }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Gửi email thất bại');
+      }
+
+      const result = await response.json();
+      setEmailProgress({
+        current: result.results.total,
+        total: result.results.total,
+        logs: result.results.logs
+      });
+
+      // Show summary
+      alert(`✅ ${result.message}\n\n📊 Tổng: ${result.results.total}\n✅ Thành công: ${result.results.success}\n❌ Thất bại: ${result.results.failed}`);
+
+    } catch (err: any) {
+      console.error('Send emails error:', err);
+      setError(err.message || 'Không thể gửi email');
+    } finally {
+      setSendingEmails(false);
+    }
+  };
+
+  const handleResendPayslip = async (ma_nhan_vien: string, ten_nhan_vien: string) => {
+    if (!confirm(`Gửi lại phiếu lương cho ${ten_nhan_vien}?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/salary/resend-payslip?ma_nhan_vien=${ma_nhan_vien}&month=${selectedMonth}&year=${selectedYear}`,
+        { method: 'POST' }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Gửi email thất bại');
+      }
+
+      const result = await response.json();
+      alert(`✅ ${result.message}\nĐã gửi email đến: ${result.employee.email}`);
+
+    } catch (err: any) {
+      console.error('Resend email error:', err);
+      alert(`❌ Lỗi: ${err.message}`);
+    }
+  };
+
   const EmptyState = ({ message }: { message: string }) => (
     <div className="flex flex-col items-center justify-center py-12 text-center">
       <div className="rounded-full bg-gray-100 p-3 mb-4">
@@ -565,6 +632,16 @@ export default function SalaryPage() {
                     {recalculating ? 'Đang tính...' : '🔄 Tính lại'}
                   </Button>
                   <Button
+                    onClick={handleSendPayslips}
+                    disabled={sendingEmails}
+                    size="sm"
+                    variant="default"
+                    className="gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    <Mail className="h-4 w-4" />
+                    {sendingEmails ? 'Đang gửi...' : 'Gửi phiếu lương'}
+                  </Button>
+                  <Button
                     onClick={() => setCreateDialogOpen(true)}
                     size="sm"
                     variant="default"
@@ -646,6 +723,7 @@ export default function SalaryPage() {
                     setSelectedRecord(record);
                     setDeleteDialogOpen(true);
                   }}
+                  onResendEmail={handleResendPayslip}
                 />
               </CardContent>
             </Card>
