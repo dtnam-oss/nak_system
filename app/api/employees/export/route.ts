@@ -15,9 +15,9 @@ export async function GET(request: NextRequest) {
     const conditions: string[] = [];
 
     if (active && active !== 'all') {
-      if (active === 'true') {
+      if (active === 'true' || active === 'active') {
         conditions.push(`is_active = true`);
-      } else {
+      } else if (active === 'false') {
         conditions.push(`is_active = false`);
       }
     }
