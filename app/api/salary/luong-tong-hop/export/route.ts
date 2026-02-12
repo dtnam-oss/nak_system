@@ -23,21 +23,29 @@ export async function GET(request: NextRequest) {
       SELECT
         ma_nhan_vien,
         ten_nhan_vien,
-        phong_ban,
         chuc_vu,
-        luong_chuyen,
-        cp_sua_chua,
-        cp_do_dau,
-        cp_phat_sinh,
-        cp_ccdc,
-        ho_tro,
-        truy_thu,
-        tru_coc,
-        hoan_coc,
-        tam_ung,
-        phat_nguoi,
-        bhxh,
-        khac
+        -- Thu nhập
+        COALESCE(luong_bat_dau, 0) as luong_bat_dau,
+        COALESCE(tong_chi_phi_sua_chua, 0) as tong_chi_phi_sua_chua,
+        COALESCE(hoan_coc, 0) as hoan_coc,
+        COALESCE(chi_phi_do_dau_ngoai, 0) as chi_phi_do_dau_ngoai,
+        COALESCE(chi_phi_phat_sinh_new, 0) as chi_phi_phat_sinh_new,
+        COALESCE(thuong, 0) as thuong,
+        -- Khấu trừ
+        COALESCE(truy_thu_dau, 0) as truy_thu_dau,
+        COALESCE(truy_thu_ontime, 0) as truy_thu_ontime,
+        COALESCE(tru_coc, 0) as tru_coc,
+        COALESCE(tam_ung, 0) as tam_ung,
+        COALESCE(phat_che_tai, 0) as phat_che_tai,
+        COALESCE(truy_thu_vetc, 0) as truy_thu_vetc,
+        COALESCE(phat_nguoi, 0) as phat_nguoi,
+        COALESCE(tien_lam_the, 0) as tien_lam_the,
+        COALESCE(bhxh, 0) as bhxh,
+        COALESCE(khac, 0) as khac,
+        -- Calculated fields
+        COALESCE(tong_thu_nhap, 0) as tong_thu_nhap,
+        COALESCE(tong_khau_tru, 0) as tong_khau_tru,
+        COALESCE(luong_thuc_lanh, 0) as luong_thuc_lanh
       FROM luong_tong_hop
       WHERE thang = $1 AND nam = $2
       ORDER BY ma_nhan_vien ASC
@@ -52,40 +60,35 @@ export async function GET(request: NextRequest) {
 
     // Format data for Excel
     const excelData = result.rows.map((row) => {
-      const income = parseFloat(row.luong_chuyen || '0') +
-                     parseFloat(row.ho_tro || '0') +
-                     parseFloat(row.hoan_coc || '0');
-      const deductions = parseFloat(row.cp_sua_chua || '0') +
-                        parseFloat(row.cp_do_dau || '0') +
-                        parseFloat(row.cp_phat_sinh || '0') +
-                        parseFloat(row.cp_ccdc || '0') +
-                        parseFloat(row.truy_thu || '0') +
-                        parseFloat(row.tru_coc || '0') +
-                        parseFloat(row.tam_ung || '0') +
-                        parseFloat(row.phat_nguoi || '0') +
-                        parseFloat(row.bhxh || '0') +
-                        parseFloat(row.khac || '0');
-      const thucLanh = income - deductions;
-
       return {
         'Mã NV': row.ma_nhan_vien || '',
         'Họ tên': row.ten_nhan_vien || '',
-        'Phòng ban': row.phong_ban || '',
-        'Chức vụ': row.chuc_vu || '',
-        'Lương chuyến': parseFloat(row.luong_chuyen || '0'),
-        'Hỗ trợ': parseFloat(row.ho_tro || '0'),
+        'Chức vụ': row.chuc_vu || 'Tài xế',
+
+        // Thu nhập
+        'Lương chuyển': parseFloat(row.luong_bat_dau || '0'),
+        'Hoàn phí sửa chữa': parseFloat(row.tong_chi_phi_sua_chua || '0'),
         'Hoàn cọc': parseFloat(row.hoan_coc || '0'),
-        'CP Sửa chữa': parseFloat(row.cp_sua_chua || '0'),
-        'CP Đổ dầu': parseFloat(row.cp_do_dau || '0'),
-        'CP Phát sinh': parseFloat(row.cp_phat_sinh || '0'),
-        'CP CCDC': parseFloat(row.cp_ccdc || '0'),
-        'Truy thu': parseFloat(row.truy_thu || '0'),
+        'Hoàn phí đổ dầu ngoài': parseFloat(row.chi_phi_do_dau_ngoai || '0'),
+        'Hoàn chi phí phát sinh': parseFloat(row.chi_phi_phat_sinh_new || '0'),
+        'Thưởng': parseFloat(row.thuong || '0'),
+        'Tổng thu nhập': parseFloat(row.tong_thu_nhap || '0'),
+
+        // Khấu trừ
+        'Truy thu đầu': parseFloat(row.truy_thu_dau || '0'),
+        'Truy thu ontime': parseFloat(row.truy_thu_ontime || '0'),
         'Trừ cọc': parseFloat(row.tru_coc || '0'),
-        'Tạm ứng': parseFloat(row.tam_ung || '0'),
-        'Phạt người': parseFloat(row.phat_nguoi || '0'),
+        'Phí tạm ứng': parseFloat(row.tam_ung || '0'),
+        'Phạt chế tài': parseFloat(row.phat_che_tai || '0'),
+        'Truy thu VETC': parseFloat(row.truy_thu_vetc || '0'),
+        'Phạt nguội': parseFloat(row.phat_nguoi || '0'),
+        'Tiền làm thẻ': parseFloat(row.tien_lam_the || '0'),
         'BHXH': parseFloat(row.bhxh || '0'),
         'Khác': parseFloat(row.khac || '0'),
-        'Thực lãnh': thucLanh,
+        'Tổng khấu trừ': parseFloat(row.tong_khau_tru || '0'),
+
+        // Kết quả
+        'Thực lãnh': parseFloat(row.luong_thuc_lanh || '0'),
       };
     });
 
@@ -96,21 +99,28 @@ export async function GET(request: NextRequest) {
     const columnWidths = [
       { wch: 12 },  // Mã NV
       { wch: 25 },  // Họ tên
-      { wch: 15 },  // Phòng ban
       { wch: 15 },  // Chức vụ
-      { wch: 15 },  // Lương chuyến
-      { wch: 12 },  // Hỗ trợ
+      // Thu nhập
+      { wch: 15 },  // Lương chuyển
+      { wch: 18 },  // Hoàn phí sửa chữa
       { wch: 12 },  // Hoàn cọc
-      { wch: 12 },  // CP Sửa chữa
-      { wch: 12 },  // CP Đổ dầu
-      { wch: 12 },  // CP Phát sinh
-      { wch: 12 },  // CP CCDC
-      { wch: 12 },  // Truy thu
+      { wch: 20 },  // Hoàn phí đổ dầu ngoài
+      { wch: 20 },  // Hoàn chi phí phát sinh
+      { wch: 12 },  // Thưởng
+      { wch: 15 },  // Tổng thu nhập
+      // Khấu trừ
+      { wch: 15 },  // Truy thu đầu
+      { wch: 15 },  // Truy thu ontime
       { wch: 12 },  // Trừ cọc
-      { wch: 12 },  // Tạm ứng
-      { wch: 12 },  // Phạt người
+      { wch: 12 },  // Phí tạm ứng
+      { wch: 12 },  // Phạt chế tài
+      { wch: 15 },  // Truy thu VETC
+      { wch: 12 },  // Phạt nguội
+      { wch: 12 },  // Tiền làm thẻ
       { wch: 12 },  // BHXH
       { wch: 12 },  // Khác
+      { wch: 15 },  // Tổng khấu trừ
+      // Kết quả
       { wch: 15 },  // Thực lãnh
     ];
     worksheet['!cols'] = columnWidths;
