@@ -111,6 +111,13 @@ export async function sendPayslipEmail(data: PayslipData): Promise<{
     }
 
     console.log(`📧 Sending payslip data to GAS for ${data.ten_nhan_vien}...`);
+    console.log(`   Data summary:`, {
+      ma_nhan_vien: data.ma_nhan_vien,
+      recipientEmail: data.recipientEmail,
+      month: data.month,
+      year: data.year,
+      luongChuyenCount: data.luongChuyen?.length || 0
+    });
 
     // Send data to Google Apps Script (GAS generates PDFs from templates)
     const response = await fetch(GAS_WEB_APP_URL, {
@@ -121,7 +128,17 @@ export async function sendPayslipEmail(data: PayslipData): Promise<{
       body: JSON.stringify(data)
     });
 
-    const result = await response.json();
+    console.log(`   GAS response status:`, response.status);
+    
+    const responseText = await response.text();
+    console.log(`   GAS response body:`, responseText.substring(0, 500));
+
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (parseError) {
+      throw new Error(`GAS returned invalid JSON: ${responseText.substring(0, 200)}`);
+    }
 
     if (!result.success) {
       throw new Error(result.error || 'Failed to send email via GAS');
@@ -129,7 +146,7 @@ export async function sendPayslipEmail(data: PayslipData): Promise<{
 
     return { success: true };
   } catch (error: any) {
-    console.error('Error sending email via GAS:', error);
+    console.error('❌ Error sending email via GAS:', error.message);
     return {
       success: false,
       error: error.message || 'Unknown error occurred'
