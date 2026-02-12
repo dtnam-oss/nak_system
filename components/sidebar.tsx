@@ -12,6 +12,7 @@ import {
   Truck,
   Settings,
   User,
+  Users,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -48,6 +49,11 @@ const navigation: NavigationItem[] = [
     name: "Data lương",
     href: "/salary",
     icon: DollarSign,
+  },
+  {
+    name: "Nhân viên",
+    href: "/employees",
+    icon: Users,
   },
   {
     name: "Đối soát",
