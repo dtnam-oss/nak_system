@@ -16,9 +16,11 @@ export async function GET(request: NextRequest) {
 
     if (active && active !== 'all') {
       if (active === 'true' || active === 'active') {
-        conditions.push(`is_active = true`);
+        // Filter active employees (not "Đã nghỉ việc")
+        conditions.push(`(trang_thai IS NULL OR trang_thai NOT ILIKE '%nghỉ việc%')`);
       } else if (active === 'false') {
-        conditions.push(`is_active = false`);
+        // Filter inactive employees
+        conditions.push(`trang_thai ILIKE '%nghỉ việc%'`);
       }
     }
 
@@ -54,9 +56,9 @@ export async function GET(request: NextRequest) {
         them,
         sua,
         xoa,
-        is_active,
-        created_at,
-        updated_at
+        trang_thai,
+        ngay_sinh,
+        so_can_cuoc
       FROM nhan_vien
     `;
 
@@ -112,7 +114,9 @@ export async function GET(request: NextRequest) {
         'Quyền xóa': row.xoa ? 'Có' : 'Không',
 
         // Trạng thái
-        'Trạng thái': row.is_active ? 'Đang làm việc' : 'Đã nghỉ việc',
+        'Trạng thái': row.trang_thai || 'Đang làm việc',
+        'Ngày sinh': row.ngay_sinh ? new Date(row.ngay_sinh).toLocaleDateString('vi-VN') : '',
+        'Số CCCD': row.so_can_cuoc || '',
 
         // Metadata
         'Ngày tạo': row.created_at ? new Date(row.created_at).toLocaleString('vi-VN') : '',
@@ -152,11 +156,10 @@ export async function GET(request: NextRequest) {
       { wch: 12 },  // Quyền thêm
       { wch: 12 },  // Quyền sửa
       { wch: 12 },  // Quyền xóa
-      // Trạng thái
+      // Trạng thái & Thông tin bổ sung
       { wch: 15 },  // Trạng thái
-      // Metadata
-      { wch: 20 },  // Ngày tạo
-      { wch: 20 },  // Cập nhật lần cuối
+      { wch: 15 },  // Ngày sinh
+      { wch: 15 },  // Số CCCD
     ];
     worksheet['!cols'] = columnWidths;
 
