@@ -14,6 +14,7 @@ export async function GET() {
       hasPostgresUrl: !!process.env.POSTGRES_URL,
       hasDatabaseUrl: !!process.env.DATABASE_URL,
       hasGasApiUrl: !!process.env.NEXT_PUBLIC_GAS_API_URL,
+      hasGasWebAppUrl: !!process.env.GAS_WEB_APP_URL,
       hasTelegramToken: !!process.env.TELEGRAM_BOT_TOKEN,
       hasCronSecret: !!process.env.CRON_SECRET,
       hasSessionSecret: !!process.env.SESSION_SECRET,
@@ -21,6 +22,7 @@ export async function GET() {
       // Masked values (show first 10 chars only)
       postgresUrl: process.env.POSTGRES_URL?.substring(0, 30) + '...',
       databaseUrl: process.env.DATABASE_URL?.substring(0, 30) + '...',
+      gasWebAppUrl: process.env.GAS_WEB_APP_URL?.substring(0, 50) + '...',
       
       nodeEnv: process.env.NODE_ENV,
       vercelEnv: process.env.VERCEL_ENV,
