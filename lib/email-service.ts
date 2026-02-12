@@ -131,16 +131,26 @@ export async function sendPayslipEmail(data: PayslipData): Promise<{
     console.log(`   GAS response status:`, response.status);
     
     const responseText = await response.text();
-    console.log(`   GAS response body:`, responseText.substring(0, 500));
+    console.log(`   GAS response body (full):`, responseText);
+
+    // If response is HTML (error page), log and throw
+    if (responseText.includes('<HTML>') || responseText.includes('<!DOCTYPE')) {
+      console.error('   ❌ GAS returned HTML instead of JSON - likely authorization or deployment issue');
+      throw new Error('GAS deployment error - please check authorization and deployment settings');
+    }
 
     let result;
     try {
       result = JSON.parse(responseText);
     } catch (parseError) {
+      console.error('   ❌ Failed to parse GAS response:', responseText.substring(0, 300));
       throw new Error(`GAS returned invalid JSON: ${responseText.substring(0, 200)}`);
     }
 
+    console.log(`   GAS result:`, result);
+
     if (!result.success) {
+      console.error('   ❌ GAS returned error:', result.error);
       throw new Error(result.error || 'Failed to send email via GAS');
     }
 
