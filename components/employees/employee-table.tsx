@@ -21,8 +21,19 @@ interface Employee {
   so_dien_thoai: string | null;
   email: string | null;
   tinh_trang_cong_tac: string | null;
+  ngay_vao_lam: string | null;
+  ngay_ky_hdld: string | null;
+  ngay_tham_gia_cong_doan: string | null;
+  ngay_tham_gia_bhxh: string | null;
+  luong_thoa_thuan: number | null;
+  tien_coc: number | null;
+  giam_tru_gia_canh: number | null;
+  phan_quyen: string | null;
+  xem: boolean;
+  them: boolean;
+  sua: boolean;
+  xoa: boolean;
   is_active?: boolean;
-  phan_quyen?: string | null;
 }
 
 interface EmployeeTableProps {
