@@ -40,6 +40,11 @@ export async function GET(request: NextRequest) {
         chuc_vu,
         so_dien_thoai,
         email,
+        ngay_sinh,
+        gioi_tinh,
+        dia_chi_thuong_tru,
+        so_can_cuoc,
+        cmnd_cccd,
         chat_id,
         hinh_anh,
         tinh_trang_cong_tac,
@@ -48,17 +53,24 @@ export async function GET(request: NextRequest) {
         ngay_tham_gia_cong_doan,
         ngay_tham_gia_bhxh,
         ngay_thoi_viec,
-        giam_tru_gia_canh,
+        loai_hinh,
         luong_thoa_thuan,
         tien_coc,
+        so_tai_khoan,
+        ngan_hang_thu_huong,
+        giam_tru_gia_canh,
         phan_quyen,
         xem,
         them,
         sua,
         xoa,
         trang_thai,
-        ngay_sinh,
-        so_can_cuoc
+        ngay_tao,
+        nguoi_tao,
+        thoi_gian_tao,
+        "Update_time",
+        nam,
+        thang
       FROM nhan_vien
     `;
 
@@ -80,31 +92,41 @@ export async function GET(request: NextRequest) {
     // Format data for Excel - TOÀN BỘ DỮ LIỆU
     const excelData = result.rows.map((row, index) => {
       return {
-        // Thông tin cơ bản
+        // STT
         'STT': index + 1,
+
+        // Thông tin cơ bản
         'Mã nhân viên': row.ma_nhan_vien || '',
         'Họ và tên': row.ho_va_ten || '',
         'Phòng ban': row.phong_ban || '',
         'Chức vụ': row.chuc_vu || '',
+        'Ngày sinh': row.ngay_sinh || '',
+        'Giới tính': row.gioi_tinh || '',
 
         // Liên hệ
         'Số điện thoại': row.so_dien_thoai || '',
         'Email': row.email || '',
+        'Địa chỉ thường trú': row.dia_chi_thuong_tru || '',
+        'Số CCCD': row.so_can_cuoc || '',
+        'CMND/CCCD (cũ)': row.cmnd_cccd || '',
         'Chat ID (Telegram)': row.chat_id || '',
         'URL Ảnh đại diện': row.hinh_anh || '',
 
         // Công việc
         'Tình trạng công tác': row.tinh_trang_cong_tac || '',
-        'Ngày vào làm': row.ngay_vao_lam ? new Date(row.ngay_vao_lam).toLocaleDateString('vi-VN') : '',
-        'Ngày ký HĐLĐ': row.ngay_ky_hdld ? new Date(row.ngay_ky_hdld).toLocaleDateString('vi-VN') : '',
-        'Ngày tham gia công đoàn': row.ngay_tham_gia_cong_doan ? new Date(row.ngay_tham_gia_cong_doan).toLocaleDateString('vi-VN') : '',
-        'Ngày tham gia BHXH': row.ngay_tham_gia_bhxh ? new Date(row.ngay_tham_gia_bhxh).toLocaleDateString('vi-VN') : '',
-        'Ngày thôi việc': row.ngay_thoi_viec ? new Date(row.ngay_thoi_viec).toLocaleDateString('vi-VN') : '',
+        'Loại hình': row.loai_hinh || '',
+        'Ngày vào làm': row.ngay_vao_lam || '',
+        'Ngày ký HĐLĐ': row.ngay_ky_hdld || '',
+        'Ngày tham gia công đoàn': row.ngay_tham_gia_cong_doan || '',
+        'Ngày tham gia BHXH': row.ngay_tham_gia_bhxh || '',
+        'Ngày thôi việc': row.ngay_thoi_viec || '',
 
         // Tài chính
-        'Giảm trừ gia cảnh (VNĐ)': parseFloat(row.giam_tru_gia_canh || '0'),
         'Lương thỏa thuận (VNĐ)': parseFloat(row.luong_thoa_thuan || '0'),
         'Tiền cọc (VNĐ)': parseFloat(row.tien_coc || '0'),
+        'Giảm trừ gia cảnh': row.giam_tru_gia_canh || '',
+        'Số tài khoản': row.so_tai_khoan || '',
+        'Ngân hàng thụ hưởng': row.ngan_hang_thu_huong || '',
 
         // Phân quyền
         'Phân quyền': row.phan_quyen || '',
@@ -113,53 +135,66 @@ export async function GET(request: NextRequest) {
         'Quyền sửa': row.sua ? 'Có' : 'Không',
         'Quyền xóa': row.xoa ? 'Có' : 'Không',
 
-        // Trạng thái
-        'Trạng thái': row.trang_thai || 'Đang làm việc',
-        'Ngày sinh': row.ngay_sinh ? new Date(row.ngay_sinh).toLocaleDateString('vi-VN') : '',
-        'Số CCCD': row.so_can_cuoc || '',
-
-        // Metadata
-        'Ngày tạo': row.created_at ? new Date(row.created_at).toLocaleString('vi-VN') : '',
-        'Cập nhật lần cuối': row.updated_at ? new Date(row.updated_at).toLocaleString('vi-VN') : '',
+        // Trạng thái & Thời gian
+        'Trạng thái': row.trang_thai || '',
+        'Ngày tạo': row.ngay_tao || '',
+        'Người tạo': row.nguoi_tao || '',
+        'Thời gian tạo': row.thoi_gian_tao || '',
+        'Cập nhật lần cuối': row.Update_time || '',
+        'Năm': row.nam || '',
+        'Tháng': row.thang || '',
       };
     });
 
     // Create workbook and worksheet
     const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-    // Set column widths - 27 cột
+    // Set column widths - 38 cột
     const columnWidths = [
-      { wch: 5 },   // STT
-      { wch: 15 },  // Mã nhân viên
-      { wch: 25 },  // Họ và tên
-      { wch: 15 },  // Phòng ban
-      { wch: 15 },  // Chức vụ
+      { wch: 5 },   // 1. STT
+      // Thông tin cơ bản
+      { wch: 12 },  // 2. Mã nhân viên
+      { wch: 25 },  // 3. Họ và tên
+      { wch: 15 },  // 4. Phòng ban
+      { wch: 15 },  // 5. Chức vụ
+      { wch: 12 },  // 6. Ngày sinh
+      { wch: 10 },  // 7. Giới tính
       // Liên hệ
-      { wch: 15 },  // Số điện thoại
-      { wch: 25 },  // Email
-      { wch: 15 },  // Chat ID
-      { wch: 40 },  // URL Ảnh đại diện
+      { wch: 15 },  // 8. Số điện thoại
+      { wch: 25 },  // 9. Email
+      { wch: 40 },  // 10. Địa chỉ thường trú
+      { wch: 15 },  // 11. Số CCCD
+      { wch: 15 },  // 12. CMND/CCCD (cũ)
+      { wch: 15 },  // 13. Chat ID
+      { wch: 40 },  // 14. URL Ảnh đại diện
       // Công việc
-      { wch: 20 },  // Tình trạng công tác
-      { wch: 15 },  // Ngày vào làm
-      { wch: 15 },  // Ngày ký HĐLĐ
-      { wch: 20 },  // Ngày tham gia công đoàn
-      { wch: 20 },  // Ngày tham gia BHXH
-      { wch: 15 },  // Ngày thôi việc
+      { wch: 20 },  // 15. Tình trạng công tác
+      { wch: 15 },  // 16. Loại hình
+      { wch: 12 },  // 17. Ngày vào làm
+      { wch: 12 },  // 18. Ngày ký HĐLĐ
+      { wch: 20 },  // 19. Ngày tham gia công đoàn
+      { wch: 20 },  // 20. Ngày tham gia BHXH
+      { wch: 15 },  // 21. Ngày thôi việc
       // Tài chính
-      { wch: 20 },  // Giảm trừ gia cảnh
-      { wch: 20 },  // Lương thỏa thuận
-      { wch: 15 },  // Tiền cọc
+      { wch: 18 },  // 22. Lương thỏa thuận
+      { wch: 15 },  // 23. Tiền cọc
+      { wch: 18 },  // 24. Giảm trừ gia cảnh
+      { wch: 20 },  // 25. Số tài khoản
+      { wch: 25 },  // 26. Ngân hàng thụ hưởng
       // Phân quyền
-      { wch: 12 },  // Phân quyền
-      { wch: 12 },  // Quyền xem
-      { wch: 12 },  // Quyền thêm
-      { wch: 12 },  // Quyền sửa
-      { wch: 12 },  // Quyền xóa
-      // Trạng thái & Thông tin bổ sung
-      { wch: 15 },  // Trạng thái
-      { wch: 15 },  // Ngày sinh
-      { wch: 15 },  // Số CCCD
+      { wch: 12 },  // 27. Phân quyền
+      { wch: 10 },  // 28. Quyền xem
+      { wch: 10 },  // 29. Quyền thêm
+      { wch: 10 },  // 30. Quyền sửa
+      { wch: 10 },  // 31. Quyền xóa
+      // Trạng thái & Metadata
+      { wch: 15 },  // 32. Trạng thái
+      { wch: 15 },  // 33. Ngày tạo
+      { wch: 15 },  // 34. Người tạo
+      { wch: 18 },  // 35. Thời gian tạo
+      { wch: 18 },  // 36. Cập nhật lần cuối
+      { wch: 8 },   // 37. Năm
+      { wch: 8 },   // 38. Tháng
     ];
     worksheet['!cols'] = columnWidths;
 
