@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { TripTable, Trip } from '@/components/trips/trip-table';
 import { Button } from '@/components/ui/button';
@@ -18,18 +18,14 @@ import {
   Search,
   Download,
   RefreshCw,
-  Package,
-  CheckCircle2,
-  Clock,
-  TrendingUp,
-  Truck,
   AlertCircle,
   CalendarRange,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 // ── Constants ───────────────────────────────────────────────────────────────
-const KHACH_HANG_OPTIONS = ['J&T', 'GHN', 'VIETTEL POST', 'YUNYI', 'Ninja Van'];
-const DVVC_OPTIONS       = ['NAK', 'VENDOR'];
+const KHACH_HANG_OPTIONS  = ['J&T', 'GHN', 'VIETTEL POST', 'YUNYI', 'Ninja Van'];
+const DVVC_OPTIONS        = ['NAK', 'VENDOR'];
 const LOAI_CHUYEN_OPTIONS = ['Một chiều', 'Hai chiều', 'Nhiều điểm'];
 const LOAI_TUYEN_OPTIONS  = ['Nội thành', 'Liên tỉnh', 'Đường dài'];
 const TRANG_THAI_OPTIONS  = [
@@ -39,63 +35,31 @@ const TRANG_THAI_OPTIONS  = [
   { value: 'Hủy',            label: 'Đã hủy' },
 ];
 
-// ── Interfaces ──────────────────────────────────────────────────────────────
-interface Summary {
-  total: number;
-  hoanThanh: number;
-  dangXuLy: number;
-  daHuy: number;
-  tongDoanhThu: number;
-  tongKm: number;
-}
+const DAY_NAMES = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
-// ── Stat card ───────────────────────────────────────────────────────────────
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  color,
-}: {
-  icon: any;
-  label: string;
-  value: string | number;
-  sub?: string;
-  color: string;
-}) {
-  return (
-    <Card>
-      <CardContent className="p-4 flex items-center gap-4">
-        <div className={`rounded-xl p-3 ${color}`}>
-          <Icon className="h-5 w-5 text-white" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs text-muted-foreground font-medium">{label}</p>
-          <p className="text-xl font-bold text-foreground truncate">{value}</p>
-          {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function formatCurrency(v: number) {
-  if (v >= 1_000_000_000)
-    return `${(v / 1_000_000_000).toFixed(1)} tỷ ₫`;
-  if (v >= 1_000_000)
-    return `${(v / 1_000_000).toFixed(0)} tr ₫`;
-  return new Intl.NumberFormat('vi-VN').format(v) + ' ₫';
+// ── Helpers ──────────────────────────────────────────────────────────────────
+/** "2026-02-24" → { display: "24/02", dayName: "T2" } */
+function formatTabDate(iso: string) {
+  const [year, month, day] = iso.split('T')[0].split('-');
+  const d = new Date(Number(year), Number(month) - 1, Number(day));
+  return {
+    display: `${day}/${month}`,
+    dayName: DAY_NAMES[d.getDay()],
+    iso: `${year}-${month}-${day}`,
+  };
 }
 
 // ── Page component ───────────────────────────────────────────────────────────
 export default function TripsPage() {
   const [trips, setTrips]         = useState<Trip[]>([]);
-  const [summary, setSummary]     = useState<Summary | null>(null);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  // Filters
+  // Active date tab ('all' or ISO date string)
+  const [activeTab, setActiveTab] = useState<string>('all');
+
+  // API filters
   const [search,         setSearch]         = useState('');
   const [fromDate,       setFromDate]       = useState('');
   const [toDate,         setToDate]         = useState('');
@@ -105,21 +69,22 @@ export default function TripsPage() {
   const [loaiTuyen,      setLoaiTuyen]      = useState('all');
   const [trangThai,      setTrangThai]      = useState('all');
 
-  // ── Fetch data ─────────────────────────────────────────────────────────
+  // ── Fetch ──────────────────────────────────────────────────────────────
   const fetchTrips = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
+      setActiveTab('all'); // reset tab on new fetch
 
-      const params = new URLSearchParams();
-      if (search)                          params.append('search', search);
-      if (fromDate)                        params.append('fromDate', fromDate);
-      if (toDate)                          params.append('toDate', toDate);
-      if (khachHang      !== 'all')        params.append('khachHang', khachHang);
-      if (donViVanChuyen !== 'all')        params.append('donViVanChuyen', donViVanChuyen);
-      if (loaiChuyen     !== 'all')        params.append('loaiChuyen', loaiChuyen);
-      if (loaiTuyen      !== 'all')        params.append('loaiTuyen', loaiTuyen);
-      if (trangThai      !== 'all')        params.append('trangThai', trangThai);
+      const params = new URLSearchParams({ limit: '500' });
+      if (search)                    params.append('search', search);
+      if (fromDate)                  params.append('fromDate', fromDate);
+      if (toDate)                    params.append('toDate', toDate);
+      if (khachHang !== 'all')       params.append('khachHang', khachHang);
+      if (donViVanChuyen !== 'all')  params.append('donViVanChuyen', donViVanChuyen);
+      if (loaiChuyen !== 'all')      params.append('loaiChuyen', loaiChuyen);
+      if (loaiTuyen !== 'all')       params.append('loaiTuyen', loaiTuyen);
+      if (trangThai !== 'all')       params.append('trangThai', trangThai);
 
       const res = await fetch(`/api/trips?${params}`);
       if (!res.ok) {
@@ -128,7 +93,6 @@ export default function TripsPage() {
       }
       const data = await res.json();
       setTrips(data.trips || []);
-      setSummary(data.summary || null);
     } catch (err: any) {
       setError(err.message || 'Không thể tải dữ liệu chuyến đi');
     } finally {
@@ -138,17 +102,39 @@ export default function TripsPage() {
 
   useEffect(() => { fetchTrips(); }, [fetchTrips]);
 
-  // ── Export Excel ───────────────────────────────────────────────────────
+  // ── Derive date tabs from trips ────────────────────────────────────────
+  const dateTabs = useMemo(() => {
+    const countByDate: Record<string, number> = {};
+    trips.forEach((t) => {
+      const iso = t.ngay_tao?.split('T')[0] ?? '';
+      if (iso) countByDate[iso] = (countByDate[iso] ?? 0) + 1;
+    });
+    // Sort newest first
+    return Object.entries(countByDate)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([iso, count]) => ({ ...formatTabDate(iso), count }));
+  }, [trips]);
+
+  // ── Trips shown in table (filtered by active tab) ──────────────────────
+  const visibleTrips = useMemo(() => {
+    if (activeTab === 'all') return trips;
+    return trips.filter((t) => t.ngay_tao?.split('T')[0] === activeTab);
+  }, [trips, activeTab]);
+
+  // ── Export ─────────────────────────────────────────────────────────────
   const handleExport = async () => {
     try {
       setExporting(true);
       const params = new URLSearchParams({ templateType: 'general' });
-      if (fromDate)                        params.append('fromDate', fromDate);
-      if (toDate)                          params.append('toDate', toDate);
-      if (khachHang      !== 'all')        params.append('khachHang', khachHang);
-      if (donViVanChuyen !== 'all')        params.append('donViVanChuyen', donViVanChuyen);
-      if (loaiChuyen     !== 'all')        params.append('loaiChuyen', loaiChuyen);
-      if (search)                          params.append('searchQuery', search);
+      // If a specific date tab is active, scope export to that date
+      const exportFrom = activeTab !== 'all' ? activeTab : fromDate;
+      const exportTo   = activeTab !== 'all' ? activeTab : toDate;
+      if (exportFrom)               params.append('fromDate', exportFrom);
+      if (exportTo)                 params.append('toDate', exportTo);
+      if (khachHang !== 'all')      params.append('khachHang', khachHang);
+      if (donViVanChuyen !== 'all') params.append('donViVanChuyen', donViVanChuyen);
+      if (loaiChuyen !== 'all')     params.append('loaiChuyen', loaiChuyen);
+      if (search)                   params.append('searchQuery', search);
 
       const res = await fetch(`/api/reconciliation/export?${params}`);
       if (!res.ok) throw new Error('Export thất bại');
@@ -157,7 +143,8 @@ export default function TripsPage() {
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href     = url;
-      a.download = `chuyen_di_${new Date().toISOString().split('T')[0]}.xlsx`;
+      const label = activeTab !== 'all' ? activeTab : new Date().toISOString().split('T')[0];
+      a.download = `chuyen_di_${label}.xlsx`;
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(url);
@@ -169,7 +156,7 @@ export default function TripsPage() {
     }
   };
 
-  // ── Reset filters ──────────────────────────────────────────────────────
+  // ── Reset ──────────────────────────────────────────────────────────────
   const handleReset = () => {
     setSearch('');
     setFromDate('');
@@ -193,48 +180,7 @@ export default function TripsPage() {
         { label: 'Chuyến đi' },
       ]}
     >
-      <div className="space-y-4">
-
-        {/* ── Stats ── */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-          <StatCard
-            icon={Package}
-            label="Tổng chuyến"
-            value={loading ? '...' : (summary?.total ?? 0).toLocaleString('vi-VN')}
-            color="bg-indigo-500"
-          />
-          <StatCard
-            icon={CheckCircle2}
-            label="Hoàn thành"
-            value={loading ? '...' : (summary?.hoanThanh ?? 0).toLocaleString('vi-VN')}
-            sub={summary ? `${Math.round((summary.hoanThanh / (summary.total || 1)) * 100)}%` : undefined}
-            color="bg-green-500"
-          />
-          <StatCard
-            icon={Clock}
-            label="Đang xử lý"
-            value={loading ? '...' : (summary?.dangXuLy ?? 0).toLocaleString('vi-VN')}
-            color="bg-blue-500"
-          />
-          <StatCard
-            icon={AlertCircle}
-            label="Đã hủy"
-            value={loading ? '...' : (summary?.daHuy ?? 0).toLocaleString('vi-VN')}
-            color="bg-red-500"
-          />
-          <StatCard
-            icon={TrendingUp}
-            label="Doanh thu"
-            value={loading ? '...' : formatCurrency(summary?.tongDoanhThu ?? 0)}
-            color="bg-emerald-500"
-          />
-          <StatCard
-            icon={Truck}
-            label="Tổng KM"
-            value={loading ? '...' : `${(summary?.tongKm ?? 0).toLocaleString('vi-VN')} km`}
-            color="bg-orange-500"
-          />
-        </div>
+      <div className="space-y-3">
 
         {/* ── Error ── */}
         {error && (
@@ -246,40 +192,35 @@ export default function TripsPage() {
 
         {/* ── Filter panel ── */}
         <Card>
-          <CardContent className="p-4 space-y-3">
+          <CardContent className="p-3 space-y-2">
             {/* Row 1: Search + Date range */}
             <div className="flex flex-wrap gap-2">
-              {/* Search */}
-              <div className="relative flex-1 min-w-[220px]">
+              <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Tìm mã chuyến, tên tuyến, tài xế..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 h-9"
                 />
               </div>
-
-              {/* Date from */}
               <div className="relative">
                 <CalendarRange className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
-                  className="pl-9 w-44"
+                  className="pl-9 w-42 h-9"
                   title="Từ ngày"
                 />
               </div>
-
-              {/* Date to */}
               <div className="relative">
                 <CalendarRange className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="date"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
-                  className="pl-9 w-44"
+                  className="pl-9 w-42 h-9"
                   title="Đến ngày"
                 />
               </div>
@@ -287,9 +228,8 @@ export default function TripsPage() {
 
             {/* Row 2: Dropdowns + Actions */}
             <div className="flex flex-wrap gap-2 items-center">
-              {/* Khách hàng */}
               <Select value={khachHang} onValueChange={setKhachHang}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-36 h-9">
                   <SelectValue placeholder="Khách hàng" />
                 </SelectTrigger>
                 <SelectContent>
@@ -300,9 +240,8 @@ export default function TripsPage() {
                 </SelectContent>
               </Select>
 
-              {/* ĐVVC */}
               <Select value={donViVanChuyen} onValueChange={setDonViVanChuyen}>
-                <SelectTrigger className="w-36">
+                <SelectTrigger className="w-32 h-9">
                   <SelectValue placeholder="Đơn vị VC" />
                 </SelectTrigger>
                 <SelectContent>
@@ -313,9 +252,8 @@ export default function TripsPage() {
                 </SelectContent>
               </Select>
 
-              {/* Loại chuyến */}
               <Select value={loaiChuyen} onValueChange={setLoaiChuyen}>
-                <SelectTrigger className="w-40">
+                <SelectTrigger className="w-36 h-9">
                   <SelectValue placeholder="Loại chuyến" />
                 </SelectTrigger>
                 <SelectContent>
@@ -326,9 +264,8 @@ export default function TripsPage() {
                 </SelectContent>
               </Select>
 
-              {/* Loại tuyến */}
               <Select value={loaiTuyen} onValueChange={setLoaiTuyen}>
-                <SelectTrigger className="w-36">
+                <SelectTrigger className="w-32 h-9">
                   <SelectValue placeholder="Loại tuyến" />
                 </SelectTrigger>
                 <SelectContent>
@@ -339,9 +276,8 @@ export default function TripsPage() {
                 </SelectContent>
               </Select>
 
-              {/* Trạng thái */}
               <Select value={trangThai} onValueChange={setTrangThai}>
-                <SelectTrigger className="w-44">
+                <SelectTrigger className="w-40 h-9">
                   <SelectValue placeholder="Trạng thái" />
                 </SelectTrigger>
                 <SelectContent>
@@ -352,80 +288,95 @@ export default function TripsPage() {
                 </SelectContent>
               </Select>
 
-              {/* Spacer */}
               <div className="flex-1" />
 
-              {/* Reset */}
               {hasFilter && (
-                <Button variant="ghost" size="sm" onClick={handleReset}>
+                <Button variant="ghost" size="sm" onClick={handleReset} className="h-9">
                   <RefreshCw className="h-4 w-4 mr-1" />
                   Xóa lọc
                 </Button>
               )}
 
-              {/* Refresh */}
-              <Button variant="outline" size="sm" onClick={fetchTrips} disabled={loading}>
+              <Button variant="outline" size="sm" onClick={fetchTrips} disabled={loading} className="h-9">
                 <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
                 Làm mới
               </Button>
 
-              {/* Export */}
-              <Button size="sm" onClick={handleExport} disabled={exporting || loading}>
+              <Button size="sm" onClick={handleExport} disabled={exporting || loading} className="h-9">
                 <Download className="h-4 w-4 mr-1" />
                 {exporting ? 'Đang xuất...' : 'Xuất Excel'}
               </Button>
             </div>
-
-            {/* Active filter chips */}
-            {hasFilter && (
-              <div className="flex flex-wrap gap-1 pt-1">
-                {fromDate && (
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                    Từ: {fromDate}
-                  </span>
-                )}
-                {toDate && (
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                    Đến: {toDate}
-                  </span>
-                )}
-                {khachHang !== 'all' && (
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                    KH: {khachHang}
-                  </span>
-                )}
-                {donViVanChuyen !== 'all' && (
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                    ĐVVC: {donViVanChuyen}
-                  </span>
-                )}
-                {loaiChuyen !== 'all' && (
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                    {loaiChuyen}
-                  </span>
-                )}
-                {loaiTuyen !== 'all' && (
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                    {loaiTuyen}
-                  </span>
-                )}
-                {trangThai !== 'all' && (
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                    {TRANG_THAI_OPTIONS.find(t => t.value === trangThai)?.label}
-                  </span>
-                )}
-                {search && (
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                    Tìm: "{search}"
-                  </span>
-                )}
-              </div>
-            )}
           </CardContent>
         </Card>
 
+        {/* ── Date tabs ── */}
+        <div className="relative">
+          <div className="overflow-x-auto pb-0 scrollbar-thin scrollbar-thumb-muted">
+            <div className="flex gap-1 min-w-max border-b border-border">
+
+              {/* "Tất cả" tab */}
+              <button
+                onClick={() => setActiveTab('all')}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-all',
+                  activeTab === 'all'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
+                )}
+              >
+                Tất cả
+                <span className={cn(
+                  'inline-flex items-center justify-center rounded-full text-xs font-semibold min-w-[20px] px-1.5 py-0.5',
+                  activeTab === 'all'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground'
+                )}>
+                  {loading ? '...' : trips.length}
+                </span>
+              </button>
+
+              {/* One tab per unique date (newest first) */}
+              {!loading && dateTabs.map(({ iso, display, dayName, count }) => (
+                <button
+                  key={iso}
+                  onClick={() => setActiveTab(iso)}
+                  className={cn(
+                    'flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-all',
+                    activeTab === iso
+                      ? 'border-primary text-primary'
+                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
+                  )}
+                >
+                  <span className="flex flex-col items-center leading-none gap-0.5">
+                    <span className="text-[10px] font-normal opacity-60">{dayName}</span>
+                    <span>{display}</span>
+                  </span>
+                  <span className={cn(
+                    'inline-flex items-center justify-center rounded-full text-xs font-semibold min-w-[20px] px-1.5 py-0.5',
+                    activeTab === iso
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground'
+                  )}>
+                    {count}
+                  </span>
+                </button>
+              ))}
+
+              {/* Loading placeholder tabs */}
+              {loading && Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-2 px-4 py-2.5">
+                  <div className="h-4 w-10 bg-muted rounded animate-pulse" />
+                  <div className="h-4 w-5 bg-muted rounded-full animate-pulse" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
         {/* ── Data table ── */}
-        <TripTable trips={trips} loading={loading} />
+        <TripTable trips={visibleTrips} loading={loading} />
+
       </div>
     </DashboardLayout>
   );
