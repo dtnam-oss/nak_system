@@ -3,12 +3,12 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-type Params = { params: { ma_chuyen_di: string } };
+type Params = { params: Promise<{ ma_chuyen_di: string }> };
 
 // ── GET /api/trips/[ma_chuyen_di] ────────────────────────────────────────────
 // Returns trip header + chi_tiet_chuyen_di rows
 export async function GET(_req: NextRequest, { params }: Params) {
-  const { ma_chuyen_di } = params;
+  const { ma_chuyen_di } = await params;
   try {
     const [tripResult, chiTietResult] = await Promise.all([
       query(
@@ -112,7 +112,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
 // ── PUT /api/trips/[ma_chuyen_di] ────────────────────────────────────────────
 // Updates editable fields of a trip
 export async function PUT(req: NextRequest, { params }: Params) {
-  const { ma_chuyen_di } = params;
+  const { ma_chuyen_di } = await params;
   try {
     const body = await req.json();
     const {
@@ -164,7 +164,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
 // ── DELETE /api/trips/[ma_chuyen_di] ─────────────────────────────────────────
 // Hard deletes a trip and its chi_tiet records
 export async function DELETE(_req: NextRequest, { params }: Params) {
-  const { ma_chuyen_di } = params;
+  const { ma_chuyen_di } = await params;
   try {
     // Delete chi_tiet first (FK constraint)
     await query(`DELETE FROM chi_tiet_chuyen_di WHERE ma_chuyen_di = $1`, [ma_chuyen_di]);
