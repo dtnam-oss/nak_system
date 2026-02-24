@@ -53,8 +53,9 @@ export async function GET(_req: NextRequest, { params }: Params) {
           ct.loai_ca,
           ct.tai_trong_tinh_phi,
           ct.hinh_thuc_tinh_gia,
-          ct.hinh_anh
+          ha.id AS hinh_anh_id
         FROM chi_tiet_chuyen_di ct
+        LEFT JOIN hinh_anh_chi_tiet ha ON ha.chi_tiet_id = ct.id
         WHERE ct.ma_chuyen_di = $1
         ORDER BY ct.id ASC`,
         [ma_chuyen_di]
@@ -98,7 +99,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       loai_ca:                  ct.loai_ca || '',
       tai_trong_tinh_phi:       ct.tai_trong_tinh_phi || '',
       hinh_thuc_tinh_gia:       ct.hinh_thuc_tinh_gia || '',
-      hinh_anh:                 ct.hinh_anh || '',
+      hinh_anh:                 ct.hinh_anh_id ? `/api/trips/upload?id=${ct.hinh_anh_id}` : '',
     }));
 
     return NextResponse.json({ trip, chiTiet });

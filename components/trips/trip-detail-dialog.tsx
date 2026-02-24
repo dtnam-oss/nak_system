@@ -69,7 +69,8 @@ function ImageUploadCell({ chiTietId, initialUrl }: { chiTietId: number; initial
       const res  = await fetch('/api/trips/upload', { method: 'POST', body: fd });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Upload thất bại');
-      setUrl(data.url);
+      // Thêm timestamp để tránh browser cache ảnh cũ
+      setUrl(`${data.url}&t=${Date.now()}`);
     } catch (err: any) {
       setError(err.message || 'Upload thất bại');
     } finally {

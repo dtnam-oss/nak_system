@@ -36,7 +36,6 @@
     "@tanstack/react-table": "^8.21.3",
     "@types/nodemailer": "^7.0.9",
     "@types/xlsx": "^0.0.35",
-    "@vercel/blob": "^2.3.0",
     "@vercel/postgres": "^0.10.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
