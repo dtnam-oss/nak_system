@@ -5,7 +5,6 @@ import { usePathname } from "next/navigation"
 import { useEffect, useState } from "react"
 import {
   LayoutDashboard,
-  FileText,
   DollarSign,
   GitCompare,
   Fuel,
@@ -21,6 +20,7 @@ import {
   Clock,
   Package,
   LogOut,
+  Navigation,
   type LucideIcon,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -54,6 +54,11 @@ const navigation: NavigationItem[] = [
     name: "Nhân viên",
     href: "/employees",
     icon: Users,
+  },
+  {
+    name: "Chuyến đi",
+    href: "/trips",
+    icon: Navigation,
   },
   {
     name: "Đối soát",
