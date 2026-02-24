@@ -3,6 +3,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { DashboardLayout } from '@/components/dashboard-layout';
 import { TripTable, Trip } from '@/components/trips/trip-table';
+import { TripDetailDialog } from '@/components/trips/trip-detail-dialog';
+import { EditTripDialog } from '@/components/trips/edit-trip-dialog';
+import { DeleteTripDialog } from '@/components/trips/delete-trip-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -46,6 +49,16 @@ export default function TripsPage() {
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
+
+  // Dialog states
+  const [selectedTrip,   setSelectedTrip]   = useState<Trip | null>(null);
+  const [detailOpen,     setDetailOpen]     = useState(false);
+  const [editOpen,       setEditOpen]       = useState(false);
+  const [deleteOpen,     setDeleteOpen]     = useState(false);
+
+  const handleView   = (trip: Trip) => { setSelectedTrip(trip); setDetailOpen(true); };
+  const handleEdit   = (trip: Trip) => { setSelectedTrip(trip); setEditOpen(true); };
+  const handleDelete = (trip: Trip) => { setSelectedTrip(trip); setDeleteOpen(true); };
 
   // Active customer tab ('all' or ma_khach_hang)
   const [activeKhachHang, setActiveKhachHang] = useState<string>('all');
@@ -352,10 +365,36 @@ export default function TripsPage() {
           </div>
 
           {/* ── Table ── */}
-          <TripTable trips={filteredTrips} loading={loading} />
+          <TripTable
+            trips={filteredTrips}
+            loading={loading}
+            onView={handleView}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
 
         </Card>
       </div>
+
+      {/* ── Dialogs ── */}
+      <TripDetailDialog
+        trip={selectedTrip}
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+      />
+      <EditTripDialog
+        trip={selectedTrip}
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        onSuccess={fetchTrips}
+      />
+      <DeleteTripDialog
+        trip={selectedTrip}
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        onSuccess={fetchTrips}
+      />
+
     </DashboardLayout>
   );
 }
