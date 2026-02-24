@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
-// Tự động tạo bảng nếu chưa có
+// Tự động tạo bảng và cột nếu chưa có
 async function ensureTable() {
   await query(`
     CREATE TABLE IF NOT EXISTS hinh_anh_chi_tiet (
@@ -16,6 +16,8 @@ async function ensureTable() {
       ngay_tao    TIMESTAMP DEFAULT NOW()
     )
   `);
+  // Đảm bảo cột hinh_anh tồn tại trong chi_tiet_chuyen_di
+  await query(`ALTER TABLE chi_tiet_chuyen_di ADD COLUMN IF NOT EXISTS hinh_anh TEXT`);
 }
 
 // ── GET /api/trips/upload?id=X ───────────────────────────────────────────────
@@ -93,7 +95,15 @@ export async function POST(req: NextRequest) {
     );
 
     const newId = result.rows[0].id;
-    return NextResponse.json({ id: newId, url: `/api/trips/upload?id=${newId}` });
+    const imageUrl = `/api/trips/upload?id=${newId}`;
+
+    // Ghi URL trực tiếp vào chi_tiet_chuyen_di.hinh_anh
+    await query(
+      `UPDATE chi_tiet_chuyen_di SET hinh_anh = $1 WHERE id::TEXT = $2`,
+      [imageUrl, String(chiTietId)]
+    );
+
+    return NextResponse.json({ id: newId, url: imageUrl });
   } catch (error) {
     console.error('❌ [upload POST] error:', error);
     return NextResponse.json(
@@ -113,6 +123,8 @@ export async function DELETE(req: NextRequest) {
     }
 
     await query('DELETE FROM hinh_anh_chi_tiet WHERE chi_tiet_id = $1', [id]);
+    // Xóa URL trong chi_tiet_chuyen_di
+    await query(`UPDATE chi_tiet_chuyen_di SET hinh_anh = NULL WHERE id::TEXT = $1`, [String(id)]);
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json(

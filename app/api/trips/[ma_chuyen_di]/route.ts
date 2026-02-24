@@ -5,19 +5,9 @@ export const dynamic = 'force-dynamic';
 
 type Params = { params: Promise<{ ma_chuyen_di: string }> };
 
-// Tạo bảng lưu ảnh nếu chưa có (chạy 1 lần, idempotent)
-async function ensureImageTable() {
-  await query(`
-    CREATE TABLE IF NOT EXISTS hinh_anh_chi_tiet (
-      id          SERIAL PRIMARY KEY,
-      chi_tiet_id INTEGER NOT NULL,
-      ten_file    TEXT,
-      loai_file   TEXT,
-      kich_thuoc  INTEGER,
-      du_lieu     BYTEA NOT NULL,
-      ngay_tao    TIMESTAMP DEFAULT NOW()
-    )
-  `);
+// Đảm bảo cột hinh_anh tồn tại trong chi_tiet_chuyen_di (idempotent)
+async function ensureHinhAnhColumn() {
+  await query(`ALTER TABLE chi_tiet_chuyen_di ADD COLUMN IF NOT EXISTS hinh_anh TEXT`);
 }
 
 // ── GET /api/trips/[ma_chuyen_di] ────────────────────────────────────────────
@@ -25,8 +15,8 @@ async function ensureImageTable() {
 export async function GET(_req: NextRequest, { params }: Params) {
   const { ma_chuyen_di } = await params;
   try {
-    // Đảm bảo bảng ảnh tồn tại trước khi JOIN
-    await ensureImageTable();
+    // Đảm bảo cột hinh_anh tồn tại
+    await ensureHinhAnhColumn();
 
     const [tripResult, chiTietResult] = await Promise.all([
       query(
@@ -71,9 +61,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
           ct.loai_ca,
           ct.tai_trong_tinh_phi,
           ct.hinh_thuc_tinh_gia,
-          ha.id AS hinh_anh_id
+          ct.hinh_anh
         FROM chi_tiet_chuyen_di ct
-        LEFT JOIN hinh_anh_chi_tiet ha ON ha.chi_tiet_id = ct.id
         WHERE ct.ma_chuyen_di = $1
         ORDER BY ct.id ASC`,
         [ma_chuyen_di]
@@ -117,7 +106,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       loai_ca:                  ct.loai_ca || '',
       tai_trong_tinh_phi:       ct.tai_trong_tinh_phi || '',
       hinh_thuc_tinh_gia:       ct.hinh_thuc_tinh_gia || '',
-      hinh_anh:                 ct.hinh_anh_id ? `/api/trips/upload?id=${ct.hinh_anh_id}` : '',
+      hinh_anh:                 ct.hinh_anh || '',
     }));
 
     return NextResponse.json({ trip, chiTiet });
