@@ -52,7 +52,8 @@ export async function GET(_req: NextRequest, { params }: Params) {
           ct.don_gia,
           ct.loai_ca,
           ct.tai_trong_tinh_phi,
-          ct.hinh_thuc_tinh_gia
+          ct.hinh_thuc_tinh_gia,
+          ct.hinh_anh
         FROM chi_tiet_chuyen_di ct
         WHERE ct.ma_chuyen_di = $1
         ORDER BY ct.id ASC`,
@@ -97,6 +98,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       loai_ca:                  ct.loai_ca || '',
       tai_trong_tinh_phi:       ct.tai_trong_tinh_phi || '',
       hinh_thuc_tinh_gia:       ct.hinh_thuc_tinh_gia || '',
+      hinh_anh:                 ct.hinh_anh || '',
     }));
 
     return NextResponse.json({ trip, chiTiet });
