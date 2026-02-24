@@ -5,7 +5,7 @@ import { DashboardLayout } from '@/components/dashboard-layout';
 import { TripTable, Trip } from '@/components/trips/trip-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -14,13 +14,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import {
-  Search,
-  Download,
-  RefreshCw,
-  AlertCircle,
-  CalendarRange,
-} from 'lucide-react';
+import { Search, Download, RefreshCw, AlertCircle, CalendarRange } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // ── Constants ───────────────────────────────────────────────────────────────
@@ -28,26 +22,15 @@ const KHACH_HANG_OPTIONS  = ['J&T', 'GHN', 'VIETTEL POST', 'YUNYI', 'Ninja Van']
 const DVVC_OPTIONS        = ['NAK', 'VENDOR'];
 const LOAI_CHUYEN_OPTIONS = ['Một chiều', 'Hai chiều', 'Nhiều điểm'];
 const LOAI_TUYEN_OPTIONS  = ['Nội thành', 'Liên tỉnh', 'Đường dài'];
-const TRANG_THAI_OPTIONS  = [
-  { value: 'Kết thúc',       label: 'Kết thúc' },
-  { value: 'Đang thực hiện', label: 'Đang thực hiện' },
-  { value: 'Chờ giao hàng',  label: 'Chờ giao hàng' },
-  { value: 'Hủy',            label: 'Đã hủy' },
-];
 
-const DAY_NAMES = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
-/** "2026-02-24" → { display: "24/02", dayName: "T2" } */
-function formatTabDate(iso: string) {
-  const [year, month, day] = iso.split('T')[0].split('-');
-  const d = new Date(Number(year), Number(month) - 1, Number(day));
-  return {
-    display: `${day}/${month}`,
-    dayName: DAY_NAMES[d.getDay()],
-    iso: `${year}-${month}-${day}`,
-  };
-}
+// Status tabs configuration with color dots (referencing CEFINEA UI pattern)
+const STATUS_TABS = [
+  { value: 'all',              label: 'Tất cả',          dot: null },
+  { value: 'Kết thúc',        label: 'Kết thúc',         dot: '#22c55e' }, // green
+  { value: 'Đang thực hiện',  label: 'Đang thực hiện',   dot: '#3b82f6' }, // blue
+  { value: 'Chờ giao hàng',   label: 'Chờ giao hàng',    dot: '#f59e0b' }, // amber
+  { value: 'Hủy',             label: 'Đã hủy',            dot: '#ef4444' }, // red
+] as const;
 
 // ── Page component ───────────────────────────────────────────────────────────
 export default function TripsPage() {
@@ -56,8 +39,8 @@ export default function TripsPage() {
   const [error, setError]         = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  // Active date tab ('all' or ISO date string)
-  const [activeTab, setActiveTab] = useState<string>('all');
+  // Active status tab
+  const [activeStatus, setActiveStatus] = useState<string>('all');
 
   // API filters
   const [search,         setSearch]         = useState('');
@@ -67,30 +50,24 @@ export default function TripsPage() {
   const [donViVanChuyen, setDonViVanChuyen] = useState('all');
   const [loaiChuyen,     setLoaiChuyen]     = useState('all');
   const [loaiTuyen,      setLoaiTuyen]      = useState('all');
-  const [trangThai,      setTrangThai]      = useState('all');
 
   // ── Fetch ──────────────────────────────────────────────────────────────
   const fetchTrips = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      setActiveTab('all'); // reset tab on new fetch
 
       const params = new URLSearchParams({ limit: '500' });
-      if (search)                    params.append('search', search);
-      if (fromDate)                  params.append('fromDate', fromDate);
-      if (toDate)                    params.append('toDate', toDate);
-      if (khachHang !== 'all')       params.append('khachHang', khachHang);
-      if (donViVanChuyen !== 'all')  params.append('donViVanChuyen', donViVanChuyen);
-      if (loaiChuyen !== 'all')      params.append('loaiChuyen', loaiChuyen);
-      if (loaiTuyen !== 'all')       params.append('loaiTuyen', loaiTuyen);
-      if (trangThai !== 'all')       params.append('trangThai', trangThai);
+      if (search)                   params.append('search', search);
+      if (fromDate)                 params.append('fromDate', fromDate);
+      if (toDate)                   params.append('toDate', toDate);
+      if (khachHang !== 'all')      params.append('khachHang', khachHang);
+      if (donViVanChuyen !== 'all') params.append('donViVanChuyen', donViVanChuyen);
+      if (loaiChuyen !== 'all')     params.append('loaiChuyen', loaiChuyen);
+      if (loaiTuyen !== 'all')      params.append('loaiTuyen', loaiTuyen);
 
       const res = await fetch(`/api/trips?${params}`);
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Lỗi tải dữ liệu');
-      }
+      if (!res.ok) throw new Error((await res.json()).error || 'Lỗi tải dữ liệu');
       const data = await res.json();
       setTrips(data.trips || []);
     } catch (err: any) {
@@ -98,43 +75,37 @@ export default function TripsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, fromDate, toDate, khachHang, donViVanChuyen, loaiChuyen, loaiTuyen, trangThai]);
+  }, [search, fromDate, toDate, khachHang, donViVanChuyen, loaiChuyen, loaiTuyen]);
 
   useEffect(() => { fetchTrips(); }, [fetchTrips]);
 
-  // ── Derive date tabs from trips ────────────────────────────────────────
-  const dateTabs = useMemo(() => {
-    const countByDate: Record<string, number> = {};
+  // ── Count per status (for tab badges) ─────────────────────────────────
+  const countByStatus = useMemo(() => {
+    const map: Record<string, number> = { all: trips.length };
     trips.forEach((t) => {
-      const iso = t.ngay_tao?.split('T')[0] ?? '';
-      if (iso) countByDate[iso] = (countByDate[iso] ?? 0) + 1;
+      map[t.trang_thai] = (map[t.trang_thai] ?? 0) + 1;
     });
-    // Sort newest first
-    return Object.entries(countByDate)
-      .sort(([a], [b]) => b.localeCompare(a))
-      .map(([iso, count]) => ({ ...formatTabDate(iso), count }));
+    return map;
   }, [trips]);
 
-  // ── Trips shown in table (filtered by active tab) ──────────────────────
-  const visibleTrips = useMemo(() => {
-    if (activeTab === 'all') return trips;
-    return trips.filter((t) => t.ngay_tao?.split('T')[0] === activeTab);
-  }, [trips, activeTab]);
+  // ── Trips filtered by active status tab ───────────────────────────────
+  const filteredTrips = useMemo(() => {
+    if (activeStatus === 'all') return trips;
+    return trips.filter((t) => t.trang_thai === activeStatus);
+  }, [trips, activeStatus]);
 
   // ── Export ─────────────────────────────────────────────────────────────
   const handleExport = async () => {
     try {
       setExporting(true);
       const params = new URLSearchParams({ templateType: 'general' });
-      // If a specific date tab is active, scope export to that date
-      const exportFrom = activeTab !== 'all' ? activeTab : fromDate;
-      const exportTo   = activeTab !== 'all' ? activeTab : toDate;
-      if (exportFrom)               params.append('fromDate', exportFrom);
-      if (exportTo)                 params.append('toDate', exportTo);
+      if (fromDate)                 params.append('fromDate', fromDate);
+      if (toDate)                   params.append('toDate', toDate);
       if (khachHang !== 'all')      params.append('khachHang', khachHang);
       if (donViVanChuyen !== 'all') params.append('donViVanChuyen', donViVanChuyen);
       if (loaiChuyen !== 'all')     params.append('loaiChuyen', loaiChuyen);
       if (search)                   params.append('searchQuery', search);
+      if (activeStatus !== 'all')   params.append('trangThai', activeStatus);
 
       const res = await fetch(`/api/reconciliation/export?${params}`);
       if (!res.ok) throw new Error('Export thất bại');
@@ -143,8 +114,7 @@ export default function TripsPage() {
       const url  = URL.createObjectURL(blob);
       const a    = document.createElement('a');
       a.href     = url;
-      const label = activeTab !== 'all' ? activeTab : new Date().toISOString().split('T')[0];
-      a.download = `chuyen_di_${label}.xlsx`;
+      a.download = `chuyen_di_${new Date().toISOString().split('T')[0]}.xlsx`;
       document.body.appendChild(a);
       a.click();
       URL.revokeObjectURL(url);
@@ -165,12 +135,11 @@ export default function TripsPage() {
     setDonViVanChuyen('all');
     setLoaiChuyen('all');
     setLoaiTuyen('all');
-    setTrangThai('all');
   };
 
-  const hasFilter = search || fromDate || toDate
+  const hasFilter = !!(search || fromDate || toDate
     || khachHang !== 'all' || donViVanChuyen !== 'all'
-    || loaiChuyen !== 'all' || loaiTuyen !== 'all' || trangThai !== 'all';
+    || loaiChuyen !== 'all' || loaiTuyen !== 'all');
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
@@ -180,56 +149,137 @@ export default function TripsPage() {
         { label: 'Chuyến đi' },
       ]}
     >
-      <div className="space-y-3">
+      <div className="space-y-0">
 
         {/* ── Error ── */}
         {error && (
-          <Alert variant="destructive">
+          <Alert variant="destructive" className="mb-3">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
-        {/* ── Filter panel ── */}
-        <Card>
-          <CardContent className="p-3 space-y-2">
-            {/* Row 1: Search + Date range */}
-            <div className="flex flex-wrap gap-2">
-              <div className="relative flex-1 min-w-[200px]">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        {/* ── Main card: tabs + filter + table in one container ── */}
+        <Card className="overflow-hidden">
+
+          {/* ── Status tabs ── */}
+          <div className="border-b border-border bg-background">
+            <div className="flex items-center gap-1 px-4 overflow-x-auto scrollbar-none">
+              {STATUS_TABS.map((tab) => {
+                const count = countByStatus[tab.value] ?? 0;
+                const isActive = activeStatus === tab.value;
+
+                return (
+                  <button
+                    key={tab.value}
+                    onClick={() => setActiveStatus(tab.value)}
+                    className={cn(
+                      'flex items-center gap-1.5 px-3 py-3 text-sm font-medium whitespace-nowrap',
+                      'border-b-2 transition-all duration-150',
+                      isActive
+                        ? 'border-primary text-primary'
+                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                    )}
+                  >
+                    {/* Colored dot */}
+                    {tab.dot && (
+                      <span
+                        className="inline-block w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: tab.dot }}
+                      />
+                    )}
+
+                    {tab.label}
+
+                    {/* Count badge */}
+                    {!loading && (
+                      <span className={cn(
+                        'inline-flex items-center justify-center rounded-full text-xs font-semibold',
+                        'min-w-[20px] h-5 px-1.5',
+                        isActive
+                          ? 'bg-primary/10 text-primary'
+                          : 'bg-muted text-muted-foreground'
+                      )}>
+                        {count}
+                      </span>
+                    )}
+                    {loading && (
+                      <span className="inline-block w-6 h-4 bg-muted rounded animate-pulse" />
+                    )}
+                  </button>
+                );
+              })}
+
+              {/* Push actions to the right */}
+              <div className="flex-1" />
+
+              {/* Quick actions inside tab bar */}
+              <div className="flex items-center gap-1 py-2 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={fetchTrips}
+                  disabled={loading}
+                  className="h-8 text-muted-foreground"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />
+                  Làm mới
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleExport}
+                  disabled={exporting || loading}
+                  className="h-8"
+                >
+                  <Download className="h-3.5 w-3.5 mr-1" />
+                  {exporting ? 'Đang xuất...' : 'Xuất Excel'}
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Filter bar ── */}
+          <div className="px-4 py-3 border-b border-border bg-muted/20">
+            <div className="flex flex-wrap gap-2 items-center">
+
+              {/* Search */}
+              <div className="relative min-w-[220px] flex-1 max-w-xs">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="Tìm mã chuyến, tên tuyến, tài xế..."
+                  placeholder="Mã chuyến, tên tuyến, tài xế..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 h-9"
+                  className="pl-8 h-8 text-sm"
                 />
               </div>
+
+              {/* Date from */}
               <div className="relative">
-                <CalendarRange className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <CalendarRange className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   type="date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
-                  className="pl-9 w-42 h-9"
+                  className="pl-8 h-8 text-sm w-40"
                   title="Từ ngày"
                 />
               </div>
+
+              {/* Date to */}
               <div className="relative">
-                <CalendarRange className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <CalendarRange className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   type="date"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
-                  className="pl-9 w-42 h-9"
+                  className="pl-8 h-8 text-sm w-40"
                   title="Đến ngày"
                 />
               </div>
-            </div>
 
-            {/* Row 2: Dropdowns + Actions */}
-            <div className="flex flex-wrap gap-2 items-center">
+              {/* Khách hàng */}
               <Select value={khachHang} onValueChange={setKhachHang}>
-                <SelectTrigger className="w-36 h-9">
+                <SelectTrigger className="h-8 text-sm w-32">
                   <SelectValue placeholder="Khách hàng" />
                 </SelectTrigger>
                 <SelectContent>
@@ -240,20 +290,22 @@ export default function TripsPage() {
                 </SelectContent>
               </Select>
 
+              {/* ĐVVC */}
               <Select value={donViVanChuyen} onValueChange={setDonViVanChuyen}>
-                <SelectTrigger className="w-32 h-9">
-                  <SelectValue placeholder="Đơn vị VC" />
+                <SelectTrigger className="h-8 text-sm w-28">
+                  <SelectValue placeholder="ĐVVC" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả ĐVVC</SelectItem>
+                  <SelectItem value="all">Tất cả</SelectItem>
                   {DVVC_OPTIONS.map((d) => (
                     <SelectItem key={d} value={d}>{d}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
+              {/* Loại chuyến */}
               <Select value={loaiChuyen} onValueChange={setLoaiChuyen}>
-                <SelectTrigger className="w-36 h-9">
+                <SelectTrigger className="h-8 text-sm w-32">
                   <SelectValue placeholder="Loại chuyến" />
                 </SelectTrigger>
                 <SelectContent>
@@ -264,8 +316,9 @@ export default function TripsPage() {
                 </SelectContent>
               </Select>
 
+              {/* Loại tuyến */}
               <Select value={loaiTuyen} onValueChange={setLoaiTuyen}>
-                <SelectTrigger className="w-32 h-9">
+                <SelectTrigger className="h-8 text-sm w-30">
                   <SelectValue placeholder="Loại tuyến" />
                 </SelectTrigger>
                 <SelectContent>
@@ -276,107 +329,24 @@ export default function TripsPage() {
                 </SelectContent>
               </Select>
 
-              <Select value={trangThai} onValueChange={setTrangThai}>
-                <SelectTrigger className="w-40 h-9">
-                  <SelectValue placeholder="Trạng thái" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả trạng thái</SelectItem>
-                  {TRANG_THAI_OPTIONS.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="flex-1" />
-
               {hasFilter && (
-                <Button variant="ghost" size="sm" onClick={handleReset} className="h-9">
-                  <RefreshCw className="h-4 w-4 mr-1" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleReset}
+                  className="h-8 text-xs text-muted-foreground"
+                >
+                  <RefreshCw className="h-3 w-3 mr-1" />
                   Xóa lọc
                 </Button>
               )}
-
-              <Button variant="outline" size="sm" onClick={fetchTrips} disabled={loading} className="h-9">
-                <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-                Làm mới
-              </Button>
-
-              <Button size="sm" onClick={handleExport} disabled={exporting || loading} className="h-9">
-                <Download className="h-4 w-4 mr-1" />
-                {exporting ? 'Đang xuất...' : 'Xuất Excel'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* ── Date tabs ── */}
-        <div className="relative">
-          <div className="overflow-x-auto pb-0 scrollbar-thin scrollbar-thumb-muted">
-            <div className="flex gap-1 min-w-max border-b border-border">
-
-              {/* "Tất cả" tab */}
-              <button
-                onClick={() => setActiveTab('all')}
-                className={cn(
-                  'flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-all',
-                  activeTab === 'all'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
-                )}
-              >
-                Tất cả
-                <span className={cn(
-                  'inline-flex items-center justify-center rounded-full text-xs font-semibold min-w-[20px] px-1.5 py-0.5',
-                  activeTab === 'all'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground'
-                )}>
-                  {loading ? '...' : trips.length}
-                </span>
-              </button>
-
-              {/* One tab per unique date (newest first) */}
-              {!loading && dateTabs.map(({ iso, display, dayName, count }) => (
-                <button
-                  key={iso}
-                  onClick={() => setActiveTab(iso)}
-                  className={cn(
-                    'flex items-center gap-2 px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-all',
-                    activeTab === iso
-                      ? 'border-primary text-primary'
-                      : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground'
-                  )}
-                >
-                  <span className="flex flex-col items-center leading-none gap-0.5">
-                    <span className="text-[10px] font-normal opacity-60">{dayName}</span>
-                    <span>{display}</span>
-                  </span>
-                  <span className={cn(
-                    'inline-flex items-center justify-center rounded-full text-xs font-semibold min-w-[20px] px-1.5 py-0.5',
-                    activeTab === iso
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted text-muted-foreground'
-                  )}>
-                    {count}
-                  </span>
-                </button>
-              ))}
-
-              {/* Loading placeholder tabs */}
-              {loading && Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-2 px-4 py-2.5">
-                  <div className="h-4 w-10 bg-muted rounded animate-pulse" />
-                  <div className="h-4 w-5 bg-muted rounded-full animate-pulse" />
-                </div>
-              ))}
             </div>
           </div>
-        </div>
 
-        {/* ── Data table ── */}
-        <TripTable trips={visibleTrips} loading={loading} />
+          {/* ── Table (with date group rows) ── */}
+          <TripTable trips={filteredTrips} loading={loading} />
 
+        </Card>
       </div>
     </DashboardLayout>
   );

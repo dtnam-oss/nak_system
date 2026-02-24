@@ -1,6 +1,6 @@
 'use client';
 
-import { Badge } from '@/components/ui/badge';
+import { useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { MapPin, TrendingUp } from 'lucide-react';
+import { MapPin, TrendingUp, ChevronDown } from 'lucide-react';
 
 export interface Trip {
   ma_chuyen_di: string;
@@ -31,21 +31,34 @@ interface TripTableProps {
   loading?: boolean;
 }
 
-// ── Status helpers ──────────────────────────────────────────────────────────
-const STATUS_CONFIG: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; className: string }> = {
-  'Kết thúc':         { label: 'Kết thúc',         variant: 'default',     className: 'bg-green-100 text-green-800 border-green-200' },
-  'Đang thực hiện':   { label: 'Đang thực hiện',   variant: 'secondary',   className: 'bg-blue-100 text-blue-800 border-blue-200' },
-  'Chờ giao hàng':    { label: 'Chờ giao hàng',    variant: 'outline',     className: 'bg-yellow-100 text-yellow-800 border-yellow-200' },
-  'Hủy':              { label: 'Đã hủy',            variant: 'destructive', className: 'bg-red-100 text-red-700 border-red-200' },
+// ── Constants ────────────────────────────────────────────────────────────────
+const DAY_NAMES = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+
+const STATUS_STYLE: Record<string, string> = {
+  'Kết thúc':        'bg-green-100 text-green-800 border-green-200',
+  'Đang thực hiện':  'bg-blue-100 text-blue-800 border-blue-200',
+  'Chờ giao hàng':   'bg-amber-100 text-amber-800 border-amber-200',
+  'Hủy':             'bg-red-100 text-red-700 border-red-200',
 };
 
-function StatusBadge({ status }: { status: string }) {
-  const cfg = STATUS_CONFIG[status] || { label: status, className: 'bg-gray-100 text-gray-700 border-gray-200' };
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.className}`}>
-      {cfg.label}
-    </span>
-  );
+const STATUS_DOT: Record<string, string> = {
+  'Kết thúc':        'bg-green-500',
+  'Đang thực hiện':  'bg-blue-500',
+  'Chờ giao hàng':   'bg-amber-500',
+  'Hủy':             'bg-red-500',
+};
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function parseIso(iso: string) {
+  const clean = iso.split('T')[0];
+  const [year, month, day] = clean.split('-').map(Number);
+  return { clean, year, month, day, date: new Date(year, month - 1, day) };
+}
+
+function formatDateHeader(iso: string) {
+  const { day, month, year, date } = parseIso(iso);
+  const dayName = DAY_NAMES[date.getDay()];
+  return `${dayName}, ${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
 }
 
 function formatCurrency(value: number) {
@@ -53,158 +66,230 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 }
 
-function formatDate(dateStr: string) {
-  if (!dateStr) return '—';
-  const [year, month, day] = dateStr.split('T')[0].split('-');
-  return `${day}/${month}/${year}`;
+// ── Sub-components ────────────────────────────────────────────────────────────
+function StatusBadge({ status }: { status: string }) {
+  const cls = STATUS_STYLE[status] ?? 'bg-gray-100 text-gray-600 border-gray-200';
+  const dot = STATUS_DOT[status] ?? 'bg-gray-400';
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${cls}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+      {status || '—'}
+    </span>
+  );
 }
 
-// ── Loading skeleton ────────────────────────────────────────────────────────
+function DvvcBadge({ dvvc }: { dvvc: string }) {
+  const upper = dvvc?.toUpperCase();
+  const cls = upper === 'NAK'
+    ? 'bg-indigo-100 text-indigo-700'
+    : upper === 'VENDOR'
+      ? 'bg-orange-100 text-orange-700'
+      : 'bg-gray-100 text-gray-600';
+  return (
+    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${cls}`}>
+      {dvvc || '—'}
+    </span>
+  );
+}
+
+// Date group separator row
+function DateGroupRow({ dateIso, count }: { dateIso: string; count: number }) {
+  return (
+    <TableRow className="hover:bg-transparent">
+      <TableCell
+        colSpan={11}
+        className="py-2 px-3 bg-muted/40 border-l-[3px] border-l-primary"
+      >
+        <div className="flex items-center gap-2">
+          <ChevronDown className="h-3.5 w-3.5 text-primary shrink-0" />
+          <span className="text-xs font-semibold text-foreground">
+            Ngày: {formatDateHeader(dateIso)}
+          </span>
+          <span className="text-xs text-muted-foreground font-medium">
+            — {count} chuyến
+          </span>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+// Loading skeleton
 function SkeletonRow() {
   return (
     <TableRow>
-      {Array.from({ length: 12 }).map((_, i) => (
+      {Array.from({ length: 11 }).map((_, i) => (
         <TableCell key={i}>
-          <div className="h-4 bg-muted rounded animate-pulse w-full" />
+          <div className="h-4 bg-muted rounded animate-pulse" />
         </TableCell>
       ))}
     </TableRow>
   );
 }
 
-// ── Main component ──────────────────────────────────────────────────────────
+// ── Main component ────────────────────────────────────────────────────────────
 export function TripTable({ trips, loading }: TripTableProps) {
+
+  // Group trips by ngay_tao, sorted newest first
+  const grouped = useMemo(() => {
+    const map: Record<string, Trip[]> = {};
+    trips.forEach((t) => {
+      const key = t.ngay_tao?.split('T')[0] ?? 'unknown';
+      if (!map[key]) map[key] = [];
+      map[key].push(t);
+    });
+    return Object.entries(map).sort(([a], [b]) => b.localeCompare(a));
+  }, [trips]);
+
+  // ── Loading state ──
   if (loading) {
     return (
-      <div className="rounded-lg border overflow-hidden">
+      <div className="overflow-auto">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
-              {['STT', 'Mã chuyến', 'Ngày', 'Khách hàng', 'Tên tuyến', 'Tài xế', 'ĐVVC',
-                'Loại chuyến', 'KM', 'Điểm dừng', 'Doanh thu', 'Trạng thái'].map((h) => (
-                <TableHead key={h} className="font-semibold whitespace-nowrap">{h}</TableHead>
+            <TableRow className="bg-muted/30 hover:bg-muted/30">
+              {['STT', 'Mã chuyến đi', 'Khách hàng', 'Tên tuyến', 'Tài xế',
+                'Đơn vị VC', 'Loại chuyến', 'KM', 'Điểm dừng', 'Doanh thu', 'Trạng thái'].map((h) => (
+                <TableHead key={h} className="text-xs font-semibold uppercase tracking-wide whitespace-nowrap">
+                  {h}
+                </TableHead>
               ))}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)}
+            {Array.from({ length: 6 }).map((_, i) => <SkeletonRow key={i} />)}
           </TableBody>
         </Table>
       </div>
     );
   }
 
+  // ── Empty state ──
   if (trips.length === 0) {
     return (
-      <div className="rounded-lg border flex flex-col items-center justify-center py-20 text-muted-foreground gap-2">
-        <TrendingUp className="h-10 w-10 opacity-30" />
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
+        <TrendingUp className="h-10 w-10 opacity-20" />
         <p className="text-sm font-medium">Không tìm thấy chuyến đi nào</p>
-        <p className="text-xs">Thử thay đổi bộ lọc để tìm dữ liệu</p>
+        <p className="text-xs opacity-70">Thử thay đổi bộ lọc hoặc trạng thái</p>
       </div>
     );
   }
 
+  // ── Table ──
+  let globalIndex = 0;
+
   return (
-    <div className="rounded-lg border overflow-auto">
+    <div className="overflow-auto">
       <Table>
         <TableHeader>
-          <TableRow className="bg-muted/50 hover:bg-muted/50">
-            <TableHead className="w-12 font-semibold text-center">STT</TableHead>
-            <TableHead className="font-semibold whitespace-nowrap">Mã chuyến đi</TableHead>
-            <TableHead className="font-semibold whitespace-nowrap">Ngày</TableHead>
-            <TableHead className="font-semibold whitespace-nowrap">Khách hàng</TableHead>
-            <TableHead className="font-semibold whitespace-nowrap min-w-[200px]">Tên tuyến</TableHead>
-            <TableHead className="font-semibold whitespace-nowrap">Tài xế</TableHead>
-            <TableHead className="font-semibold whitespace-nowrap">Đơn vị VC</TableHead>
-            <TableHead className="font-semibold whitespace-nowrap">Loại chuyến</TableHead>
-            <TableHead className="font-semibold whitespace-nowrap text-right">KM</TableHead>
-            <TableHead className="font-semibold whitespace-nowrap text-center">Điểm dừng</TableHead>
-            <TableHead className="font-semibold whitespace-nowrap text-right">Doanh thu</TableHead>
-            <TableHead className="font-semibold whitespace-nowrap">Trạng thái</TableHead>
+          <TableRow className="bg-muted/30 hover:bg-muted/30">
+            <TableHead className="w-10 text-center text-xs font-semibold uppercase tracking-wide">STT</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide whitespace-nowrap">Mã chuyến đi</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide whitespace-nowrap">Khách hàng</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide min-w-[200px]">Tên tuyến</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide whitespace-nowrap">Tài xế</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide whitespace-nowrap">Đơn vị VC</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide whitespace-nowrap">Loại chuyến</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide text-right whitespace-nowrap">KM</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide text-center whitespace-nowrap">Điểm dừng</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide text-right whitespace-nowrap">Doanh thu</TableHead>
+            <TableHead className="text-xs font-semibold uppercase tracking-wide whitespace-nowrap">Trạng thái</TableHead>
           </TableRow>
         </TableHeader>
+
         <TableBody>
-          {trips.map((trip, index) => (
-            <TableRow key={trip.ma_chuyen_di} className="hover:bg-muted/30 transition-colors">
-              {/* STT */}
-              <TableCell className="text-center text-muted-foreground text-sm">
-                {index + 1}
-              </TableCell>
+          {grouped.map(([dateIso, dateTrips]) => (
+            <>
+              {/* ── Date group header ── */}
+              <DateGroupRow key={`header-${dateIso}`} dateIso={dateIso} count={dateTrips.length} />
 
-              {/* Mã chuyến */}
-              <TableCell className="font-mono text-sm font-medium text-primary">
-                {trip.ma_chuyen_di}
-              </TableCell>
+              {/* ── Trips in this date ── */}
+              {dateTrips.map((trip) => {
+                globalIndex++;
+                const idx = globalIndex;
+                return (
+                  <TableRow
+                    key={trip.ma_chuyen_di}
+                    className="hover:bg-muted/20 transition-colors border-b border-border/50"
+                  >
+                    {/* STT */}
+                    <TableCell className="text-center text-xs text-muted-foreground w-10">
+                      {idx}
+                    </TableCell>
 
-              {/* Ngày */}
-              <TableCell className="whitespace-nowrap text-sm">
-                {formatDate(trip.ngay_tao)}
-              </TableCell>
+                    {/* Mã chuyến */}
+                    <TableCell className="font-mono text-sm font-semibold text-primary whitespace-nowrap">
+                      {trip.ma_chuyen_di}
+                    </TableCell>
 
-              {/* Khách hàng */}
-              <TableCell className="whitespace-nowrap">
-                <span className="font-medium text-sm">{trip.ten_khach_hang || '—'}</span>
-              </TableCell>
+                    {/* Khách hàng */}
+                    <TableCell className="whitespace-nowrap text-sm font-medium">
+                      {trip.ten_khach_hang || '—'}
+                    </TableCell>
 
-              {/* Tên tuyến */}
-              <TableCell className="text-sm text-muted-foreground max-w-[250px] truncate" title={trip.ten_tuyen}>
-                {trip.ten_tuyen || '—'}
-              </TableCell>
+                    {/* Tên tuyến */}
+                    <TableCell
+                      className="text-sm text-muted-foreground max-w-[260px] truncate"
+                      title={trip.ten_tuyen}
+                    >
+                      {trip.ten_tuyen || '—'}
+                    </TableCell>
 
-              {/* Tài xế */}
-              <TableCell className="whitespace-nowrap text-sm">
-                {trip.ten_tai_xe || '—'}
-              </TableCell>
+                    {/* Tài xế */}
+                    <TableCell className="text-sm whitespace-nowrap">
+                      {trip.ten_tai_xe || '—'}
+                    </TableCell>
 
-              {/* ĐVVC */}
-              <TableCell>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold
-                  ${trip.don_vi_van_chuyen?.toUpperCase() === 'NAK'
-                    ? 'bg-indigo-100 text-indigo-700'
-                    : trip.don_vi_van_chuyen?.toUpperCase() === 'VENDOR'
-                      ? 'bg-orange-100 text-orange-700'
-                      : 'bg-gray-100 text-gray-600'}`}>
-                  {trip.don_vi_van_chuyen || '—'}
-                </span>
-              </TableCell>
+                    {/* ĐVVC */}
+                    <TableCell>
+                      <DvvcBadge dvvc={trip.don_vi_van_chuyen} />
+                    </TableCell>
 
-              {/* Loại chuyến */}
-              <TableCell className="text-sm whitespace-nowrap text-muted-foreground">
-                {trip.loai_chuyen || '—'}
-              </TableCell>
+                    {/* Loại chuyến */}
+                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                      {trip.loai_chuyen || '—'}
+                    </TableCell>
 
-              {/* KM */}
-              <TableCell className="text-right text-sm font-medium">
-                {trip.so_km > 0 ? `${trip.so_km.toLocaleString('vi-VN')} km` : '—'}
-              </TableCell>
+                    {/* KM */}
+                    <TableCell className="text-right text-sm font-medium whitespace-nowrap">
+                      {trip.so_km > 0
+                        ? `${trip.so_km.toLocaleString('vi-VN')} km`
+                        : '—'}
+                    </TableCell>
 
-              {/* Điểm dừng */}
-              <TableCell className="text-center">
-                {trip.so_diem_dung > 0 ? (
-                  <span className="inline-flex items-center gap-1 text-sm text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    {trip.so_diem_dung}
-                  </span>
-                ) : '—'}
-              </TableCell>
+                    {/* Điểm dừng */}
+                    <TableCell className="text-center">
+                      {trip.so_diem_dung > 0 ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <MapPin className="h-3 w-3" />
+                          {trip.so_diem_dung}
+                        </span>
+                      ) : '—'}
+                    </TableCell>
 
-              {/* Doanh thu */}
-              <TableCell className="text-right font-medium text-sm whitespace-nowrap">
-                {formatCurrency(trip.doanh_thu)}
-              </TableCell>
+                    {/* Doanh thu */}
+                    <TableCell className="text-right text-sm font-medium whitespace-nowrap">
+                      {formatCurrency(trip.doanh_thu)}
+                    </TableCell>
 
-              {/* Trạng thái */}
-              <TableCell>
-                <StatusBadge status={trip.trang_thai} />
-              </TableCell>
-            </TableRow>
+                    {/* Trạng thái */}
+                    <TableCell>
+                      <StatusBadge status={trip.trang_thai} />
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </>
           ))}
         </TableBody>
       </Table>
 
-      {/* Footer summary */}
-      <div className="border-t px-4 py-2 bg-muted/30 flex items-center justify-between text-xs text-muted-foreground">
-        <span>Hiển thị <strong>{trips.length}</strong> chuyến đi</span>
+      {/* ── Table footer ── */}
+      <div className="border-t px-4 py-2.5 bg-muted/20 flex items-center justify-between text-xs text-muted-foreground">
+        <span>
+          Hiển thị <strong className="text-foreground">{trips.length}</strong> chuyến
+          trong <strong className="text-foreground">{grouped.length}</strong> ngày
+        </span>
         <span>
           Tổng doanh thu:{' '}
           <strong className="text-foreground">
