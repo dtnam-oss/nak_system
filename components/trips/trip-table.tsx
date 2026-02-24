@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -9,7 +9,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { MapPin, TrendingUp, ChevronDown } from 'lucide-react';
+import { MapPin, TrendingUp, ChevronRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export interface Trip {
   ma_chuyen_di: string;
@@ -93,15 +94,33 @@ function DvvcBadge({ dvvc }: { dvvc: string }) {
 }
 
 // Date group separator row
-function DateGroupRow({ dateIso, count }: { dateIso: string; count: number }) {
+function DateGroupRow({
+  dateIso,
+  count,
+  isCollapsed,
+  onToggle,
+}: {
+  dateIso: string;
+  count: number;
+  isCollapsed: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <TableRow className="hover:bg-transparent">
+    <TableRow
+      className="hover:bg-muted/30 cursor-pointer select-none"
+      onClick={onToggle}
+    >
       <TableCell
         colSpan={11}
         className="py-2 px-3 bg-muted/40 border-l-[3px] border-l-primary"
       >
         <div className="flex items-center gap-2">
-          <ChevronDown className="h-3.5 w-3.5 text-primary shrink-0" />
+          <ChevronRight
+            className={cn(
+              'h-3.5 w-3.5 text-primary shrink-0 transition-transform duration-150',
+              !isCollapsed && 'rotate-90'
+            )}
+          />
           <span className="text-xs font-semibold text-foreground">
             Ngày: {formatDateHeader(dateIso)}
           </span>
@@ -140,6 +159,23 @@ export function TripTable({ trips, loading }: TripTableProps) {
     });
     return Object.entries(map).sort(([a], [b]) => b.localeCompare(a));
   }, [trips]);
+
+  // All date groups collapsed by default; reset when trips data changes
+  const [collapsedDates, setCollapsedDates] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    const allDates = new Set(trips.map((t) => t.ngay_tao?.split('T')[0] ?? 'unknown'));
+    setCollapsedDates(allDates);
+  }, [trips]);
+
+  const toggleDate = (dateIso: string) => {
+    setCollapsedDates((prev) => {
+      const next = new Set(prev);
+      if (next.has(dateIso)) next.delete(dateIso);
+      else next.add(dateIso);
+      return next;
+    });
+  };
 
   // ── Loading state ──
   if (loading) {
@@ -201,10 +237,16 @@ export function TripTable({ trips, loading }: TripTableProps) {
           {grouped.map(([dateIso, dateTrips]) => (
             <>
               {/* ── Date group header ── */}
-              <DateGroupRow key={`header-${dateIso}`} dateIso={dateIso} count={dateTrips.length} />
+              <DateGroupRow
+                key={`header-${dateIso}`}
+                dateIso={dateIso}
+                count={dateTrips.length}
+                isCollapsed={collapsedDates.has(dateIso)}
+                onToggle={() => toggleDate(dateIso)}
+              />
 
-              {/* ── Trips in this date ── */}
-              {dateTrips.map((trip) => {
+              {/* ── Trips in this date (hidden when collapsed) ── */}
+              {!collapsedDates.has(dateIso) && dateTrips.map((trip) => {
                 globalIndex++;
                 const idx = globalIndex;
                 return (
