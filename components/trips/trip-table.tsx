@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 export interface Trip {
   ma_chuyen_di: string;
   ngay_tao: string;
+  ma_khach_hang: string;
   ten_khach_hang: string;
   ten_tuyen: string;
   ten_tai_xe: string;

@@ -84,6 +84,7 @@ export async function GET(request: NextRequest) {
       SELECT
         cd.ma_chuyen_di,
         cd.ngay_tao,
+        cd.ma_khach_hang,
         cd.ten_khach_hang,
         cd.ten_tuyen,
         cd.ten_tai_xe,
@@ -159,6 +160,7 @@ export async function GET(request: NextRequest) {
       ngay_tao:            row.ngay_tao instanceof Date
                              ? row.ngay_tao.toISOString().split('T')[0]
                              : String(row.ngay_tao || '').split('T')[0],
+      ma_khach_hang:       row.ma_khach_hang || '',
       ten_khach_hang:      row.ten_khach_hang || '',
       ten_tuyen:           row.ten_tuyen || '',
       ten_tai_xe:          row.ten_tai_xe || '',

@@ -47,7 +47,7 @@ export default function TripsPage() {
   const [error, setError]         = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
 
-  // Active customer tab ('all' or ten_khach_hang)
+  // Active customer tab ('all' or ma_khach_hang)
   const [activeKhachHang, setActiveKhachHang] = useState<string>('all');
 
   // API filters
@@ -92,14 +92,14 @@ export default function TripsPage() {
   const customerTabs = useMemo(() => {
     const countMap: Record<string, number> = {};
     trips.forEach((t) => {
-      const key = t.ten_khach_hang || '(Không có)';
+      const key = t.ma_khach_hang || '(Không có)';
       countMap[key] = (countMap[key] ?? 0) + 1;
     });
     return Object.entries(countMap)
       .sort(([, a], [, b]) => b - a) // sort by count desc
-      .map(([name, count], idx) => ({
-        value: name,
-        label: name,
+      .map(([maKh, count], idx) => ({
+        value: maKh,
+        label: maKh,
         count,
         color: TAB_COLORS[idx % TAB_COLORS.length],
       }));
@@ -108,7 +108,7 @@ export default function TripsPage() {
   // ── Trips filtered by active customer tab ─────────────────────────────
   const filteredTrips = useMemo(() => {
     if (activeKhachHang === 'all') return trips;
-    return trips.filter((t) => (t.ten_khach_hang || '(Không có)') === activeKhachHang);
+    return trips.filter((t) => (t.ma_khach_hang || '(Không có)') === activeKhachHang);
   }, [trips, activeKhachHang]);
 
   // ── Export ─────────────────────────────────────────────────────────────
