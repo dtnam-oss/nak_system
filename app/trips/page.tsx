@@ -20,6 +20,15 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Search, Download, RefreshCw, AlertCircle, CalendarRange } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function monthStart() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+}
+function today() {
+  return new Date().toISOString().split('T')[0];
+}
+
 // ── Constants ────────────────────────────────────────────────────────────────
 const DVVC_OPTIONS        = ['NAK', 'VENDOR'];
 const LOAI_CHUYEN_OPTIONS = ['Một chiều', 'Hai chiều', 'Nhiều điểm'];
@@ -65,8 +74,8 @@ export default function TripsPage() {
 
   // API filters
   const [search,         setSearch]         = useState('');
-  const [fromDate,       setFromDate]       = useState('');
-  const [toDate,         setToDate]         = useState('');
+  const [fromDate,       setFromDate]       = useState(monthStart);
+  const [toDate,         setToDate]         = useState(today);
   const [donViVanChuyen, setDonViVanChuyen] = useState('all');
   const [loaiChuyen,     setLoaiChuyen]     = useState('all');
   const [loaiTuyen,      setLoaiTuyen]      = useState('all');
