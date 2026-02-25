@@ -22,7 +22,7 @@ import {
 import { Card } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
-  AlertCircle, Loader2, RefreshCw, Search, X,
+  AlertCircle, Download, Loader2, RefreshCw, Search, X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -158,6 +158,43 @@ export default function TongHopPage() {
     return rows.filter((r) => (r.ma_khach_hang || '(Không có)') === activeKhachHang);
   }, [rows, activeKhachHang]);
 
+  // ── Export Excel ──────────────────────────────────────────────────────────
+  const [exporting, setExporting] = useState(false);
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      setError(null);
+      const params = new URLSearchParams();
+      if (fromDate)                        params.set('from_date',    fromDate);
+      if (toDate)                          params.set('to_date',      toDate);
+      if (loaiChuyen !== 'all')            params.set('loai_chuyen',  loaiChuyen);
+      if (debouncedSearch)                 params.set('search',       debouncedSearch);
+      if (activeKhachHang !== 'all')       params.set('ma_khach_hang', activeKhachHang);
+
+      const res = await fetch(`/api/reconciliation/tong-hop/export?${params}`);
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Xuất Excel thất bại');
+      }
+      const blob     = await res.blob();
+      const url      = URL.createObjectURL(blob);
+      const a        = document.createElement('a');
+      a.href         = url;
+      const suffix   = activeKhachHang !== 'all'
+        ? `_${activeKhachHang.replace(/[^a-zA-Z0-9]/g, '_')}`
+        : '';
+      a.download = `TongHop_ChiTiet${suffix}_${fromDate}_${toDate}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err: any) {
+      setError(err.message || 'Xuất Excel thất bại');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // ── Reset ─────────────────────────────────────────────────────────────────
   const hasFilter = !!(search || fromDate || toDate || loaiChuyen !== 'all');
   const handleReset = () => {
@@ -252,7 +289,7 @@ export default function TongHopPage() {
 
               <div className="flex-1" />
 
-              {/* Refresh */}
+              {/* Actions */}
               <div className="flex items-center gap-1 py-2 shrink-0">
                 <Button
                   variant="ghost" size="sm"
@@ -261,6 +298,17 @@ export default function TongHopPage() {
                 >
                   <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} />
                   Làm mới
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleExport} disabled={exporting || loading}
+                  className="h-8"
+                >
+                  {exporting
+                    ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                    : <Download className="h-3.5 w-3.5 mr-1" />
+                  }
+                  {exporting ? 'Đang xuất...' : 'Xuất Excel'}
                 </Button>
               </div>
             </div>
